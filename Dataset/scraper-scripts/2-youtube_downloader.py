@@ -12,7 +12,7 @@ if method == "csv":
     for index, row in df.iterrows():
         if row['downloaded'] == False:
             video_id = row['video_id']
-            os.system('youtube-dl f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" ' + video_id + ' -o ' + output_dir)
+            os.system('youtube-dl -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" ' + video_id + ' -o ' + output_dir)
             row['downloaded'] = True # NOT WORKING
 else:
     # python youtube_downloader.py 1Qws70XGSq4
