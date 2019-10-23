@@ -2,6 +2,7 @@ import os, operator
 from fastai.vision import *
 
 videos_dir = '../videos'
+sorted_videos_list = []
 
 models_path = "../../Models/slide-classifier/saved-models/"
 learn = load_learner(models_path)
@@ -19,8 +20,9 @@ for item in os.listdir(videos_dir):
     current_dir = os.path.join(videos_dir, item)
     frames_dir = current_dir + "/frames"
     frames_sorted_dir = current_dir + "/frames_sorted"
-    if os.path.isdir(current_dir) and os.path.exists(frames_dir):
+    if os.path.isdir(current_dir) and os.path.exists(frames_dir) and not os.path.exists(frames_sorted_dir):
         print("Video Folder " + item + " with Frames Directory Found!")
+        sorted_videos_list.append(item)
         frames = os.listdir(frames_dir)
         num_frames = len(frames)
         for idx, frame in enumerate(frames):
@@ -36,3 +38,5 @@ for item in os.listdir(videos_dir):
             if not os.path.exists(classified_image_dir):
                 os.makedirs(classified_image_dir)
             os.system('mv ' + current_frame_path + ' ' + classified_image_dir)
+
+print("The Following Videos Need Manual Sorting:\n" + str(sorted_videos_list))
