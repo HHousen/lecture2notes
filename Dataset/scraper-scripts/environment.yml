@@ -1,0 +1,8 @@
+name: lecture2notes-scraper
+channels:
+  - conda-forge
+dependencies:
+  - google-api-python-client
+  - google-auth-oauthlib
+  - google-auth-httplib2
+  - pandas

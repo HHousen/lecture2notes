@@ -1,10 +1,10 @@
-import os
-import sys
+import os, sys
 import pandas as pd
+from pathlib import Path
 
 method = sys.argv[1]
-csv_path = "../videos-dataset.csv"
-output_dir="../videos/%\(id\)s/%\(id\)s.%\(ext\)s"
+csv_path = Path("../videos-dataset.csv")
+output_dir = "../videos/%\(id\)s/%\(id\)s.%\(ext\)s"
 
 if method == "csv":
     # python youtube_downloader.py csv

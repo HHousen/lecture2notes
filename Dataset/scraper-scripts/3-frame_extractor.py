@@ -1,12 +1,11 @@
-import os
-import sys
-import subprocess
+import os, sys, subprocess
+from pathlib import Path
 
 def command(input_video_path, extract_every_x_seconds, quality, output_path, video_id):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    command = 'ffmpeg -i ' + input_video_path + ' -vf "fps=1/' + extract_every_x_seconds + '" -q:v ' + quality + ' ' + output_path + '/' + video_id + '-img_%03d.jpg'
+    command = 'ffmpeg -i ' + str(input_video_path) + ' -vf "fps=1/' + extract_every_x_seconds + '" -q:v ' + quality + ' ' + str(output_path) + '/' + video_id + '-img_%03d.jpg'
 
     print("Running Command: " + command)
     os.system(command)
@@ -19,7 +18,7 @@ def getLength(filename):
             return x.decode("utf-8")[12:23]
     return False
 
-videos_dir = '../videos'
+videos_dir = Path("../videos")
 
 if sys.argv[1] == "auto":
     for item in os.listdir(videos_dir):
@@ -30,23 +29,23 @@ if sys.argv[1] == "auto":
             print("Video Folder " + item + " Without Frames Directory Found!")
             os.makedirs(frames_dir)
             video_id = item
-            input_video_path = "../videos/" + video_id + "/" + video_id + ".mp4"
+            input_video_path = videos_dir / video_id / (video_id + ".mp4")
             extract_every_x_seconds = str(20)
             quality = str(5) # 2 is best
-            output_path = "../videos/" + video_id + "/frames"
+            output_path = videos_dir / video_id / "frames"
             command(input_video_path, extract_every_x_seconds, quality, output_path, video_id)
 
 else:
     video_id = sys.argv[1]
-    input_video_path = "../videos/" + video_id + "/" + video_id + ".mp4"
+    input_video_path = videos_dir / video_id / (video_id + ".mp4")
     extract_every_x_seconds = sys.argv[2]
     quality = sys.argv[3] # 2 is best
-    output_path = "../videos/" + video_id + "/frames"
+    output_path = videos_dir / video_id / "frames"
 
     #num_frames = os.popen('ffprobe -show_streams ' + input_video_path + ' | grep "^nb_frames" | cut -d "=" -f 2').read()
     # https://stackoverflow.com/questions/8679390/ffmpeg-extracting-20-images-from-a-video-of-variable-length
     length = getLength(input_video_path)
-    length_good_check = input("Input Video: " + input_video_path + "\nOutput Path: " + output_path + "\nVideo Length: " + length + "\nSelected Quality: " + quality + "\nExtracing Every " + extract_every_x_frames + " frames" + "\nContinue? ")
+    length_good_check = input("Input Video: " + str(input_video_path) + "\nOutput Path: " + str(output_path) + "\nVideo Length: " + length + "\nSelected Quality: " + quality + "\nExtracing Every " + extract_every_x_seconds + " frames" + "\nContinue? ")
 
     if length_good_check == 'y':
         command(input_video_path, extract_every_x_seconds, quality, output_path, video_id)

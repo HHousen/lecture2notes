@@ -1,0 +1,8 @@
+name: lecture2notes-e2e
+channels:
+  - conda-forge
+  - pytorch
+  - fastai
+dependencies:
+  - pytesseract
+  - fastai

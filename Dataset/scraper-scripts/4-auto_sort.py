@@ -1,10 +1,11 @@
 import os, operator
+import os, operatorfrom pathlib import Path
 from fastai.vision import *
 
-videos_dir = '../videos'
+videos_dir = Path('../videos')
 sorted_videos_list = []
 
-models_path = "../../Models/slide-classifier/saved-models/"
+models_path = Path("../../Models/slide-classifier/saved-models/")
 learn = load_learner(models_path)
 
 def model_predict(img_path):
@@ -18,15 +19,15 @@ def model_predict(img_path):
 
 for item in os.listdir(videos_dir):
     current_dir = os.path.join(videos_dir, item)
-    frames_dir = current_dir + "/frames"
-    frames_sorted_dir = current_dir + "/frames_sorted"
+    frames_dir = current_dir / "frames"
+    frames_sorted_dir = current_dir / "frames_sorted"
     if os.path.isdir(current_dir) and os.path.exists(frames_dir) and not os.path.exists(frames_sorted_dir):
         print("Video Folder " + item + " with Frames Directory Found!")
         sorted_videos_list.append(item)
         frames = os.listdir(frames_dir)
         num_frames = len(frames)
         for idx, frame in enumerate(frames):
-            print("Progress: " + str(idx) + "/" + str(num_frames))
+            print("Progress: " + str(idx+1) + "/" + str(num_frames))
             current_frame_path = os.path.join(frames_dir, frame)
             # run classification
             predictions = model_predict(current_frame_path)

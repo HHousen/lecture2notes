@@ -6,11 +6,12 @@
 
 import os, sys
 import googleapiclient.discovery
+from pathlib import Path
 
 import pandas as pd
 
 def main():
-    csv_path = "../videos-dataset.csv"
+    csv_path = Path("../videos-dataset.csv")
     df = pd.read_csv(csv_path, index_col=0)
     # df = pd.DataFrame(columns=["date","video_id","title","description","thumbnail_default","thumbnail_medium","thumbnail_high","downloaded"])
     
