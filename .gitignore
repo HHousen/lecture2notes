@@ -129,3 +129,5 @@ Dataset/classifier-data
 Dataset/videos
 Dataset/slides
 Models/slide-classifier/saved-models
+*.tar
+Models/slide-classifier/data
