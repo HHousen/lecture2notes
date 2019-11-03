@@ -196,7 +196,8 @@ def main_worker(gpu, ngpus_per_node, args):
             'arch': args.arch,
             'state_dict': model.state_dict(),
             'best_acc1': best_acc1,
-            'optimizer' : optimizer.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'class_index': classes
         }, is_best)
 
 def get_datasets(args):
@@ -218,9 +219,7 @@ def get_datasets(args):
         val_size = len(full_dataset) - train_size
         train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
         
-        # Get list of classes by getting top level directories in dataset directory (args.data)
-        classes = [item for item in os.listdir(args.data) 
-                    if os.path.isdir(os.path.join(args.data, item))]
+        classes = full_dataset.classes
     else:
         traindir = os.path.join(args.data, 'train')
         valdir = os.path.join(args.data, 'val')
@@ -242,9 +241,9 @@ def get_datasets(args):
                 normalize,
             ])
         )
-        # Get list of classes by getting top level directories in traindir
-        classes = [item for item in os.listdir(traindir) 
-                    if os.path.isdir(os.path.join(traindir, item))]
+        classes = train_dataset.classes
+
+    # print(full_dataset.class_to_idx)
     return train_dataset, val_dataset, classes
 
 def initialize_model(num_classes, feature_extract, args):
@@ -258,8 +257,7 @@ def initialize_model(num_classes, feature_extract, args):
         print("=> creating model '{}'".format(args.arch))
 
     if args.arch.startswith("resnet"):
-        """ Resnet
-        """
+        """ Resnet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         # Reshape model so last layer has 512 input features and num_classes output features
@@ -267,32 +265,28 @@ def initialize_model(num_classes, feature_extract, args):
         input_size = 224
 
     elif args.arch.startswith("alexnet"):
-        """ Alexnet
-        """
+        """ Alexnet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
         input_size = 224
 
     elif args.arch.startswith("vgg"):
-        """ VGG11_bn
-        """
+        """ VGG11_bn """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
         input_size = 224
 
     elif args.arch.startswith("squeezenet"):
-        """ Squeezenet
-        """
+        """ Squeezenet """
         set_parameter_requires_grad(model_ft, feature_extract)
         model_ft.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1,1), stride=(1,1))
         model_ft.num_classes = num_classes
         input_size = 224
 
     elif args.arch.startswith("densenet"):
-        """ Densenet
-        """
+        """ Densenet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier.in_features
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
