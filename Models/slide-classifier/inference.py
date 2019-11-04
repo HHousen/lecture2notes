@@ -58,6 +58,8 @@ model = torch.nn.DataParallel(model).cuda()
 model.load_state_dict(model_best['state_dict'])
 model.eval()
 
+sm = torch.nn.Softmax()
+
 def transform_image(image):
     my_transforms = transforms.Compose([transforms.Resize((480,640)),
                                         transforms.ToTensor(),
@@ -70,6 +72,9 @@ def get_prediction(image):
     tensor = transform_image(image)
     outputs = model.forward(tensor)
     _, y_hat = outputs.max(1)
+    probs = sm(outputs).cpu().detach().numpy().tolist()
     predicted_idx = str(y_hat.item())
     class_name = class_index[int(predicted_idx)]
-    return class_name, predicted_idx
+    return class_name, predicted_idx, probs
+
+# print(get_prediction(Image.open("test.png")))

@@ -18,6 +18,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
+from tqdm import tqdm
+
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
@@ -32,21 +34,21 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet34',
                         ' (default: resnet34)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=5, type=int, metavar='N',
-                    help='number of total epochs to run')
+parser.add_argument('--epochs', default=6, type=int, metavar='N',
+                    help='number of total epochs to run (default: 6)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=16, type=int,
                     metavar='N',
                     help='mini-batch size (default: 16)')
-parser.add_argument('--lr', '--learning-rate', default=4e-3, type=float, # 3e-4 is the best learning rate for Adam, hands down
+parser.add_argument('--lr', '--learning-rate', default=4e-3, type=float, # 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--wd', '--weight-decay', default=1e-2, type=float,
                     metavar='W', help='weight decay (default: 1e-2)',
                     dest='weight_decay')
-parser.add_argument('-p', '--print-freq', default=10, type=int,
+parser.add_argument('-p', '--print-freq', default=-1, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
@@ -62,6 +64,8 @@ parser.add_argument('--random_split', dest='use_random_split', action='store_tru
                     help='use random_split to create train and val set instead of train and val folders')
 parser.add_argument('--feature_extract', dest='use_feature_extract', action='store_true',
                     help='Flag for feature extracting. When False, we finetune the whole model, when True we only update the reshaped layer params')
+parser.add_argument('--find_lr', dest='use_find_lr', action='store_true',
+                    help='Flag for lr_finder.')
 parser.add_argument('-o', '--optimizer', default='adamw', dest='optim',
                     help='Optimizer to use (default=AdamW)')
 
@@ -75,8 +79,13 @@ def set_parameter_requires_grad(model, feature_extracting):
     extracting and only want to compute gradients for the newly initialized layer 
     then we want all of the other parameters to not require gradients."""
     if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
+        for module in model.modules():
+            for param in module.parameters():
+                # Don't set BatchNorm layers to .requires_grad False because that's what fastai does
+                if isinstance(module, nn.BatchNorm2d):
+                    param.requires_grad = True
+                else:
+                    param.requires_grad = False
 
 
 def main():
@@ -124,6 +133,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # Create model
     model, input_size = initialize_model(len(classes), args.use_feature_extract, args)
 
+    print(str(model))
     if args.gpu is not None:
         torch.cuda.set_device(args.gpu)
         model = model.cuda(args.gpu)
@@ -137,6 +147,14 @@ def main_worker(gpu, ngpus_per_node, args):
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
+
+    if args.use_find_lr:
+        from lr_finder import LRFinder
+        lr_optimizer = torch.optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
+        lr_finder = LRFinder(model, lr_optimizer, criterion, device="cuda")
+        lr_finder.range_test(train_loader, end_lr=100, num_iter=100)
+        lr_finder.plot()
+        exit()
 
     if args.optim == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), args.lr,
@@ -180,7 +198,7 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Overall"):
         # train for one epoch
         train(train_loader, model, criterion, optimizer, scheduler, epoch, args)
 
@@ -246,6 +264,36 @@ def get_datasets(args):
     # print(full_dataset.class_to_idx)
     return train_dataset, val_dataset, classes
 
+class Flatten(nn.Module):
+    """Flatten x to a single dimension, often used at the end of a model."""
+    def __init__(self): super().__init__()
+    def forward(self, x): return x.view(x.size(0), -1)
+
+class AdaptiveConcatPool2d(nn.Module):
+    """
+    Layer that concats AdaptiveAvgPool2d and AdaptiveMaxPool2d
+    https://docs.fast.ai/layers.html#AdaptiveConcatPool2d
+    """
+    def __init__(self, sz=None):
+        super().__init__()
+        sz = sz or (1,1)
+        self.ap = nn.AdaptiveAvgPool2d(sz)
+        self.mp = nn.AdaptiveMaxPool2d(sz)
+    def forward(self, x): return torch.cat([self.mp(x), self.ap(x)], 1)
+
+def create_head(out_features):
+    layers = [
+        Flatten(),
+        nn.BatchNorm1d(1024),
+        nn.Dropout(0.25),
+        nn.Linear(1024, 512),
+        nn.ReLU(inplace=True),
+        nn.BatchNorm1d(512),
+        nn.Dropout(0.5),
+        nn.Linear(512, out_features)
+    ]
+    return nn.Sequential(*layers)
+
 def initialize_model(num_classes, feature_extract, args):
     # Initialize these variables which will be set in this if statement. Each of these
     # variables is model specific.
@@ -260,8 +308,12 @@ def initialize_model(num_classes, feature_extract, args):
         """ Resnet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
-        # Reshape model so last layer has 512 input features and num_classes output features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        # # Reshape model so last layer has 512 input features and num_classes output features
+        # model_ft.fc = nn.Linear(num_ftrs, num_classes)
+
+        # Use advanced pretraining technique from fastai - https://docs.fast.ai/vision.learner.html#cnn_learner
+        model_ft.avgpool = AdaptiveConcatPool2d(1)
+        model_ft.fc = create_head(num_classes)
         input_size = 224
 
     elif args.arch.startswith("alexnet"):
@@ -312,20 +364,22 @@ def initialize_model(num_classes, feature_extract, args):
     return model_ft, input_size
 
 def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
-    batch_time = AverageMeter('Time', ':6.3f')
-    data_time = AverageMeter('Data', ':6.3f')
+    num_batches = len(train_loader)
+    batch_time = AverageMeter('Time', ':5.3f')
+    data_time = AverageMeter('Data', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
+    top1 = AverageMeter('Acc@1', ':5.3f')
     progress = ProgressMeter(
-        len(train_loader),
+        num_batches,
         [batch_time, data_time, losses, top1],
-        prefix="Epoch: [{}]".format(epoch))
+        prefix="Train Epoch [{}]".format(epoch)
+    )
 
     # switch to train mode
     model.train()
 
     end = time.time()
-    for i, (images, target) in enumerate(train_loader):
+    for i, (images, target) in tqdm(enumerate(train_loader), total=num_batches, desc=("Train Epoch [" + str(epoch) + "]")):
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -357,25 +411,27 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
+        if args.print_freq != -1 and i % args.print_freq == 0:
             progress.display(i)
+    progress.display(average=True)
 
 
 def validate(val_loader, model, criterion, args):
-    batch_time = AverageMeter('Time', ':6.3f')
+    batch_time = AverageMeter('Time', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
+    top1 = AverageMeter('Acc@1', ':5.3f')
     progress = ProgressMeter(
         len(val_loader),
         [batch_time, losses, top1],
-        prefix='Test: ')
+        prefix='Test'
+    )
 
     # switch to evaluate mode
     model.eval()
 
     with torch.no_grad():
         end = time.time()
-        for i, (images, target) in enumerate(val_loader):
+        for i, (images, target) in tqdm(enumerate(val_loader), total=len(val_loader), desc=("Test")):
             if args.gpu is not None:
                 images = images.cuda(args.gpu, non_blocking=True)
             target = target.cuda(args.gpu, non_blocking=True)
@@ -393,11 +449,10 @@ def validate(val_loader, model, criterion, args):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if i % args.print_freq == 0:
+            if args.print_freq != -1 and i % args.print_freq == 0:
                 progress.display(i)
 
-        # TODO: this should also be done with the ProgressMeter
-        print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
+        progress.display(average=True)
 
     return top1.avg
 
@@ -427,6 +482,10 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+    def avg_string(self):
+        fmtstr = '{name} {avg' + self.fmt + '}'
+        return fmtstr.format(**self.__dict__)
+
     def __str__(self):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
@@ -438,22 +497,20 @@ class ProgressMeter(object):
         self.meters = meters
         self.prefix = prefix
 
-    def display(self, batch):
-        entries = [self.prefix + self.batch_fmtstr.format(batch)]
-        entries += [str(meter) for meter in self.meters]
+    def display(self, batch=0, average=False):
+        if average:
+            entries = ["\n" + self.prefix + " Average: "]
+            entries += [meter.avg_string() for meter in self.meters]
+            entries += "\n"
+        else:
+            entries = [self.prefix + ": " + self.batch_fmtstr.format(batch)]
+            entries += [str(meter) for meter in self.meters]
         print('\t'.join(entries))
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
-
-
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
 
 
 def accuracy(output, target, topk=(1,)):

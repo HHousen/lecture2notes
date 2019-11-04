@@ -1,7 +1,9 @@
 name: lecture2notes-slide_classifier
 channels:
+  - conda-forge
   - pytorch
 dependencies:
   - pytorch
   - torchvision
   - cudatoolkit=10.1
+  - matplotlib

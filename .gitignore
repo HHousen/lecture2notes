@@ -131,3 +131,5 @@ Dataset/slides
 Models/slide-classifier/saved-models
 *.tar
 Models/slide-classifier/data
+lr_finder.png
+test.png
