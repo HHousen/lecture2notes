@@ -20,6 +20,8 @@ import torchvision.models as models
 
 from tqdm import tqdm
 
+from custom_nnmodules import *
+
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
@@ -62,8 +64,8 @@ parser.add_argument('--gpu', default=None, type=int,
                     help='GPU id to use.')
 parser.add_argument('--random_split', dest='use_random_split', action='store_true',
                     help='use random_split to create train and val set instead of train and val folders')
-parser.add_argument('--feature_extract', dest='use_feature_extract', action='store_true',
-                    help='Flag for feature extracting. When False, we finetune the whole model, when True we only update the reshaped layer params')
+parser.add_argument('--feature_extract', choices=["normal", "advanced"],
+                    help='If False, we finetune the whole model. When normal we only update the reshaped layer params. When advanced use fastai version of feature extracting (add fancy group of layers and only update this group and BatchNorm)')
 parser.add_argument('--find_lr', dest='use_find_lr', action='store_true',
                     help='Flag for lr_finder.')
 parser.add_argument('-o', '--optimizer', default='adamw', dest='optim',
@@ -82,11 +84,16 @@ def set_parameter_requires_grad(model, feature_extracting):
         for module in model.modules():
             for param in module.parameters():
                 # Don't set BatchNorm layers to .requires_grad False because that's what fastai does
-                if isinstance(module, nn.BatchNorm2d):
+                # but only if using feature_extracting == "advanced"
+                if feature_extracting == "advanced" and isinstance(module, nn.BatchNorm2d):
                     param.requires_grad = True
                 else:
                     param.requires_grad = False
 
+def unfreeze_model(model):
+    """Sets every layer of model to trainable (.requires_grad True)"""
+    for param in model.parameters():
+        param.requires_grad = True
 
 def main():
     
@@ -131,9 +138,9 @@ def main_worker(gpu, ngpus_per_node, args):
         num_workers=args.workers, pin_memory=True)
 
     # Create model
-    model, input_size = initialize_model(len(classes), args.use_feature_extract, args)
+    model, input_size, params_to_update = initialize_model(len(classes), args.feature_extract, args)
+    print("Model:\n" + str(model))
 
-    print(str(model))
     if args.gpu is not None:
         torch.cuda.set_device(args.gpu)
         model = model.cuda(args.gpu)
@@ -150,18 +157,18 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.use_find_lr:
         from lr_finder import LRFinder
-        lr_optimizer = torch.optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
+        lr_optimizer = torch.optim.Adam(params_to_update, lr=1e-7, weight_decay=1e-2)
         lr_finder = LRFinder(model, lr_optimizer, criterion, device="cuda")
         lr_finder.range_test(train_loader, end_lr=100, num_iter=100)
         lr_finder.plot()
         exit()
 
     if args.optim == "sgd":
-        optimizer = torch.optim.SGD(model.parameters(), args.lr,
+        optimizer = torch.optim.SGD(params_to_update, args.lr,
                                     momentum=args.momentum,
                                     weight_decay=args.weight_decay)
     else:
-        optimizer = torch.optim.Adam(model.parameters(), args.lr,
+        optimizer = torch.optim.Adam(params_to_update, args.lr,
                                 weight_decay=args.weight_decay)
     
     # optionally resume from a checkpoint
@@ -210,6 +217,7 @@ def main_worker(gpu, ngpus_per_node, args):
         best_acc1 = max(acc1, best_acc1)
 
         save_checkpoint({
+            'model': model,
             'epoch': epoch + 1,
             'arch': args.arch,
             'state_dict': model.state_dict(),
@@ -264,25 +272,9 @@ def get_datasets(args):
     # print(full_dataset.class_to_idx)
     return train_dataset, val_dataset, classes
 
-class Flatten(nn.Module):
-    """Flatten x to a single dimension, often used at the end of a model."""
-    def __init__(self): super().__init__()
-    def forward(self, x): return x.view(x.size(0), -1)
-
-class AdaptiveConcatPool2d(nn.Module):
-    """
-    Layer that concats AdaptiveAvgPool2d and AdaptiveMaxPool2d
-    https://docs.fast.ai/layers.html#AdaptiveConcatPool2d
-    """
-    def __init__(self, sz=None):
-        super().__init__()
-        sz = sz or (1,1)
-        self.ap = nn.AdaptiveAvgPool2d(sz)
-        self.mp = nn.AdaptiveMaxPool2d(sz)
-    def forward(self, x): return torch.cat([self.mp(x), self.ap(x)], 1)
-
 def create_head(out_features):
     layers = [
+        AdaptiveConcatPool2d(1),
         Flatten(),
         nn.BatchNorm1d(1024),
         nn.Dropout(0.25),
@@ -295,6 +287,28 @@ def create_head(out_features):
     return nn.Sequential(*layers)
 
 def initialize_model(num_classes, feature_extract, args):
+    def get_updateable_params(model, feature_extract):
+        """
+        Gather the parameters to be optimized/updated in this run
+        If feature_extract is normal then params should only be fully connected layer
+        If feature_extract is advanced then params should be all BatchNorm layers and head (create_head) of network
+        If feature_extract is None then params is model.named_parameters()
+        """
+        params_to_update = model.parameters()
+        print("Params to learn:")
+        if feature_extract:
+            params_to_update = []
+            for name,param in model.named_parameters():
+                if param.requires_grad == True:
+                    params_to_update.append(param)
+                    print("\t",name)
+        else:
+            params_to_update = model_ft.parameters()
+            for name,param in model.named_parameters():
+                if param.requires_grad == True:
+                    print("\t",name)
+        return params_to_update
+    
     # Initialize these variables which will be set in this if statement. Each of these
     # variables is model specific.
     model_ft = models.__dict__[args.arch](pretrained=args.pretrained)
@@ -308,12 +322,17 @@ def initialize_model(num_classes, feature_extract, args):
         """ Resnet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
-        # # Reshape model so last layer has 512 input features and num_classes output features
-        # model_ft.fc = nn.Linear(num_ftrs, num_classes)
 
-        # Use advanced pretraining technique from fastai - https://docs.fast.ai/vision.learner.html#cnn_learner
-        model_ft.avgpool = AdaptiveConcatPool2d(1)
-        model_ft.fc = create_head(num_classes)
+        # TODO: Implement advanced pretraining technique from fastai for all models
+        if feature_extract == "advanced":
+            # Use advanced pretraining technique from fastai - https://docs.fast.ai/vision.learner.html#cnn_learner
+            # Remove last two layers
+            model_ft = nn.Sequential(*list(model_ft.children())[:-2])
+            # append head to resnet body
+            model_ft = nn.Sequential(model_ft, create_head(num_classes))
+        else:
+            # Reshape model so last layer has 512 input features and num_classes output features
+            model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
     elif args.arch.startswith("alexnet"):
@@ -361,7 +380,9 @@ def initialize_model(num_classes, feature_extract, args):
         print("Invalid model name, exiting...")
         exit()
 
-    return model_ft, input_size
+    params_to_update = get_updateable_params(model_ft, feature_extract)
+
+    return model_ft, input_size, params_to_update
 
 def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
     num_batches = len(train_loader)

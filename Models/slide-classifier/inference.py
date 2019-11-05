@@ -4,6 +4,8 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from PIL import Image
 
+from custom_nnmodules import *
+
 def initialize_model(arch, num_classes):
     model = models.__dict__[arch]()
     if arch.startswith("resnet"):
@@ -52,9 +54,13 @@ def initialize_model(arch, num_classes):
 # Load saved model
 model_best = torch.load("model_best.pth.tar")
 class_index = model_best['class_index']
-# Load model arch from models
-model = initialize_model(model_best['arch'], num_classes=len(model_best['class_index']))
-model = torch.nn.DataParallel(model).cuda()
+if model_best['model']:
+    model = model_best['model']
+    model = model.cuda()
+else:
+    # Load model arch from models
+    model = initialize_model(model_best['arch'], num_classes=len(model_best['class_index']))
+    model = torch.nn.DataParallel(model).cuda()
 model.load_state_dict(model_best['state_dict'])
 model.eval()
 
@@ -77,4 +83,4 @@ def get_prediction(image):
     class_name = class_index[int(predicted_idx)]
     return class_name, predicted_idx, probs
 
-# print(get_prediction(Image.open("test.png")))
+print(get_prediction(Image.open("test.png")))
