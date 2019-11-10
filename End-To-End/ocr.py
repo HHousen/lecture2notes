@@ -6,7 +6,9 @@ import pytesseract, os
 
 def all_in_folder(path):
     results = []
-    for item in os.listdir(path):
+    images = os.listdir(path)
+    images.sort()
+    for item in images:
         print("> OCR: Processing file " + item)
         current_path = os.path.join(path, item)
         if os.path.isfile(current_path):
