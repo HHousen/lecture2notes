@@ -1,0 +1,15 @@
+name: lecture2notes
+channels:
+  - conda-forge
+  - pytorch
+  - fastai
+dependencies:
+  - pytorch
+  - torchvision
+  - cudatoolkit=10.1
+  - faiss-gpu
+  - matplotlib
+  - pytesseract
+  - fastai
+  - termcolor
+  - scikit-learn

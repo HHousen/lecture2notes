@@ -3,6 +3,7 @@ from pathlib import Path
 from helpers import make_dir_if_not_exist
 
 def extract_frames(input_video_path, quality, output_path, extract_every_x_seconds):
+    """Extracts frames from `input_video_path` at quality level `quality` (best quality is 2) every `extract_every_x_seconds seconds` and saves them to `output_path`"""
     quality = str(quality)
     output_path = str(output_path)
     extract_every_x_seconds = str(extract_every_x_seconds)

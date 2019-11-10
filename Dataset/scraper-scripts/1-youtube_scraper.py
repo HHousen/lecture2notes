@@ -12,13 +12,16 @@ import pandas as pd
 
 def main():
     csv_path = Path("../videos-dataset.csv")
-    df = pd.read_csv(csv_path, index_col=0)
-    # df = pd.DataFrame(columns=["date","video_id","title","description","thumbnail_default","thumbnail_medium","thumbnail_high","downloaded"])
+    # If CSV file exists then load it otherwise create a new dataframe that will be saved once scraping is complete
+    if csv_path.is_file():
+        df = pd.read_csv(csv_path, index_col=0)
+    else:
+        df = pd.DataFrame(columns=["date","video_id","title","description","thumbnail_default","thumbnail_medium","thumbnail_high","downloaded"])
     
     if sys.argv[1] == "channel":
-        # python youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw
+        # python youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw 10
         next_page=""
-        for i in range(50):
+        for i in range(int(sys.argv[3])):
             if sys.argv[2]:
                 response = get_youtube_results(next_page, sys.argv[2])
             else:

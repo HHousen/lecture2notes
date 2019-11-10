@@ -3,6 +3,7 @@ from pathlib import Path
 from helpers import make_dir_if_not_exist
 from termcolor import colored
 
+# Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
 from custom_nnmodules import *
 from inference import *

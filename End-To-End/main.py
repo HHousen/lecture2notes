@@ -7,6 +7,7 @@ import sys, os
 from pathlib import Path
 from helpers import *
 
+# Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
 from custom_nnmodules import *
 

@@ -5,6 +5,7 @@ except ImportError:
 import pytesseract, os
 
 def all_in_folder(path):
+    """Perform OCR on every file in folder and return results"""
     results = []
     images = os.listdir(path)
     images.sort()
@@ -18,6 +19,7 @@ def all_in_folder(path):
     return results
 
 def write_to_file(results, save_file):
+    """Write everything stored in `results` to file at path `save_file`. Used to write results from `all_in_folder()` to `save_file`."""
     file_results = open(save_file, "a+")
     print("> OCR: Writing results to file " + str(save_file))
     for item in results:

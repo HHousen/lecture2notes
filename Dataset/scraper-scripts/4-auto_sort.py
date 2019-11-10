@@ -1,4 +1,4 @@
-import os, operator, sys
+import os, operator, sys, shutil
 from pathlib import Path
 from termcolor import colored
 import pandas as pd
@@ -13,15 +13,17 @@ if sys.argv[1] == "fastai":
     learn = load_learner(models_path)
 else:
     import inspect
+    # Hack to import modules from different parent directory
     sys.path.insert(1, os.path.join(sys.path[0], '../../Models/slide-classifier'))
     from custom_nnmodules import *
     from inference import *
 
-def model_predict_fastai(img_path):
+def model_predict_fastai(img_path, percent=False):
     img = open_image(img_path)
     pred_class,pred_idx,outputs = learn.predict(img)
     model_results = outputs.numpy().tolist()
-    #model_results_percent = [i * 100 for i in model_results]
+    if percent:
+        model_results = [i * 100 for i in model_results]
     classes = learn.data.classes
     probs = dict(zip(classes, model_results))
     return pred_class, pred_idx, probs
@@ -62,8 +64,12 @@ for item in os.listdir(videos_dir):
             classified_image_dir = frames_sorted_dir / best_guess
             if not os.path.exists(classified_image_dir):
                 os.makedirs(classified_image_dir)
-            os.system('mv ' + str(current_frame_path) + ' ' + str(classified_image_dir))
+            shutil.move(str(current_frame_path), str(classified_image_dir))
         if num_incorrect == 0:
             df.loc[len(df.index)]=[item,frame,best_guess,prob_max_correct]
+            percent_wrong = 0
+        else:
+            percent_wrong = (num_incorrect / num_frames) * 100
+        print("> AI Prediction Engine: Percent frames classified incorrectly: " + str(percent_wrong))
         df.to_csv(csv_path)
 print("The Following Videos Need Manual Sorting:\n" + str(sorted_videos_list))

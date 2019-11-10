@@ -64,7 +64,7 @@ else:
 model.load_state_dict(model_best['state_dict'])
 model.eval()
 
-sm = torch.nn.Softmax()
+sm = torch.nn.Softmax(dim=1)
 
 def transform_image(image):
     my_transforms = transforms.Compose([transforms.Resize((480,640)),
@@ -74,13 +74,40 @@ def transform_image(image):
                                             [0.229, 0.224, 0.225])])
     return my_transforms(image).unsqueeze(0)
 
-def get_prediction(image):
-    tensor = transform_image(image)
-    outputs = model.forward(tensor)
-    _, y_hat = outputs.max(1)
-    probs = sm(outputs).cpu().detach().numpy().tolist()
-    predicted_idx = str(y_hat.item())
-    class_name = class_index[int(predicted_idx)]
-    return class_name, predicted_idx, probs
+def attach_hook(model):
+    my_embedding = torch.zeros(512)
+    # Define a function that will copy the output of a layer
+    def copy_data(m, i, o):
+        my_embedding.copy_(o.data)
+    # Attach that function to our selected layer
+    h = model[1][6].register_forward_hook(copy_data)
+    # Run the model on our transformed image
+    model(t_img)
+    # Detach our copy function from the layer
+    h.remove()
+    # Return the feature vector
+    return my_embedding
 
-print(get_prediction(Image.open("test.png")))
+def get_prediction(image, percent=False):
+    tensor = transform_image(image)
+
+    extracted_features = torch.zeros(1, 512)
+    def copy_data(m, i, o):
+        extracted_features.copy_(o.data)
+    hook = model.module[1][6].register_forward_hook(copy_data)
+
+    outputs = model.forward(tensor)
+
+    hook.remove()
+    extracted_features = extracted_features.numpy()[0, :]
+
+    _, y_hat = outputs.max(1)
+    probs = sm(outputs).cpu().detach().numpy().tolist()[0]
+    if percent:
+        probs = [i*100 for i in probs]
+    probs = dict(zip(class_index, probs))
+    predicted_idx = int(y_hat.item())
+    class_name = class_index[int(predicted_idx)]
+    return class_name, predicted_idx, probs, extracted_features
+
+#print(get_prediction(Image.open("test.png")))
