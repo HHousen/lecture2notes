@@ -57,10 +57,10 @@ Installation is made easy due to conda environments. Simply run this command fro
     * Examples:
         * If *csv*: `python 2-youtube_downloader.py csv`
         * If *your_youtube_video_id*: `python 2-youtube_downloader.py 1Qws70XGSq4`
-* **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. Extracted frames are saved into `Dataset/videos/video_id/frames`.
-    * Command: `python 3-frame_extractor.py <video_id/auto> <extract_every_x_seconds> <quality>`
+* **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. `extract_every_x_seconds` can be set to auto to use the `get_extract_every_x_seconds()` function to automatically determine a good number of frames to extract. `auto` mode uses this feature and allows for exact reconstruction of the dataset. Extracted frames are saved into `Dataset/videos/video_id/frames`.
+    * Command: `python 3-frame_extractor.py <video_id/auto> <extract_every_x_seconds/auto> <quality>`
     * Examples:
-        * If *video_id*: `python 3-frame_extractor.py VT2o4KCEbes 20 5`
+        * If *video_id*: `python 3-frame_extractor.py VT2o4KCEbes 20 5` or to automatically extract a good number of frames: `python 3-frame_extractor.py 63hAHbkzJG4 auto 5`
         * If *auto*:  `python 3-frame_extractor.py auto`
 * **pdf2image**: Takes every page in all pdf files in `Dataset/slides/pdfs`, converts them to png images, and saves them in `Dataset/slides/images/pdf_file_name`. Requires `pdftoppm` package. 
     * Command: `python 3-pdf2image.py`
