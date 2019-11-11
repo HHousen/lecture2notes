@@ -36,6 +36,7 @@ Installation is made easy due to conda environments. Simply run this command fro
         * frames: All frames extracted from `video_id` by [scraper-scripts/3-frame_extractor.py](Dataset/scraper-scripts/3-frame_extractor.py)
         * frames_sorted: Frames from `video_id` that are grouped into correct classes. [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) can help with this but you must verify correctness. More info in *Script Descriptions*.
 * **slides-dataset.csv**: A list of all slides used in the dataset. **NOT** automatically updated by [scraper-scripts/2-slides_downloader.py](Dataset/scraper-scripts/2-slides_downloader.py). You need to manually update this file if you want the dataset to be reproducible.
+* **sort_file_map.csv**: A list of filenames and categories. Used exclusively by [scraper-scripts/4-sort_from_file.py](Dataset/scraper-scripts/4-sort_from_file.py) to either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`.
 * **to-be-sorted.csv**: A list of videos and specific frames that have been sorted by [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) but need to be checked by a human for correctness. When running [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) any frames where the AI model's confidence level is below a threshold are added to this list as most likely incorrect.
 * **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](Dataset/scraper-scripts/1-youtube_scraper.py).
 
@@ -66,6 +67,8 @@ Installation is made easy due to conda environments. Simply run this command fro
     * Command: `python 3-pdf2image.py`
 * **auto_sort**: Goes through every extracted frame for all videos in the dataset that don’t have sorted frames and classifies them using `Models/slide-classifier`. You need either a trained fastai or pytorch model to use this. This code works with both fastai and pytorch models. Creates a list of frames that need to be checked for correctness by humans in [to-be-sorted.csv](Dataset/to-be-sorted.csv). This also requires certain files from `Models/slide-classifier`.
     * Command: `python 4-auto_sort.py <fastai/pytorch>`
+* **sort_from_file**: Either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`. Only purpose is to exactly reconstruct the dataset without downloading already sorted images.
+    * Command: `python 4-sort_from_file.py <make/sort>`
 * **compile_data**: Merges the sorted frames from all the videos in the dataset to `Dataset/classifier-data`.
     * Command: `python 5-compile_data.py`
 
@@ -79,7 +82,7 @@ Installation is made easy due to conda environments. Simply run this command fro
 2. Data Pre-processing:
     1. Convert slide pdfs to pngs: `python 3-pdf2image.py`
     2. Extract frames from all videos: `python 3-frame_extractor.py auto`
-    3. Auto sort the frames: `python 4-auto_sort.py pytorch` and check for correctness
+    3. Sort the frames: `python 4-sort_from_file.py sort`
 3. Compile and merge the data: `python 5-compile_data.py`
 
 ### Models

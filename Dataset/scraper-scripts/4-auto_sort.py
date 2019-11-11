@@ -50,7 +50,7 @@ for item in os.listdir(videos_dir):
             if sys.argv[1] == "fastai":
                 best_guess, best_guess_idx, probs = model_predict(current_frame_path)
             else:
-                best_guess, best_guess_idx, probs = get_prediction(Image.open(current_frame_path))
+                best_guess, best_guess_idx, probs, _ = get_prediction(Image.open(current_frame_path))
             prob_max_correct = list(probs.values())[best_guess_idx]
             print("AI Predicts: " + best_guess)
             print("Probabilities: " + str(probs))
