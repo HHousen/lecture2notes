@@ -53,18 +53,22 @@ Installation is made easy due to conda environments. Simply run this command fro
     * Examples:
         * If *csv*: `python 2-slides_downloader.py csv`
         * If *your_url*: `python 2-slides_downloader.py https://ocw.mit.edu/courses/history/21h-343j-making-books-the-renaissance-and-today-spring-2016/lecture-slides/MIT21H_343JS16_Print.pdf`
+    * Required Software: `wget`
 * **youtube_downloader**: Uses youtube-dl to download either a video by id or every video that has not been download in [videos-dataset.csv](Dataset/videos-dataset.csv).
     * Command: `python 2-youtube_downloader.py <csv/your_youtube_video_id>`
     * Examples:
         * If *csv*: `python 2-youtube_downloader.py csv`
         * If *your_youtube_video_id*: `python 2-youtube_downloader.py 1Qws70XGSq4`
+    * Required Software: `youtube-dl` ([Github](https://github.com/ytdl-org/youtube-dl)/[Website](https://ytdl-org.github.io/youtube-dl/index.html))
 * **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. `extract_every_x_seconds` can be set to auto to use the `get_extract_every_x_seconds()` function to automatically determine a good number of frames to extract. `auto` mode uses this feature and allows for exact reconstruction of the dataset. Extracted frames are saved into `Dataset/videos/video_id/frames`.
     * Command: `python 3-frame_extractor.py <video_id/auto> <extract_every_x_seconds/auto> <quality>`
     * Examples:
         * If *video_id*: `python 3-frame_extractor.py VT2o4KCEbes 20 5` or to automatically extract a good number of frames: `python 3-frame_extractor.py 63hAHbkzJG4 auto 5`
         * If *auto*:  `python 3-frame_extractor.py auto`
+    * Required Software: `ffmpeg` ([Github](https://github.com/FFmpeg/FFmpeg)/[Website](https://www.ffmpeg.org/))
 * **pdf2image**: Takes every page in all pdf files in `Dataset/slides/pdfs`, converts them to png images, and saves them in `Dataset/slides/images/pdf_file_name`. Requires `pdftoppm` package. 
     * Command: `python 3-pdf2image.py`
+    * Required Software: `poppler-utils (pdftoppm)` ([Man Page](https://linux.die.net/man/1/pdftoppm)/[Website](https://poppler.freedesktop.org/))
 * **auto_sort**: Goes through every extracted frame for all videos in the dataset that don’t have sorted frames and classifies them using `Models/slide-classifier`. You need either a trained fastai or pytorch model to use this. This code works with both fastai and pytorch models. Creates a list of frames that need to be checked for correctness by humans in [to-be-sorted.csv](Dataset/to-be-sorted.csv). This also requires certain files from `Models/slide-classifier`.
     * Command: `python 4-auto_sort.py <fastai/pytorch>`
 * **sort_from_file**: Either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`. Only purpose is to exactly reconstruct the dataset without downloading already sorted images.
@@ -76,14 +80,24 @@ Installation is made easy due to conda environments. Simply run this command fro
 
 > Either download compiled dataset from [Dataset Direct Download Link] or use the following steps.
 
-1. Download Content:
+1. Install Prerequisite Software
+    * wget: `apt install wget`
+    * youtube-dl (most up-to-date instructions on [their website](https://ytdl-org.github.io/youtube-dl/index.html)):
+    ```bash
+    sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
+
+    sudo chmod a+rx /usr/local/bin/youtube-dl
+    ```
+    * ffmpeg: `apt install ffmpeg`
+    * pdftoppm: `apt install poppler-utils`
+2. Download Content:
     1. Download all videos: `python 2-youtube_downloader.py csv`
     2. Download all slides: `python 2-slides_downloader.py csv`
-2. Data Pre-processing:
+3. Data Pre-processing:
     1. Convert slide pdfs to pngs: `python 3-pdf2image.py`
     2. Extract frames from all videos: `python 3-frame_extractor.py auto`
     3. Sort the frames: `python 4-sort_from_file.py sort`
-3. Compile and merge the data: `python 5-compile_data.py`
+4. Compile and merge the data: `python 5-compile_data.py`
 
 ### Models
 
