@@ -184,7 +184,7 @@ Run `python main.py <path_to_video>` to get a notes file.
 
 Hayden Housen – [haydenhousen.com](https://haydenhousen.com)
 
-Distributed under the MIT license. See the [LICENSE](LICENSE) for more information.
+Distributed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) for more information.
 
 <https://github.com/HHousen>
 
