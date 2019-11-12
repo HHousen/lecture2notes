@@ -12,4 +12,5 @@ dependencies:
   - pytesseract
   - fastai
   - termcolor
+  - tqdm
   - scikit-learn

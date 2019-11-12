@@ -1,6 +1,7 @@
 import os, sys, shutil
 from pathlib import Path
 import pandas as pd
+from tqdm import tqdm
 
 videos_dir = Path('../videos')
 csv_path = Path("../sort_file_map.csv")
@@ -12,14 +13,18 @@ else:
 
 if sys.argv[1] == "make":
     # create the file mapping
-    for item in os.listdir(videos_dir):
+    videos = os.listdir(videos_dir)
+    for item in tqdm(videos, total=len(videos), desc="Creating File Mapping - Videos"):
         current_dir = videos_dir / item
         frames_sorted_dir = current_dir / "frames_sorted"
         if os.path.isdir(current_dir) and os.path.exists(frames_sorted_dir):
             frames_sorted = os.listdir(frames_sorted_dir)
-            for category in frames_sorted:
+            desc = "Creating File Mapping - " + str(item)
+            for category in tqdm(frames_sorted, total=len(frames_sorted), desc=desc):
                 category_path = frames_sorted_dir / category
-                for frame in os.listdir(category_path):
+                frames = os.listdir(category_path)
+                desc = "Creating File Mapping - " + str(category)
+                for frame in tqdm(frames, total=len(frames), desc=desc):
                     df.loc[len(df.index)]=[item,frame,category]
     df.to_csv(csv_path)
 else: # if sys.argv[1] == "sort"

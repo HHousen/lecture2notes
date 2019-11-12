@@ -1,5 +1,6 @@
 import os, sys, subprocess
 from pathlib import Path
+from tqdm import tqdm
 
 def command(input_video_path, extract_every_x_seconds, quality, output_path, video_id):
     if not os.path.exists(output_path):
@@ -42,7 +43,8 @@ def get_extract_every_x_seconds(seconds):
 videos_dir = Path("../videos")
 
 if sys.argv[1] == "auto":
-    for item in os.listdir(videos_dir):
+    videos = os.listdir(videos_dir)
+    for item in tqdm(videos, total=len(videos), desc="Extracting Frames"):
         current_dir = os.path.join(videos_dir, item)
         frames_dir = current_dir + "/frames"
         frames_sorted_dir = current_dir + "/frames_sorted"
