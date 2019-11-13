@@ -1,22 +1,28 @@
-import os
-import subprocess as sbp
+import os, shutil
 from pathlib import Path
+from distutils.dir_util import copy_tree
+from tqdm import tqdm
 
 videos_dir = Path('../videos')
 slides_dir = Path('../slides/images')
 data_dir = Path('../classifier-data')
 
-for item in os.listdir(videos_dir):
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
+videos = os.listdir(videos_dir)
+for item in tqdm(videos, total=len(videos), desc="Compiling Videos"):
     current_dir = videos_dir / item
     frames_sorted_dir = current_dir / "frames_sorted"
     if os.path.isdir(current_dir) and os.path.exists(frames_sorted_dir):
         frames_sorted = os.listdir(frames_sorted_dir)
         for category in frames_sorted:
-            category_path = os.path.join(frames_sorted_dir, category)
-            copy_command = 'cp -r ' + str(category_path) + ' ' + str(data_dir) + '/.'
-            sbp.Popen(copy_command, shell=True)
+            video_category_path = frames_sorted_dir / category
+            data_category_path = data_dir / category
+            copy_tree(str(video_category_path), str(data_category_path))
 
-for item in os.listdir(slides_dir):
-    current_dir = os.path.join(slides_dir, item)
-    copy_command = 'cp -r ' + str(current_dir) + '/. ' + str(data_dir) + '/slide/.'
-    sbp.Popen(copy_command, shell=True)
+slide_images = os.listdir(slides_dir)
+for item in tqdm(slide_images, total=len(slide_images), desc="Compiling Slideshow Images"):
+    current_dir = slides_dir / item
+    data_dir_slide = data_dir / "slide"
+    copy_tree(str(current_dir), str(data_dir_slide))
