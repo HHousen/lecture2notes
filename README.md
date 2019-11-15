@@ -38,7 +38,7 @@ Installation is made easy due to conda environments. Simply run this command fro
 * **slides-dataset.csv**: A list of all slides used in the dataset. **NOT** automatically updated by [scraper-scripts/2-slides_downloader.py](Dataset/scraper-scripts/2-slides_downloader.py). You need to manually update this file if you want the dataset to be reproducible.
 * **sort_file_map.csv**: A list of filenames and categories. Used exclusively by [scraper-scripts/4-sort_from_file.py](Dataset/scraper-scripts/4-sort_from_file.py) to either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`.
 * **to-be-sorted.csv**: A list of videos and specific frames that have been sorted by [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) but need to be checked by a human for correctness. When running [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) any frames where the AI model's confidence level is below a threshold are added to this list as most likely incorrect.
-* **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](Dataset/scraper-scripts/1-youtube_scraper.py).
+* **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](Dataset/scraper-scripts/1-youtube_scraper.py) and [scraper-scripts/1-website_scraper.py](Dataset/scraper-scripts/1-website_scraper.py).
 
 #### Script Descriptions
 > All scripts that are needed to obtain and manipulate the data. Located in `Dataset/scraper-scripts`
@@ -54,12 +54,12 @@ Installation is made easy due to conda environments. Simply run this command fro
         * If *csv*: `python 2-slides_downloader.py csv`
         * If *your_url*: `python 2-slides_downloader.py https://ocw.mit.edu/courses/history/21h-343j-making-books-the-renaissance-and-today-spring-2016/lecture-slides/MIT21H_343JS16_Print.pdf`
     * Required Software: `wget`
-* **youtube_downloader**: Uses youtube-dl to download either a video by id or every video that has not been download in [videos-dataset.csv](Dataset/videos-dataset.csv).
+* **video_downloader**: Uses youtube-dl (for `youtube` videos) and wget (for `website` videos) to download either a youtube video by id or every video that has not been download in [videos-dataset.csv](Dataset/videos-dataset.csv).
     * Command: `python 2-youtube_downloader.py <csv/your_youtube_video_id>`
     * Examples:
         * If *csv*: `python 2-youtube_downloader.py csv`
-        * If *your_youtube_video_id*: `python 2-youtube_downloader.py 1Qws70XGSq4`
-    * Required Software: `youtube-dl` ([Github](https://github.com/ytdl-org/youtube-dl)/[Website](https://ytdl-org.github.io/youtube-dl/index.html))
+        * If *your_youtube_video_id*: `python 2-youtube_downloader.py youtube 1Qws70XGSq4`
+    * Required Software: `youtube-dl` ([Github](https://github.com/ytdl-org/youtube-dl)/[Website](https://ytdl-org.github.io/youtube-dl/index.html)), `wget`
 * **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. `extract_every_x_seconds` can be set to auto to use the `get_extract_every_x_seconds()` function to automatically determine a good number of frames to extract. `auto` mode uses this feature and allows for exact reconstruction of the dataset. Extracted frames are saved into `Dataset/videos/video_id/frames`.
     * Command: `python 3-frame_extractor.py <video_id/auto> <extract_every_x_seconds/auto> <quality>`
     * Examples:

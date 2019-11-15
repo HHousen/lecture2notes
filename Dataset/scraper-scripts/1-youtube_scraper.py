@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Sample Python code for youtube.search.list
-# See instructions for running these code samples locally:
-# https://developers.google.com/explorer-help/guides/code_samples#python
-
 import os, sys
 import googleapiclient.discovery
 from pathlib import Path
@@ -16,7 +10,7 @@ def main():
     if csv_path.is_file():
         df = pd.read_csv(csv_path, index_col=0)
     else:
-        df = pd.DataFrame(columns=["date","video_id","title","description","thumbnail_default","thumbnail_medium","thumbnail_high","downloaded"])
+        df = pd.DataFrame(columns=["date","provider","video_id","page_link","download_link","title","description","thumbnail_default","thumbnail_medium","thumbnail_high","downloaded"])
     
     if sys.argv[1] == "channel":
         # python youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw 10
@@ -40,7 +34,7 @@ def main():
                 channel = item['snippet']['channelId']
                 if channel != sys.argv[2] or channel != 'UCEBb1b_L6zDS3xTUrIALZOw':
                     print("Video From Wrong Channel\n-------------------\nVideo ID: " + video_id + "\nTitle: " + title)
-                df.loc[len(df.index)]=[date,video_id,title,description,thumbnail_default,thumbnail_medium,thumbnail_high,"false"]
+                df.loc[len(df.index)]=[date,"youtube",video_id,0,0,title,description,thumbnail_default,thumbnail_medium,thumbnail_high,"false"]
             df.to_csv(csv_path)
     else:
         # python youtube_scraper.py video 1Qws70XGSq4
@@ -56,7 +50,7 @@ def main():
             thumbnail_medium = item['snippet']['thumbnails']['medium']['url']
             thumbnail_high = item['snippet']['thumbnails']['high']['url']
             channel = item['snippet']['channelId']
-            df.loc[len(df.index)]=[date,video_id,title,description,thumbnail_default,thumbnail_medium,thumbnail_high,"false"]
+            df.loc[len(df.index)]=[date,"youtube",video_id,0,0,title,description,thumbnail_default,thumbnail_medium,thumbnail_high,"false"]
         df.to_csv(csv_path)
 
 def get_youtube_results(page="",channel="UCEBb1b_L6zDS3xTUrIALZOw",video_id="VT2o4KCEbes"):

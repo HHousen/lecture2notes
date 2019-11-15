@@ -52,7 +52,9 @@ if sys.argv[1] == "auto":
             print("Video Folder " + item + " Without Frames Directory Found!")
             os.makedirs(frames_dir)
             video_id = item
-            input_video_path = videos_dir / video_id / (video_id + ".mp4")
+            input_video_dir = videos_dir / video_id
+            files_in_dir = [filename for filename in os.listdir(input_video_dir) if filename.startswith(video_id)]
+            input_video_path = input_video_dir / files_in_dir[0]
 
             length = get_length(input_video_path)
             length_in_seconds = get_sec(length)
