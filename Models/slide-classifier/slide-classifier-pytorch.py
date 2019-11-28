@@ -18,6 +18,16 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
+import matplotlib as mpl
+if os.environ.get('DISPLAY','') == '':
+    print('=> MatPlotLib: No display found. Using non-interactive Agg backend')
+    mpl.use('Agg')
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, classification_report
+
 from tqdm import tqdm
 
 from custom_nnmodules import *
@@ -203,6 +213,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.evaluate:
         validate(val_loader, model, criterion, args)
+        final_evaluate(val_loader, model, classes, args)
         return
 
     for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Overall"):
@@ -390,9 +401,12 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
     data_time = AverageMeter('Data', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':5.3f')
+    precision_metric = AverageMeter('Precision', ':5.3f')
+    recall_metric = AverageMeter('Recall', ':5.3f')
+    f_score_metric = AverageMeter('F-Score', ':5.3f')
     progress = ProgressMeter(
         num_batches,
-        [batch_time, data_time, losses, top1],
+        [batch_time, data_time, losses, top1, precision_metric, recall_metric, f_score_metric],
         prefix="Train Epoch [{}]".format(epoch)
     )
 
@@ -413,9 +427,15 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+        acc1 = accuracy(output, target)
         losses.update(loss.item(), images.size(0))
-        top1.update(acc1[0], images.size(0))
+        top1.update(acc1, images.size(0))
+
+        # measure precision, recall, F-measure and support
+        precision, recall, f_score, _ = calculate_precision_recall_fscore_support(output, target)
+        precision_metric.update(precision)
+        recall_metric.update(recall)
+        f_score_metric.update(f_score)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -441,9 +461,12 @@ def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter('Time', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':5.3f')
+    precision_metric = AverageMeter('Precision', ':5.3f')
+    recall_metric = AverageMeter('Recall', ':5.3f')
+    f_score_metric = AverageMeter('F-Score', ':5.3f')
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1],
+        [batch_time, losses, top1, precision_metric, recall_metric, f_score_metric],
         prefix='Test'
     )
 
@@ -462,9 +485,15 @@ def validate(val_loader, model, criterion, args):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1 = accuracy(output, target)
             losses.update(loss.item(), images.size(0))
-            top1.update(acc1[0], images.size(0))
+            top1.update(acc1, images.size(0))
+
+            # measure precision, recall, F-measure and support
+            precision, recall, f_score, _ = calculate_precision_recall_fscore_support(output, target)
+            precision_metric.update(precision)
+            recall_metric.update(recall)
+            f_score_metric.update(f_score)
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -477,6 +506,26 @@ def validate(val_loader, model, criterion, args):
 
     return top1.avg
 
+def final_evaluate(val_loader, model, classes, args):
+    # switch to evaluate mode
+    model.eval()
+    preds = []
+    targets = []
+    with torch.no_grad():
+        for i, (images, target) in tqdm(enumerate(val_loader), total=len(val_loader), desc=("Final Stats")):
+            if args.gpu is not None:
+                images = images.cuda(args.gpu, non_blocking=True)
+
+            targets = np.concatenate((targets, target.numpy()))
+
+            # compute output
+            output = model(images)
+            preds = np.concatenate((preds, torch.argmax(output, 1).cpu().numpy()))
+
+    # print("Preds: " + str(preds))
+    # print("Targets: " + str(targets))
+    plot_confusion_matrix(preds, targets, classes)
+    print(classification_report(targets, preds, target_names=classes))
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
@@ -533,22 +582,73 @@ class ProgressMeter(object):
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
+def plot_confusion_matrix(y_pred, y_true, classes,
+                          normalize=False,
+                          title="Confusion Matrix",
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
 
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
+    if not title:
+        if normalize:
+            title = 'Normalized confusion matrix'
+        else:
+            title = 'Confusion matrix, without normalization'
+
+    # Compute confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    # Only use the labels that appear in the data
+    # classes = classes[unique_labels(y_true, y_pred)]
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
+    ax.figure.colorbar(im, ax=ax)
+    # We want to show all ticks...
+    ax.set(xticks=np.arange(cm.shape[1]),
+           yticks=np.arange(cm.shape[0]),
+           # ... and label them with the respective list entries
+           xticklabels=classes, yticklabels=classes,
+           title=title,
+           ylabel='True label',
+           xlabel='Predicted label')
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+
+    # Loop over data dimensions and create text annotations.
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], fmt),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+    fig.tight_layout()
+
+    if mpl.backends.backend == "agg":
+        plt.savefig("confusion_matrix.png")
+    else:
+        plt.show()
+
+    return ax
+
+def calculate_precision_recall_fscore_support(output, target):
     with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
+        _, preds = torch.max(output.data, 1)
+        precision, recall, f_score, support = precision_recall_fscore_support(target.cpu(), preds.cpu(), average="weighted")
+        return precision, recall, f_score, support
 
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
+def accuracy(output, target):
+    """Computes the accuracy over the top predictions"""
+    with torch.no_grad():
+        _, preds = torch.max(output.data, 1)
+        acc1 = accuracy_score(target.cpu(), preds.cpu(), normalize=True)
+        return acc1
 
 
 if __name__ == '__main__':
