@@ -91,6 +91,14 @@ class Cluster:
             move_list[filename] = self.labels[idx]
         return move_list
 
+    def get_num_clusters(self):
+        if self.algorithm_name == "affinity_propagation":
+            cluster_centers_indices = self.algorithm.cluster_centers_indices_
+            n_clusters_ = len(cluster_centers_indices)
+            return n_clusters_
+        else:
+            return self.num_centroids
+
     def calculate_best_k(self, max_k=50):
         """
         Implements elbow method to graph the cost (squared error) as a function of the number of centroids (value of k)

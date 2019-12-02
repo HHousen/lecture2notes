@@ -34,7 +34,7 @@ if skip_to <= 2:
 
 # 3. Cluster slides
 if skip_to <= 3: 
-    if skip_to   >= 3: # if step 2 (classify slides) was skipped
+    if skip_to >= 3: # if step 2 (classify slides) was skipped
         frames_sorted_dir = root_process_folder / "frames_sorted"
     slides_dir = frames_sorted_dir / "slide"
     from cluster import make_clusters
