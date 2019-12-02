@@ -11,7 +11,7 @@ def make_clusters(slides_dir, copy=True):
     """Clusters all images in directory `slides_dir` and saves each cluster to a subfolder in `cluster_dir` (directory in parent of `slides_dir`)"""
     slides = os.listdir(slides_dir)
     num_slides = len(slides)
-    cluster = Cluster(algorithm_name="affinity_propagation", preference=-6, damping=0.7)
+    cluster = Cluster(algorithm_name="affinity_propagation", preference=-8, damping=0.72)
 
     print("> AI Clustering Engine: Ready to cluster " + str(num_slides) + " slides")
     for idx, slide in tqdm(enumerate(slides), total=num_slides, desc="> AI Clustering Engine: Feature extraction"):
