@@ -38,12 +38,16 @@ Installation is made easy due to conda environments. Simply run this command fro
 * **slides-dataset.csv**: A list of all slides used in the dataset. **NOT** automatically updated by [scraper-scripts/2-slides_downloader.py](Dataset/scraper-scripts/2-slides_downloader.py). You need to manually update this file if you want the dataset to be reproducible.
 * **sort_file_map.csv**: A list of filenames and categories. Used exclusively by [scraper-scripts/4-sort_from_file.py](Dataset/scraper-scripts/4-sort_from_file.py) to either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`.
 * **to-be-sorted.csv**: A list of videos and specific frames that have been sorted by [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) but need to be checked by a human for correctness. When running [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) any frames where the AI model's confidence level is below a threshold are added to this list as most likely incorrect.
-* **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](Dataset/scraper-scripts/1-youtube_scraper.py) and [scraper-scripts/1-website_scraper.py](Dataset/scraper-scripts/1-website_scraper.py).
+* **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](Dataset/scraper-scripts/1-youtube_scraper.py) and [scraper-scripts/1-website_scraper.py](Dataset/scraper-scripts/1-website_scraper.py). The `provider` column is used to determine how to download the video in [scraper-scripts/2-video_downloader.py](Dataset/scraper-scripts/2-video_downloader.py).
 
 #### Script Descriptions
 > All scripts that are needed to obtain and manipulate the data. Located in `Dataset/scraper-scripts`
 
-* **youtube_scraper**: Takes a video id or channel id from youtube, extracts important information using the YouTube Data API, and then adds that information to [slides-dataset.csv](Dataset/videos-dataset.csv).
+* **website_scraper**: Takes a video page link, video download link, and video published date and then adds that information to [videos-dataset.csv](Dataset/videos-dataset.csv).
+    * Command: `python 1-website_scraper.py <date> <page_link> <video_download_link> <description (optional)>`
+    * Examples:
+        * `python 1-website_scraper.py 1-1-2010 https://oyc.yale.edu/astronomy/astr-160/update-1 http://openmedia.yale.edu/cgi-bin/open_yale/media_downloader.cgi?file=/courses/spring07/astr160/mov/astr160_update01_070212.mov`
+* **youtube_scraper**: Takes a video id or channel id from youtube, extracts important information using the YouTube Data API, and then adds that information to [videos-dataset.csv](Dataset/videos-dataset.csv).
     * Command: `python 1-youtube_scraper.py <channel/video> <video_id/channel_id> <number of pages (only if channel)>`
     * Examples:
         * If *channel*: `python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw 10`
@@ -55,10 +59,10 @@ Installation is made easy due to conda environments. Simply run this command fro
         * If *your_url*: `python 2-slides_downloader.py https://ocw.mit.edu/courses/history/21h-343j-making-books-the-renaissance-and-today-spring-2016/lecture-slides/MIT21H_343JS16_Print.pdf`
     * Required Software: `wget`
 * **video_downloader**: Uses youtube-dl (for `youtube` videos) and wget (for `website` videos) to download either a youtube video by id or every video that has not been download in [videos-dataset.csv](Dataset/videos-dataset.csv).
-    * Command: `python 2-youtube_downloader.py <csv/your_youtube_video_id>`
+    * Command: `python 2-video_downloader.py <csv/youtube your_youtube_video_id>`
     * Examples:
-        * If *csv*: `python 2-youtube_downloader.py csv`
-        * If *your_youtube_video_id*: `python 2-youtube_downloader.py youtube 1Qws70XGSq4`
+        * If *csv*: `python 2-video_downloader.py csv`
+        * If *your_youtube_video_id*: `python 2-video_downloader.py youtube 1Qws70XGSq4`
     * Required Software: `youtube-dl` ([Github](https://github.com/ytdl-org/youtube-dl)/[Website](https://ytdl-org.github.io/youtube-dl/index.html)), `wget`
 * **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. `extract_every_x_seconds` can be set to auto to use the `get_extract_every_x_seconds()` function to automatically determine a good number of frames to extract. `auto` mode uses this feature and allows for exact reconstruction of the dataset. Extracted frames are saved into `Dataset/videos/video_id/frames`.
     * Command: `python 3-frame_extractor.py <video_id/auto> <extract_every_x_seconds/auto> <quality>`
@@ -91,7 +95,7 @@ Installation is made easy due to conda environments. Simply run this command fro
     * ffmpeg: `apt install ffmpeg`
     * pdftoppm: `apt install poppler-utils`
 2. Download Content:
-    1. Download all videos: `python 2-youtube_downloader.py csv`
+    1. Download all videos: `python 2-video_downloader.py csv`
     2. Download all slides: `python 2-slides_downloader.py csv`
 3. Data Pre-processing:
     1. Convert slide pdfs to pngs: `python 3-pdf2image.py`

@@ -9,7 +9,7 @@ output_dir_yt = "../videos/%\(id\)s/%\(id\)s.%\(ext\)s"
 video_dir = Path("../videos/")
 
 if method == "csv":
-    # python youtube_downloader.py csv
+    # python video_downloader.py csv
     df = pd.read_csv(csv_path, index_col=0)
     for index, row in tqdm(df.iterrows(), total=len(df.index), desc="Downloading Videos"):
         if row['downloaded'] == False:
@@ -29,7 +29,7 @@ if method == "csv":
                 os.system('wget -O ' + str(output_file_website) + ' ' + download_link)
             row['downloaded'] = True # NOT WORKING
 elif method == "youtube":
-    # python youtube_downloader.py youtube 1Qws70XGSq4
+    # python video_downloader.py youtube 1Qws70XGSq4
     video_id = sys.argv[2]
     os.system('youtube-dl ' + video_id + ' -o ' + output_dir_yt)
 
