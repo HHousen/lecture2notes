@@ -25,11 +25,17 @@ parser.add_argument('-id', '--auto-id', dest='auto_id', action='store_true',
                     help='automatically create a subdirectory in `process_dir` with a unique id for the video and change `process_dir` to this new directory')
 parser.add_argument('-rm', '--remove', dest='remove', action='store_true',
                     help='remove `process_dir` once conversion is complete')
+parser.add_argument('-c', '--chunk', dest='chunk', action='store_true',
+                    help='split the audio into small chunks on silence')
+parser.add_argument('-tm', '--transcription_method', default="sphinx", choices=["sphinx", "google", "youtube"],
+                    help='specify the program that should be used for transcription. Either CMU Sphinx (works offline) or Google Speech Recognition (probably will require chunking) or pull a video transcript from YouTube based on video_id')
+parser.add_argument('--video_id', type=str, metavar='ID',
+                    help='id of youtube video to get subtitles from')
 
 args = parser.parse_args()
 
 if args.process_dir == "automatic":
-    root_process_folder = os.path.dirname(args.video_path)
+    root_process_folder = Path(os.path.dirname(args.video_path))
 else:
     root_process_folder = Path(args.process_dir)
 if args.auto_id:
@@ -55,30 +61,49 @@ if args.skip_to <= 3:
     if args.skip_to >= 3: # if step 2 (classify slides) was skipped
         frames_sorted_dir = root_process_folder / "frames_sorted"
     slides_dir = frames_sorted_dir / "slide"
-    from cluster import make_clusters
-    cluster_dir = make_clusters(slides_dir)
+    from cluster import ClusterFilesystem
+    cluster_filesystem = ClusterFilesystem(slides_dir, algorithm_name="affinity_propagation", preference=-8, damping=0.72, max_iter=1000)
+    cluster_filesystem.extract_and_add_features()
+    cluster_dir, best_samples_dir= cluster_filesystem.transfer_to_filesystem()
+    best_samples_dir = cluster_dir / "best_samples"
+    # cluster_dir = make_clusters(slides_dir)
 
 # 4. OCR slides
 if args.skip_to <= 4: 
     if args.skip_to >= 4: # if step 3 (cluster slides) was skipped
-        frames_sorted_dir = root_process_folder / "frames_sorted"
+        cluster_dir = root_process_folder / "slide_clusters"
+        best_samples_dir = cluster_dir / "best_samples"
     import ocr
-    slides_folder = frames_sorted_dir / "slide"
     save_file = root_process_folder / "ocr.txt"
-    results = ocr.all_in_folder(slides_folder)
+    results = ocr.all_in_folder(best_samples_dir)
     ocr.write_to_file(results, save_file)
 
 if args.skip_to <= 5:
     import transcribe
-    audio_input_path = args.video_path
-    audio_output_path = root_process_folder / "audio.wav"
-    transcript_output_file = root_process_folder / "audio.txt"
-    transcribe.extract_audio(audio_input_path, audio_output_path)
-    try:
-        transcript = transcribe.transcribe_audio(audio_output_path)
-    except:
-        print("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5")
-    transcribe.write_to_file(transcript, transcript_output_file)
+    extract_from_video = args.video_path
+    audio_path = root_process_folder / "audio.wav"
+
+    if args.transcription_method == "youtube":
+        transcript_output_file = root_process_folder / "audio.srt"
+        try:
+            transcribe.get_youtube_transcript(args.video_id, transcript_output_file)
+        except:
+            youtube_transcription_failed = True
+            args.transcription_method = "sphinx"
+            print("> Main Process: Error detected in grabbing transcript from YouTube. Falling back to sphinx transcription.")
+    if args.transcription_method != "youtube" or youtube_transcription_failed:
+        transcript_output_file = root_process_folder / "audio.txt"
+        transcribe.extract_audio(extract_from_video, audio_path)
+        try:
+            if args.chunk:
+                chunk_dir = root_process_folder / "chunks"
+                transcribe.create_chunks(audio_path, chunk_dir, 5, 2000)
+                transcribe.process_chunks(chunk_dir, transcript_output_file, method=args.transcription_method)
+            else:
+                transcript = transcribe.transcribe_audio(audio_path, method=args.transcription_method)
+                transcribe.write_to_file(transcript, transcript_output_file)
+        except:
+            print("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")
 
 # if args.remove:
 #     rmtree(root_process_folder)

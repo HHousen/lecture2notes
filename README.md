@@ -13,6 +13,12 @@ Some code supports fastai since that was the library that was initially used to 
 ## Install
 Installation is made easy due to conda environments. Simply run this command from the root project directory: `conda env create` and conda will create and environment called `lecture2notes` with all the required packages in [environment.yml](environment.yml).
 
+NOTE: The `srt` package is on pypi but not conda. Therefore you have to build it locally. More details can be found in the [conda documentation](https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs-skeleton.html). This can de done by performing the following steps:
+1. `conda skeleton pypi srt`
+2. Open the `srt` folder that was created in your workign directory and edit the `meta.yaml` file `requirements` section so that python version 3.6 is used. Change `python` under the `host` and `run` sections to `python 3.6`.
+3. `conda build srt`
+4. You're done. The `srt` package is now ready to be installed from the `local` channel. You can now create the conda environment using `conda env create`.
+
 ### Step-by-Step Instructions
 1. Clone this repository: `git clone https://github.com/HHousen/lecture2notes.git`.
 2. Change to project diretory: `cd lecture2notes`.
@@ -48,10 +54,25 @@ Installation is made easy due to conda environments. Simply run this command fro
     * Examples:
         * `python 1-website_scraper.py 1-1-2010 https://oyc.yale.edu/astronomy/astr-160/update-1 http://openmedia.yale.edu/cgi-bin/open_yale/media_downloader.cgi?file=/courses/spring07/astr160/mov/astr160_update01_070212.mov`
 * **youtube_scraper**: Takes a video id or channel id from youtube, extracts important information using the YouTube Data API, and then adds that information to [videos-dataset.csv](Dataset/videos-dataset.csv).
-    * Command: `python 1-youtube_scraper.py <channel/video> <video_id/channel_id> <number of pages (only if channel)>`
-    * Examples:
-        * If *channel*: `python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw 10`
-        * If *video*: `python 1-youtube_scraper.py video 1Qws70XGSq4`
+    * Output of `python 1-youtube_scraper.py --help`:
+    ```
+    usage: 1-youtube_scraper.py [-h] [-n N] [-t] {video,channel,transcript} STR
+
+    YouTube Scraper
+
+    positional arguments:
+    {video,channel,transcript}
+                            Get metadata for a video or a certain number of videos
+                            from a channel. Transcript mode downloads the
+                            transcript for a video_id.
+    STR                   Channel or video id depending on mode
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -n N, --num_pages N   Number of pages of videos to scape if mode is
+                            `channel`
+    -t, --transcript      Download transcript for each video scraped.
+    ```
 * **slides_downloader**: Takes a link to a pdf slideshow and downloads it to `Dataset/slides/pdfs` or downloads every entry in [slides-dataset.csv](Dataset/slides-dataset.csv).
     * Command: `python slides_downloader.py <csv/your_url>`
     * Examples:
@@ -180,8 +201,37 @@ Run `python main.py <path_to_video>` to get a notes file.
 * **frames_extractor**: Provides `extract_frames()`, which extracts frames from `input_video_path` at quality level `quality` (best quality is 2) every `extract_every_x_seconds seconds` and saves them to `output_path`.
 * **helpers**: A small file of helper functions to reduce duplicate code.
 * **main**: The master file that brings all of the components in this directory together by calling functions provided by the components with correct parameters. Implements a `skip_to` variable that can be set to skip to a certain step of the process. This is useful if a pervious step completed but the overall process failed. If this happens the `skip_to` variable allows the user to fix the problem and resume from the point where the error occurred.
-    * Example: `python main.py <path_to_video>`
-    * Example with *skip_to*: `python main.py <path_to_video> <skip_to>`
+    * Output of `python main.py --help`:
+    ```
+    usage: main.py [-h] [-s N] [-d PATH] [-id] [-rm] [-c]
+            [-tm {sphinx,google,youtube}] [--video_id ID]
+            DIR
+
+    End-to-End Conversion of Lecture Videos to Notes using ML
+
+    positional arguments:
+    DIR                   path to video
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -s N, --skip-to N     set to > 0 to skip specific processing steps
+    -d PATH, --process_dir PATH
+                            path to the proessing directory (where extracted
+                            frames and other files are saved), set to "automatic"
+                            to use the video's folder (default: ./)
+    -id, --auto-id        automatically create a subdirectory in `process_dir`
+                            with a unique id for the video and change
+                            `process_dir` to this new directory
+    -rm, --remove         remove `process_dir` once conversion is complete
+    -c, --chunk           split the audio into small chunks on silence
+    -tm {sphinx,google,youtube}, --transcription_method {sphinx,google,youtube}
+                            specify the program that should be used for
+                            transcription. Either CMU Sphinx (works offline) or
+                            Google Speech Recognition (probably will require
+                            chunking) or pull a video transcript from YouTube
+                            based on video_id
+    --video_id ID         id of youtube video to get subtitles from
+    ```
 * **ocr**: Provides `all_in_folder()`, which performs OCR on every file in folder and returns results, and `write_to_file`, which writes everything stored in `results` to file at path `save_file` (used to write results from `all_in_folder()` to `save_file`).
 
 ## Meta

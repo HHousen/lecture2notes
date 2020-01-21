@@ -3,11 +3,12 @@ channels:
   - conda-forge
   - pytorch
   - fastai
+  - local
 dependencies:
   - pytorch
   - torchvision
   - cudatoolkit=10.1
-  - faiss-gpu
+  # - faiss-gpu
   - matplotlib
   - pytesseract
   - fastai
@@ -17,3 +18,9 @@ dependencies:
   - speechrecognition
   - pocketsphinx-python
   - pydub
+  - google-api-python-client
+  - google-auth-oauthlib
+  - google-auth-httplib2
+  - srt
+  - spacy
+  - pillow=6.1

@@ -128,11 +128,14 @@ dmypy.json
 Dataset/classifier-data
 Dataset/videos
 Dataset/slides
+Dataset/transcripts
 Dataset/to-be-sorted.csv
 Models/slide-classifier/saved-models
 *.tar
 Models/slide-classifier/data
 lr_finder.png
 test.png
+test.srt
 best_k_value.png
 End-To-End/process
+*secret*

@@ -11,7 +11,7 @@ def all_in_folder(path):
     images = os.listdir(path)
     images.sort()
     for item in tqdm(images, total=len(images), desc="> OCR: Progress"):
-        print("> OCR: Processing file " + item)
+        # print("> OCR: Processing file " + item)
         current_path = os.path.join(path, item)
         if os.path.isfile(current_path):
             ocr_result = pytesseract.image_to_string(Image.open(current_path))

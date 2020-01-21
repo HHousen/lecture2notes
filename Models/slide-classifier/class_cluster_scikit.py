@@ -1,15 +1,17 @@
 import os, numpy
 from sklearn.cluster import KMeans, AffinityPropagation
+from sklearn.metrics import pairwise_distances_argmin_min
 import matplotlib as mpl
 if os.environ.get('DISPLAY','') == '':
     print('=> Class Cluster: No display found. Using non-interactive Agg backend')
     mpl.use('Agg')
 import matplotlib.pyplot as plt
+from collections import OrderedDict
 
 class Cluster:
-    def __init__(self, algorithm_name="kmeans", num_centroids=20, preference=None, damping=0.5):
+    def __init__(self, algorithm_name="kmeans", num_centroids=20, preference=None, damping=0.5, max_iter=200):
         """Set up cluster object by defining necessary variables and asserting that user provided algorithm is supported"""
-        self.vectors = dict()
+        self.vectors = OrderedDict()
 
         algorithms = ["kmeans","affinity_propagation"]
         assert algorithm_name in algorithms
@@ -19,9 +21,13 @@ class Cluster:
         self.algorithm = None
         self.cost = None
         self.labels = None
+        self.closest = None
+        self.move_list = None
+        self.closest_filenames = None
         self.num_centroids = num_centroids
         self.preference = preference
         self.damping = damping
+        self.max_iter = max_iter
     
     def add(self, vector, filename):
         """Adds a filename and its coresponding feature vector to the cluster object"""
@@ -33,7 +39,7 @@ class Cluster:
             if self.algorithm_name == "kmeans":
                 self.create_kmeans(self.num_centroids)
             elif self.algorithm_name == "affinity_propagation":
-                self.create_affinity_propagation(self.preference, self.damping)
+                self.create_affinity_propagation(self.preference, self.damping, self.max_iter)
 
     def predict(self, array):
         """Wrapper function for algorithm.predict. Creates algorithm if it has not been created."""
@@ -46,11 +52,11 @@ class Cluster:
         vector_array = numpy.stack(vector_list)
         return vector_array
 
-    def create_affinity_propagation(self, preference, damping, store=True):
+    def create_affinity_propagation(self, preference, damping, max_iter, store=True):
         """Create and fit an affinity propagation cluster"""
         vector_array = self.get_vector_array()
 
-        affinity_propagation = AffinityPropagation(preference=preference, damping=damping)
+        affinity_propagation = AffinityPropagation(preference=preference, damping=damping, max_iter=max_iter)
         affinity_propagation.fit(vector_array)
 
         centroids = affinity_propagation.cluster_centers_
@@ -82,13 +88,17 @@ class Cluster:
 
         return kmeans, centroids, cost, labels
     
-    def create_move_list(self):
+    def get_move_list(self):
         """Creates a dictionary of file names and their coresponding centroid numbers"""
+        if self.move_list is not None:
+            return self.move_list
+
         self.create_algorithm_if_none()
             
         move_list = dict()
         for idx, filename in enumerate(self.vectors):
             move_list[filename] = self.labels[idx]
+        self.move_list = move_list
         return move_list
 
     def get_num_clusters(self):
@@ -98,6 +108,28 @@ class Cluster:
             return n_clusters_
         else:
             return self.num_centroids
+
+    def get_closest_sample_filenames_to_centroids(self):
+        """
+        Return the sample indexes that are closest to each centroid. 
+        Ex: If [0,8] is returned then X[0] (X is training data/vectors) is the closest 
+        point in X to centroid 0 and X[8] is the closest to centroid 1
+        """
+        if self.closest_filenames is not None:
+            return self.closest_filenames
+
+        vector_array = self.get_vector_array()
+        closest, _ = pairwise_distances_argmin_min(self.centroids, vector_array)
+        self.closest = closest
+        closest_filenames = list()
+        for centroid_number, sample_index in enumerate(closest):
+            # vector = vector_array[sample_index]
+            vector_filenames = list(self.vectors.keys())
+            filename = vector_filenames[sample_index]
+            # filename = list(self.vectors.keys())[list(self.vectors.values()).index(vector.all())] # get key by value in self.vectors
+            closest_filenames.append(filename)
+        self.closest_filenames = closest_filenames
+        return closest_filenames
 
     def calculate_best_k(self, max_k=50):
         """
