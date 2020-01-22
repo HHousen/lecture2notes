@@ -206,8 +206,9 @@ Run `python main.py <path_to_video>` to get a notes file.
     * Output of `python main.py --help`:
     ```
     usage: main.py [-h] [-s N] [-d PATH] [-id] [-rm] [-c]
-            [-tm {sphinx,google,youtube}] [--video_id ID]
-            DIR
+               [-tm {sphinx,google,youtube,deepspeech}] [--video_id ID]
+               [--deepspeech_model_dir DIR]
+               DIR
 
     End-to-End Conversion of Lecture Videos to Notes using ML
 
@@ -226,13 +227,17 @@ Run `python main.py <path_to_video>` to get a notes file.
                             `process_dir` to this new directory
     -rm, --remove         remove `process_dir` once conversion is complete
     -c, --chunk           split the audio into small chunks on silence
-    -tm {sphinx,google,youtube}, --transcription_method {sphinx,google,youtube}
+    -tm {sphinx,google,youtube,deepspeech}, --transcription_method {sphinx,google,youtube,deepspeech}
                             specify the program that should be used for
-                            transcription. Either CMU Sphinx (works offline) or
-                            Google Speech Recognition (probably will require
-                            chunking) or pull a video transcript from YouTube
-                            based on video_id
+                            transcription. CMU Sphinx: use pocketsphinx (works
+                            offline) Google Speech Recognition: probably will
+                            require chunking YouTube: pull a video transcript from
+                            YouTube based on video_id DeepSpeech: Use the
+                            deepspeech library (works offline with great accuracy)
     --video_id ID         id of youtube video to get subtitles from
+    --deepspeech_model_dir DIR
+                            path containing the DeepSpeech model files. See the
+                            documentation for details.
     ```
 * **ocr**: Provides `all_in_folder()`, which performs OCR on every file in folder and returns results, and `write_to_file()`, which writes everything stored in `results` to file at path `save_file` (used to write results from `all_in_folder()` to `save_file`).
 * **slide_classifier**: Provides `classify_frames()` which automatically sorts images (the extracted frames) using the slide-classifier model.
