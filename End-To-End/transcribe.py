@@ -8,8 +8,10 @@ from helpers import make_dir_if_not_exist
 from transcript_downloader import TranscriptDownloader
 import srt
 import spacy
+import numpy as np
 
 def extract_audio(video_path, output_path):
+    """Extracts audio from video at `video_path` and saves it to `output_path`"""
     print("> Transcriber: Extracting audio from " + str(video_path) + " and saving to " + str(output_path))
     command = 'ffmpeg -i ' + str(video_path) + ' -f wav -ab 192000 -vn ' + str(output_path)
     os.system(command)
@@ -36,6 +38,37 @@ def transcribe_audio(audio_path, method="sphinx"):
         print("> Transcriber: Could not understand audio")
     except sr.RequestError as e:
         print("> Transcriber: Error; {0}".format(e))
+
+def transcribe_audio_deepspeech(audio_path, model_dir, model='output_graph.pb', beam_width=500, lm="lm.binary", trie="trie", lm_alpha=0.75, lm_beta=1.85):
+    import deepspeech
+    import scipy.io.wavfile as wav
+    from scipy import signal
+    
+    # load model
+    model = os.path.join(model_dir, model)
+    lm = os.path.join(model_dir, lm)
+    trie = os.path.join(model_dir, trie)
+    model = deepspeech.Model(model, beam_width)
+    model.enableDecoderWithLM(lm, trie, lm_alpha, lm_beta)
+    
+    # load audio
+    sampling_rate, audio = wav.read(audio_path)
+
+    if audio.ndim == 2:
+        print("> Transcriber: [WARNING] Your audio has 2 channels. The second one will automatically be removed. While this will work, it is better to resample to 1 channel before running this function.")
+        audio = audio[:, 0]
+    elif audio.ndim > 2:
+        raise Exception("> Transcriber: Your audio has " + str(audio.ndim) + " dimensions/channels. The maximum is two. Please resample to 1 channel.")
+
+    # resample to 16000
+    if sampling_rate != 16000:
+        resample_size = int(len(audio) / sampling_rate * 16000)
+        resample = signal.resample(audio, resample_size)
+        resample16 = np.array(resample, dtype=np.int16)
+        transcript = model.stt(resample16)
+    else:
+        transcript = model.stt(audio)
+    return transcript
 
 def write_to_file(results, save_file):
     file_results = open(save_file, "a+")
@@ -79,16 +112,25 @@ def create_chunks(audio_path, output_path, silence_thresh_offset, min_silence_le
             format = "wav"
         )
 
-def process_chunks(chunk_dir, save_file, method="sphinx"):
+def process_chunks(chunk_dir, save_file, method="sphinx", model_dir=None):
+    """Runs transcription on every chunk (audio file) in a directory"""
     chunks = os.listdir(chunk_dir)
     chunks.sort()
     for chunk in chunks:
         if chunk.endswith(".wav"):
             chunk_path = Path(chunk_dir) / chunk
-            transcript = transcribe_audio(chunk_path, method)
+            if method == "deepspeech":
+                assert model_dir is not None
+                transcript = transcribe_audio_deepspeech(chunk_path, model_dir)
+            else:
+                transcript = transcribe_audio(chunk_path, method)
             write_to_file(transcript, save_file)
 
 def srt_to_string(transcript_path, remove_speakers=False):
+    """
+    Converts a .srt file saved at `transcript_path` to a python string. 
+    Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
+    """
     assert transcript_path.is_file()
     transcript_srt_string = open(transcript_path, "r")
     subtitle_generator = srt.parse(transcript_srt_string)
@@ -102,12 +144,13 @@ def srt_to_string(transcript_path, remove_speakers=False):
     return transcript
 
 def get_youtube_transcript(video_id, output_path):
+    """Downloads the transcript for `video_id` and saves it to `output_path`"""
     downloader = TranscriptDownloader()
     transcript_path = downloader.download(video_id, output_path)
     return transcript_path
 
 def check_transcript(generated_transcript, ground_truth_transcript):
-    """Compares `generated_transcript` to `ground_truth_transcript` to check for accuracy."""
+    """Compares `generated_transcript` to `ground_truth_transcript` to check for accuracy using spacy similarity measurement."""
     nlp = spacy.load("en_vectors_web_lg")
     print("> Transcriber: Loaded Spacy `en_vectors_web_lg`")
     gen_doc = nlp(generated_transcript)
@@ -129,3 +172,6 @@ def check_transcript(generated_transcript, ground_truth_transcript):
 # ground_truth_transcript = transcript
 # similarity = check_transcript(generated_transcript, ground_truth_transcript)
 # print(similarity)
+
+# transcript = transcribe_audio_deepspeech("outputfile.wav", "../deepspeech-models")
+# print(transcript)

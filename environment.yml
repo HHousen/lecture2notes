@@ -7,7 +7,8 @@ channels:
 dependencies:
   - pytorch
   - torchvision
-  - cudatoolkit=10.1
+  - cudatoolkit=10.0
+  - cudnn=7.6
   # - faiss-gpu
   - matplotlib
   - pytesseract
@@ -24,3 +25,7 @@ dependencies:
   - srt
   - spacy
   - pillow=6.1
+  - sox
+  - pip
+  - pip: 
+    - deepspeech-gpu

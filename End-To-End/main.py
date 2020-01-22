@@ -27,12 +27,21 @@ parser.add_argument('-rm', '--remove', dest='remove', action='store_true',
                     help='remove `process_dir` once conversion is complete')
 parser.add_argument('-c', '--chunk', dest='chunk', action='store_true',
                     help='split the audio into small chunks on silence')
-parser.add_argument('-tm', '--transcription_method', default="sphinx", choices=["sphinx", "google", "youtube"],
-                    help='specify the program that should be used for transcription. Either CMU Sphinx (works offline) or Google Speech Recognition (probably will require chunking) or pull a video transcript from YouTube based on video_id')
+parser.add_argument('-tm', '--transcription_method', default="deepspeech", choices=["sphinx", "google", "youtube", "deepspeech"],
+                    help='''specify the program that should be used for transcription. 
+                    CMU Sphinx: use pocketsphinx (works offline)
+                    Google Speech Recognition: probably will require chunking
+                    YouTube: pull a video transcript from YouTube based on video_id
+                    DeepSpeech: Use the deepspeech library (works offline with great accuracy)''')
 parser.add_argument('--video_id', type=str, metavar='ID',
                     help='id of youtube video to get subtitles from')
+parser.add_argument('--deepspeech_model_dir', type=str, metavar='DIR',
+                    help='path containing the DeepSpeech model files. See the documentation for details.')
 
 args = parser.parse_args()
+
+if args.transcription_method == "deepspeech" and args.deepspeech_model_dir is None:
+    parser.error("DeepSpeech method requires --deepspeech_model_dir to be set to the directory containing the deepspeech models. See the documentation for details.")
 
 if args.process_dir == "automatic":
     root_process_folder = Path(os.path.dirname(args.video_path))
@@ -89,8 +98,8 @@ if args.skip_to <= 5:
             transcribe.get_youtube_transcript(args.video_id, transcript_output_file)
         except:
             youtube_transcription_failed = True
-            args.transcription_method = "sphinx"
-            print("> Main Process: Error detected in grabbing transcript from YouTube. Falling back to sphinx transcription.")
+            args.transcription_method = parser.get_default("transcription_method")
+            print("> Main Process: Error detected in grabbing transcript from YouTube. Falling back to " + parser.get_default("transcription_method") + " transcription.")
     if args.transcription_method != "youtube" or youtube_transcription_failed:
         transcript_output_file = root_process_folder / "audio.txt"
         transcribe.extract_audio(extract_from_video, audio_path)
@@ -98,9 +107,15 @@ if args.skip_to <= 5:
             if args.chunk:
                 chunk_dir = root_process_folder / "chunks"
                 transcribe.create_chunks(audio_path, chunk_dir, 5, 2000)
-                transcribe.process_chunks(chunk_dir, transcript_output_file, method=args.transcription_method)
+                if args.transcription_method == "deepspeech":
+                    transcribe.process_chunks(chunk_dir, transcript_output_file, model_dir=args.deepspeech_model_dir, method=args.transcription_method)
+                else:
+                    transcribe.process_chunks(chunk_dir, transcript_output_file, method=args.transcription_method)
             else:
-                transcript = transcribe.transcribe_audio(audio_path, method=args.transcription_method)
+                if args.transcription_method == "deepspeech":
+                    transcript = transcribe.transcribe_audio_deepspeech(audio_path, args.deepspeech_model_dir)
+                else:
+                    transcript = transcribe.transcribe_audio(audio_path, method=args.transcription_method)
                 transcribe.write_to_file(transcript, transcript_output_file)
         except:
             print("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")

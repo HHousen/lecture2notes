@@ -19,6 +19,8 @@ NOTE: The `srt` package is on pypi but not conda. Therefore you have to build it
 3. `conda build srt`
 4. You're done. The `srt` package is now ready to be installed from the `local` channel. You can now create the conda environment using `conda env create`.
 
+Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on [the spacy documentation](https://spacy.io/models/en-starters). More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](End-To-End/transcribe.py) file.
+
 ### Step-by-Step Instructions
 1. Clone this repository: `git clone https://github.com/HHousen/lecture2notes.git`.
 2. Change to project diretory: `cd lecture2notes`.
@@ -232,7 +234,20 @@ Run `python main.py <path_to_video>` to get a notes file.
                             based on video_id
     --video_id ID         id of youtube video to get subtitles from
     ```
-* **ocr**: Provides `all_in_folder()`, which performs OCR on every file in folder and returns results, and `write_to_file`, which writes everything stored in `results` to file at path `save_file` (used to write results from `all_in_folder()` to `save_file`).
+* **ocr**: Provides `all_in_folder()`, which performs OCR on every file in folder and returns results, and `write_to_file()`, which writes everything stored in `results` to file at path `save_file` (used to write results from `all_in_folder()` to `save_file`).
+* **slide_classifier**: Provides `classify_frames()` which automatically sorts images (the extracted frames) using the slide-classifier model.
+* **transcribe**: Implements transcription using four different methods from 3 libraries and other miscellaneous functions related to audio transcription. 
+    * The `sphinx` and `google` methods use the [SpeechRecognition library](https://pypi.org/project/SpeechRecognition/) to access pockersphinx-python and Google Speech Recognition, respectively.
+    * The `youtube` method is implemented in `get_youtube_transcript()` which will download the transcript for a specific `video_id` from youtube using the `TranscriptDownloader` class implemented in `transcript_downloader`. 
+    * Finally, the `deepspeech` method uses the [Mozilla DeepSpeech](https://github.com/mozilla/DeepSpeech) library, which achieves very good accuracy on the [LibriSpeech clean test corpus](https://www.openslr.org/12). In order to use this method in the [main](End-To-End/main.py) script you need to download the latest DeepSpeech model from their [releases page](https://github.com/mozilla/DeepSpeech/releases). Mozilla provides code to download and extract the model on the [project's documentation](https://deepspeech.readthedocs.io/en/v0.6.1/USING.html#getting-the-pre-trained-model). It is possible to manually specify the names of these files. However, if they are named as shown below then you only have to specify one directory and the script with "just work" (the directory name is not important but `deepspeech-models` is descriptive).
+        ```
+        deepspeech-models/
+        ├── lm.binary
+        ├── output_graph.pb
+        ├── output_g
+        ```
+    * This file also implements a chunking process to convert a long audio file into chunks. The audio file is split based on sections with silence. This will increase processing time but is necessary for the `google` method for long audio files since `google` will time out if the filesize is too large.
+    * The `check_transcript()` function compares two transcripts (documents) and returns their similarity according to spacy's similarity metric. This function requires the `en_vectors_web_lg` spacy model which you can learn more about on [the spacy documentation](https://spacy.io/models/en-starters). This file needs to be downloaded in order for this function to work.
 
 ## Meta
 
