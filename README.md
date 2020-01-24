@@ -207,7 +207,7 @@ Run `python main.py <path_to_video>` to get a notes file.
     ```
     usage: main.py [-h] [-s N] [-d PATH] [-id] [-rm] [-c]
                [-tm {sphinx,google,youtube,deepspeech}] [--video_id ID]
-               [--deepspeech_model_dir DIR]
+               [--yt_convert_to_str] [--deepspeech_model_dir DIR]
                DIR
 
     End-to-End Conversion of Lecture Videos to Notes using ML
@@ -235,6 +235,9 @@ Run `python main.py <path_to_video>` to get a notes file.
                             YouTube based on video_id DeepSpeech: Use the
                             deepspeech library (works offline with great accuracy)
     --video_id ID         id of youtube video to get subtitles from
+    --yt_convert_to_str   if the method is `youtube` and this option is
+                            specified then the transcript will be saved as a txt
+                            file instead of a srt file.
     --deepspeech_model_dir DIR
                             path containing the DeepSpeech model files. See the
                             documentation for details.
@@ -253,6 +256,63 @@ Run `python main.py <path_to_video>` to get a notes file.
         ```
     * This file also implements a chunking process to convert a long audio file into chunks. The audio file is split based on sections with silence. This will increase processing time but is necessary for the `google` method for long audio files since `google` will time out if the filesize is too large.
     * The `check_transcript()` function compares two transcripts (documents) and returns their similarity according to spacy's similarity metric. This function requires the `en_vectors_web_lg` spacy model which you can learn more about on [the spacy documentation](https://spacy.io/models/en-starters). This file needs to be downloaded in order for this function to work.
+* **mic_vad_streaming**: Uses Voice Activity Detection (VAD) from `webrtcvad` to detect words and then converts them to text in real time using `deepspeech`. This is a modified version of the example file from the [deepspeech examples repository](https://github.com/mozilla/DeepSpeech-examples/tree/r0.6/mic_vad_streaming). Importantly, the final output can be saved using the `--write_transcript` option and specify a text file path. 
+    * To select the correct input device, the code below can be used. It will print a list of devices and associated parameters as detected by pyaudio.
+    ```
+    import pyaudio
+    p = pyaudio.PyAudio()
+    for i in range(p.get_device_count()):
+        print(p.get_device_info_by_index(i))
+    ```
+    * Output of `python mic_vad_streaming.py --help`
+    ```
+    usage: mic_vad_streaming.py [-h] [-v VAD_AGGRESSIVENESS] [--nospinner]
+                            [-w SAVEWAV] [-f FILE]
+                            [--write_transcript WRITE_TRANSCRIPT] -m MODEL
+                            [-l LM] [-t TRIE] [-d DEVICE] [-r RATE] [-ar]
+                            [-la LM_ALPHA] [-lb LM_BETA] [-bw BEAM_WIDTH]
+
+    Stream from microphone to DeepSpeech using VAD
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -v VAD_AGGRESSIVENESS, --vad_aggressiveness VAD_AGGRESSIVENESS
+                            Set aggressiveness of VAD: an integer between 0 and 3,
+                            0 being the least aggressive about filtering out non-
+                            speech, 3 the most aggressive. Default: 3
+    --nospinner           Disable spinner
+    -w SAVEWAV, --savewav SAVEWAV
+                            Save .wav files of utterences to given directory
+    -f FILE, --file FILE  Read from .wav file instead of microphone
+    --write_transcript WRITE_TRANSCRIPT
+                            Optional path to save the final concatenated output of
+                            all recognized text pieces.
+    -m MODEL, --model MODEL
+                            Path to the model (protocol buffer binary file, or
+                            entire directory containing all standard-named files
+                            for model)
+    -l LM, --lm LM        Path to the language model binary file. Default:
+                            lm.binary
+    -t TRIE, --trie TRIE  Path to the language model trie file created with
+                            native_client/generate_trie. Default: trie
+    -d DEVICE, --device DEVICE
+                            Device input index (Int) as listed by
+                            pyaudio.PyAudio.get_device_info_by_index(). If not
+                            provided, falls back to PyAudio.get_default_device().
+    -r RATE, --rate RATE  Input device sample rate. Default: 16000. Your device
+                            may require 44100.
+    -ar, --rate_auto      Automatically set the --rate (input device sampling
+                            rate) to its default rate according to pyaudio.
+    -la LM_ALPHA, --lm_alpha LM_ALPHA
+                            The alpha hyperparameter of the CTC decoder. Language
+                            Model weight. Default: 0.75
+    -lb LM_BETA, --lm_beta LM_BETA
+                            The beta hyperparameter of the CTC decoder. Word
+                            insertion bonus. Default: 1.85
+    -bw BEAM_WIDTH, --beam_width BEAM_WIDTH
+                            Beam width used in the CTC decoder when building
+                            candidate transcriptions. Default: 500
+    ```
 
 ## Meta
 

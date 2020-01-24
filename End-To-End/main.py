@@ -35,6 +35,8 @@ parser.add_argument('-tm', '--transcription_method', default="deepspeech", choic
                     DeepSpeech: Use the deepspeech library (works offline with great accuracy)''')
 parser.add_argument('--video_id', type=str, metavar='ID',
                     help='id of youtube video to get subtitles from')
+parser.add_argument('--yt_convert_to_str', action='store_true',
+                    help='if the method is `youtube` and this option is specified then the transcript will be saved as a txt file instead of a srt file.')
 parser.add_argument('--deepspeech_model_dir', type=str, metavar='DIR',
                     help='path containing the DeepSpeech model files. See the documentation for details.')
 
@@ -91,17 +93,20 @@ if args.skip_to <= 5:
     import transcribe
     extract_from_video = args.video_path
     audio_path = root_process_folder / "audio.wav"
+    transcript_output_file = root_process_folder / "audio.txt"
 
     if args.transcription_method == "youtube":
-        transcript_output_file = root_process_folder / "audio.srt"
+        yt_output_file = root_process_folder / "audio.srt"
         try:
-            transcribe.get_youtube_transcript(args.video_id, transcript_output_file)
+            transcript_path = transcribe.get_youtube_transcript(args.video_id, yt_output_file)
+            if args.yt_convert_to_str:
+                transcript = transcribe.srt_to_string(transcript_path)
+                transcribe.write_to_file(transcript, transcript_output_file)
         except:
             youtube_transcription_failed = True
             args.transcription_method = parser.get_default("transcription_method")
             print("> Main Process: Error detected in grabbing transcript from YouTube. Falling back to " + parser.get_default("transcription_method") + " transcription.")
     if args.transcription_method != "youtube" or youtube_transcription_failed:
-        transcript_output_file = root_process_folder / "audio.txt"
         transcribe.extract_audio(extract_from_video, audio_path)
         try:
             if args.chunk:

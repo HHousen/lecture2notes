@@ -26,6 +26,9 @@ dependencies:
   - spacy
   - pillow=6.1
   - sox
+  - pyaudio
   - pip
   - pip: 
     - deepspeech-gpu
+    - webrtcvad
+    - halo
