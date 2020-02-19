@@ -13,6 +13,7 @@ from helpers import *
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
 from custom_nnmodules import *
+sys.path.insert(1, os.path.join(sys.path[0], '../Models/summarizer'))
 
 parser = argparse.ArgumentParser(description='End-to-End Conversion of Lecture Videos to Notes using ML')
 parser.add_argument('video_path', metavar='DIR',
@@ -89,6 +90,7 @@ if args.skip_to <= 4:
     results = ocr.all_in_folder(best_samples_dir)
     ocr.write_to_file(results, save_file)
 
+# 5. Transcribe Audio
 if args.skip_to <= 5:
     import transcribe
     extract_from_video = args.video_path
@@ -124,6 +126,26 @@ if args.skip_to <= 5:
                 transcribe.write_to_file(transcript, transcript_output_file)
         except:
             print("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")
+
+# 6. Summarize Transcript
+if args.skip_to <= 6:
+    if args.skip_to >= 6: # if step 5 transcription was skipped
+        import transcribe
+        transcript_output_file = root_process_folder / "audio.txt"
+        transcript_file = open(transcript_output_file, "r")
+        transcript = transcript_file.read()
+        transcript_file.close()
+    transcript_summarized_output_file = root_process_folder / "audio_summarized.txt"
+    import bart_sum
+    bart = bart_sum.load_bart()
+
+    transcript_length = len(transcript.split())
+    min_len = int(transcript_length/6)
+    if min_len > 500:
+        # If the length is too long the model will start to repeat
+        min_len = 500
+    transcript_summarized = bart_sum.summarize(bart, transcript, min_len=min_len, max_len_b=min_len+200)
+    transcribe.write_to_file(transcript_summarized, transcript_summarized_output_file)
 
 # if args.remove:
 #     rmtree(root_process_folder)

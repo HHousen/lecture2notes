@@ -173,5 +173,5 @@ def check_transcript(generated_transcript, ground_truth_transcript):
 # similarity = check_transcript(generated_transcript, ground_truth_transcript)
 # print(similarity)
 
-# transcript = transcribe_audio_deepspeech("outputfile.wav", "../deepspeech-models")
+# transcript = transcribe_audio_deepspeech("process/audio.wav", "../deepspeech-models")
 # print(transcript)
