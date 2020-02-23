@@ -3,7 +3,7 @@ import os
 def download_video(row, video_dir, output_dir_yt):
     video_id = row['video_id']
     if row['provider'] == "youtube":
-        os.system('youtube-dl -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" ' + video_id + ' -o ' + output_dir_yt)
+        os.system('youtube-dl -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" -o ' + output_dir_yt + ' -- ' + video_id)
     elif row['provider'] == "website":
         download_link = row['download_link']
         file_extension = download_link.split(".")[-1]
@@ -28,8 +28,8 @@ def get_length(filename):
     return result
 
 def get_extract_every_x_seconds(seconds):
-    # Specifying `number of frames wanted` instead of `extract every x seconds` because 
-    # `number of frames wanted` will scale to the length of the video. Longer videos are 
+    # Specifying `number of frames wanted` instead of `extract every x seconds` because
+    # `number of frames wanted` will scale to the length of the video. Longer videos are
     # likely to stay focused on one subject longer than shorter videos.
 
     # Default is 200 frames
@@ -42,5 +42,5 @@ def get_extract_every_x_seconds(seconds):
     # Exception for very long videos
     if seconds > 4800: # 80 minuets
         num_frames_wanted = 300
-    
+
     return seconds / num_frames_wanted

@@ -2,6 +2,7 @@ import os, operator, sys, shutil
 from pathlib import Path
 from termcolor import colored
 import pandas as pd
+from PIL import Image
 
 videos_dir = Path('../videos')
 sorted_videos_list = []
@@ -15,8 +16,8 @@ else:
     import inspect
     # Hack to import modules from different parent directory
     sys.path.insert(1, os.path.join(sys.path[0], '../../Models/slide-classifier'))
-    from custom_nnmodules import *
-    from inference import *
+    from custom_nnmodules import * #pylint: disable=import-error,wildcard-import
+    from inference import * #pylint: disable=import-error,wildcard-import
 
 def model_predict_fastai(img_path, percent=False):
     img = open_image(img_path)
@@ -66,7 +67,7 @@ for item in os.listdir(videos_dir):
                 os.makedirs(classified_image_dir)
             shutil.move(str(current_frame_path), str(classified_image_dir))
         if num_incorrect == 0:
-            df.loc[len(df.index)]=[item,frame,best_guess,prob_max_correct]
+            # df.loc[len(df.index)]=[item,frame,best_guess,prob_max_correct]
             percent_wrong = 0
         else:
             percent_wrong = (num_incorrect / num_frames) * 100

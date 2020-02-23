@@ -3,8 +3,8 @@ from tqdm import tqdm
 from helpers import make_dir_if_not_exist
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
-from class_cluster_scikit import Cluster
-from custom_nnmodules import *
+from class_cluster_scikit import Cluster #pylint: disable=import-error,wrong-import-position
+from custom_nnmodules import * #pylint: disable=import-error,wrong-import-position,wildcard-import
 import inference
 from PIL import Image
 

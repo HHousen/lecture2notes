@@ -1,14 +1,14 @@
-import os, sys, operator, inspect, shutil
-from pathlib import Path
+import os, sys, shutil
 from helpers import make_dir_if_not_exist
 from termcolor import colored
+from PIL import Image
 
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
-from custom_nnmodules import *
-from inference import *
+from custom_nnmodules import * #pylint: disable=import-error,wrong-import-position,wildcard-import
+import inference #pylint: disable=wrong-import-position
 
-def classify_frames(frames_dir, do_move=True):
+def classify_frames(frames_dir, do_move=True, incorrect_treshold=0.60):
     certainties = []
     frames_sorted_dir = frames_dir.parents[0] / "frames_sorted"
     print("> AI Prediction Engine: Received inputs:\nframes_dir=" + str(frames_dir))
@@ -21,12 +21,12 @@ def classify_frames(frames_dir, do_move=True):
         print("> AI Prediction Engine: Progress: " + str(idx+1) + "/" + str(num_frames))
         current_frame_path = os.path.join(frames_dir, frame)
         # run classification
-        best_guess, best_guess_idx, probs, extracted_features = get_prediction(Image.open(current_frame_path))
+        best_guess, best_guess_idx, probs, _ = inference.get_prediction(Image.open(current_frame_path), extract_features=False) #pylint: disable=no-member
         prob_max_correct = list(probs.values())[best_guess_idx]
         certainties.append(prob_max_correct)
         print("> AI Prediction Engine: Prediction is " + best_guess)
         print("> AI Prediction Engine: Probabilities are " + str(probs))
-        if prob_max_correct < 0.60:
+        if prob_max_correct < incorrect_treshold:
             num_incorrect = num_incorrect + 1
             print(colored(str(prob_max_correct) + " Likely Incorrect", 'red'))
         else:

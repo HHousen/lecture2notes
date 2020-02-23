@@ -22,9 +22,6 @@ from torch.utils.tensorboard import SummaryWriter
 from efficientnet_pytorch import EfficientNet
 
 import matplotlib as mpl
-if os.environ.get('DISPLAY','') == '':
-    print('=> MatPlotLib: No display found. Using non-interactive Agg backend')
-    mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -33,22 +30,26 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support, con
 
 from tqdm import tqdm
 
-from custom_nnmodules import *
+from custom_nnmodules import * #pylint: disable=wildcard-import
 
-model_names = sorted(name for name in models.__dict__
-    if name.islower() and not name.startswith("__")
-    and callable(models.__dict__[name]))
-# Add EfficientNet models separately becuase they come from the 
+if os.environ.get('DISPLAY', '') == '':
+    print('=> MatPlotLib: No display found. Using non-interactive Agg backend')
+    mpl.use('Agg')
+
+MODEL_NAMES = sorted(name for name in models.__dict__
+                     if name.islower() and not name.startswith("__")
+                     and callable(models.__dict__[name]))
+# Add EfficientNet models separately because they come from the
 # lukemelas/EfficientNet-PyTorch package not the main pytorch code
-model_names += ["efficientnet-b" + str(i) for i in range(0, 7)]
+MODEL_NAMES += ["efficientnet-b" + str(i) for i in range(0, 7)]
 
 parser = argparse.ArgumentParser(description='PyTorch Slide Classifier Training')
 parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet34',
-                    choices=model_names,
+                    choices=MODEL_NAMES,
                     help='model architecture: ' +
-                        ' | '.join(model_names) +
+                        ' | '.join(MODEL_NAMES) +
                         ' (default: resnet34)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
@@ -59,7 +60,8 @@ parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
 parser.add_argument('-b', '--batch-size', default=16, type=int,
                     metavar='N',
                     help='mini-batch size (default: 16)')
-parser.add_argument('--lr', '--learning-rate', default=4e-3, type=float, # 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
+# 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
+parser.add_argument('--lr', '--learning-rate', default=4e-3, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum. Ranger optimizer suggests 0.95.')
@@ -80,7 +82,8 @@ parser.add_argument('-p', '--print-freq', default=-1, type=int,
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
-                    help='evaluate model on validation set and generate overall statistics/confusion matrix')
+                    help='evaluate model on validation set and generate overall ' +
+                    'statistics/confusion matrix')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='use pre-trained model')
 parser.add_argument('--seed', default=None, type=int,
@@ -107,11 +110,11 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 def set_parameter_requires_grad(model, feature_extracting):
-    """This helper function sets the .requires_grad attribute of the parameters in 
-    the model to False when we are feature extracting. By default, when we load a 
-    pretrained model all of the parameters have .requires_grad=True, which is fine 
-    if we are training from scratch or finetuning. However, if we are feature 
-    extracting and only want to compute gradients for the newly initialized layer 
+    """This helper function sets the .requires_grad attribute of the parameters in
+    the model to False when we are feature extracting. By default, when we load a
+    pretrained model all of the parameters have .requires_grad=True, which is fine
+    if we are training from scratch or finetuning. However, if we are feature
+    extracting and only want to compute gradients for the newly initialized layer
     then we want all of the other parameters to not require gradients."""
     if feature_extracting:
         for module in model.modules():
@@ -162,7 +165,8 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
 
-    train_dataset, val_dataset, classes = get_datasets(args)
+    input_size = get_input_size(args.arch)
+    train_dataset, val_dataset, classes = get_datasets(args, input_size)
 
     train_sampler = None
 
@@ -176,11 +180,11 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
         num_workers=args.workers, pin_memory=True)
 
     # Create model
-    model, input_size, params_to_update = initialize_model(len(classes), args.feature_extract, args)
+    model, params_to_update = initialize_model(len(classes), args.feature_extract, args)
     print("Model:\n" + str(model))
 
     if args.tensorboard and args.tensorboard_model:
-        images, labels = next(iter(train_loader))
+        images, _ = next(iter(train_loader))
         writer.add_graph(model, images)
 
     if args.gpu is not None:
@@ -211,14 +215,14 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
                                     weight_decay=args.weight_decay)
     elif args.optim == "ranger":
         from ranger.ranger import Ranger
-        optimizer = Ranger(params_to_update, args.lr, k=args.optim_k, 
-                            betas=(args.momentum,args.optim_alpha), 
-                            eps=args.optim_eps, weight_decay=args.weight_decay)
+        optimizer = Ranger(params_to_update, args.lr, k=args.optim_k,
+                           betas=(args.momentum, args.optim_alpha),
+                           eps=args.optim_eps, weight_decay=args.weight_decay)
     else:
         optimizer = torch.optim.Adam(params_to_update, args.lr, 
-                                    betas=(args.momentum,args.optim_alpha), 
-                                    eps=args.optim_eps,
-                                    weight_decay=args.weight_decay)
+                                     betas=(args.momentum, args.optim_alpha),
+                                     eps=args.optim_eps,
+                                     weight_decay=args.weight_decay)
     
     # optionally resume from a checkpoint
     if args.resume:
@@ -245,9 +249,9 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
     cudnn.benchmark = True
 
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimizer, 
-        max_lr=args.lr, 
-        steps_per_epoch=len(train_loader), 
+        optimizer,
+        max_lr=args.lr,
+        steps_per_epoch=len(train_loader),
         epochs=args.epochs)
 
     if args.evaluate:
@@ -268,6 +272,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
 
         save_checkpoint({
             'model': model,
+            'input_size': input_size,
             'epoch': epoch + 1,
             'arch': args.arch,
             'state_dict': model.state_dict(),
@@ -276,7 +281,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
             'class_index': classes
         }, is_best)
 
-def get_datasets(args):
+def get_datasets(args, input_size):
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
@@ -287,6 +292,7 @@ def get_datasets(args):
             args.data,
             transforms.Compose([
                 transforms.Resize((480,640)),
+                transforms.CenterCrop(input_size),
                 transforms.RandomVerticalFlip(),
                 transforms.ToTensor(),
                 normalize,
@@ -302,7 +308,8 @@ def get_datasets(args):
         train_dataset = datasets.ImageFolder(
             traindir,
             transforms.Compose([
-                transforms.RandomResizedCrop(224),
+                transforms.Resize((480,640)),
+                transforms.CenterCrop(input_size),
                 transforms.RandomVerticalFlip(),
                 transforms.ToTensor(),
                 normalize,
@@ -311,8 +318,8 @@ def get_datasets(args):
         val_dataset = datasets.ImageFolder(
             valdir, 
             transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
+                transforms.Resize((480,640)),
+                transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
                 normalize,
             ])
@@ -336,6 +343,18 @@ def create_head(out_features):
     ]
     return nn.Sequential(*layers)
 
+def get_input_size(arch): 
+    if arch.startswith("efficientnet"):
+        model_type = arch.split('-', 1)[-1] # get everything after "-"
+        if model_type.startswith("b"):
+            input_sizes = [224, 240, 260, 300, 380, 456, 528, 600, 672]
+            input_size = input_sizes[int(model_type[-1:])] # select size from array that matches last character of `model_type`
+    elif arch.startswith("inception"):
+        input_size = 299
+    else:
+        input_size = 224
+    return input_size
+
 def initialize_model(num_classes, feature_extract, args):
     def get_updateable_params(model, feature_extract):
         """
@@ -349,13 +368,13 @@ def initialize_model(num_classes, feature_extract, args):
         if feature_extract:
             params_to_update = []
             for name,param in model.named_parameters():
-                if param.requires_grad == True:
+                if param.requires_grad:
                     params_to_update.append(param)
                     print("\t",name)
         else:
             params_to_update = model_ft.parameters()
             for name,param in model.named_parameters():
-                if param.requires_grad == True:
+                if param.requires_grad:
                     print("\t",name)
         return params_to_update
     
@@ -370,8 +389,6 @@ def initialize_model(num_classes, feature_extract, args):
             model_ft = EfficientNet.from_name(args.arch)
     else:
         model_ft = models.__dict__[args.arch](pretrained=args.pretrained)
-    
-    input_size = 0
 
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
@@ -379,7 +396,6 @@ def initialize_model(num_classes, feature_extract, args):
         print("=> creating model '{}'".format(args.arch))
 
     if args.arch.startswith("resnet"):
-        """ Resnet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
 
@@ -393,58 +409,41 @@ def initialize_model(num_classes, feature_extract, args):
         else:
             # Reshape model so last layer has 512 input features and num_classes output features
             model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
 
     elif args.arch.startswith("efficientnet"):
-        """ EfficientNet """
         set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft._fc.in_features
-        model_ft._fc = nn.Linear(num_ftrs, num_classes)
-        model_type = args.arch.split('-', 1)[-1] # get everything after "-"
-        if model_type.startswith("b"):
-            input_sizes = [224, 240, 260, 300, 380, 456, 528, 600, 672]
-            input_size = input_sizes[int(model_type[-1:])] # select size from array that matches last character of `model_type`
+        num_ftrs = model_ft._fc.in_features #pylint: disable=protected-access
+        model_ft._fc = nn.Linear(num_ftrs, num_classes) #pylint: disable=protected-access
 
     elif args.arch.startswith("alexnet"):
-        """ Alexnet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
-        model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
-        input_size = 224
+        model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
 
     elif args.arch.startswith("vgg"):
-        """ VGG11_bn """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
-        model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
-        input_size = 224
+        model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
 
     elif args.arch.startswith("squeezenet"):
-        """ Squeezenet """
         set_parameter_requires_grad(model_ft, feature_extract)
         model_ft.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1,1), stride=(1,1))
         model_ft.num_classes = num_classes
-        input_size = 224
 
     elif args.arch.startswith("densenet"):
-        """ Densenet """
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier.in_features
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
 
     elif args.arch.startswith("inception"):
-        """ Inception v3
-        Be careful, expects (299,299) sized images and has auxiliary output
-        """
+        # Be careful, expects (299,299) sized images and has auxiliary output
         set_parameter_requires_grad(model_ft, feature_extract)
-        # Handle the auxilary net
+        # Handle the auxiliary net
         num_ftrs = model_ft.AuxLogits.fc.in_features
         model_ft.AuxLogits.fc = nn.Linear(num_ftrs, num_classes)
         # Handle the primary net
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs,num_classes)
-        input_size = 299
 
     else:
         print("Invalid model name, exiting...")
@@ -455,9 +454,8 @@ def initialize_model(num_classes, feature_extract, args):
 
     params_to_update = get_updateable_params(model_ft, feature_extract)
 
-    return model_ft, input_size, params_to_update
+    return model_ft, params_to_update
 
-# TODO: This has never been tested
 def convert_relu_to_mish(model):
     from mish import mish
     for child_name, child in model.named_children():
@@ -589,7 +587,7 @@ def final_evaluate(val_loader, model, classes, args):
     preds = []
     targets = []
     with torch.no_grad():
-        for i, (images, target) in tqdm(enumerate(val_loader), total=len(val_loader), desc=("Final Stats")):
+        for (images, target) in tqdm(val_loader, total=len(val_loader), desc=("Final Stats")):
             if args.gpu is not None:
                 images = images.cuda(args.gpu, non_blocking=True)
 
@@ -615,6 +613,8 @@ class AverageMeter(object):
     def __init__(self, name, fmt=':f'):
         self.name = name
         self.fmt = fmt
+        self.val = None
+        self.avg = None
         self.reset()
 
     def reset(self):
