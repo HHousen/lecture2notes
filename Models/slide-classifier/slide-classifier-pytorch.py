@@ -17,6 +17,9 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
+from torch.utils.tensorboard import SummaryWriter
+
+from efficientnet_pytorch import EfficientNet
 
 import matplotlib as mpl
 if os.environ.get('DISPLAY','') == '':
@@ -35,6 +38,9 @@ from custom_nnmodules import *
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
+# Add EfficientNet models separately becuase they come from the 
+# lukemelas/EfficientNet-PyTorch package not the main pytorch code
+model_names += ["efficientnet-b" + str(i) for i in range(0, 7)]
 
 parser = argparse.ArgumentParser(description='PyTorch Slide Classifier Training')
 parser.add_argument('data', metavar='DIR',
@@ -56,10 +62,19 @@ parser.add_argument('-b', '--batch-size', default=16, type=int,
 parser.add_argument('--lr', '--learning-rate', default=4e-3, type=float, # 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                    help='momentum')
+                    help='momentum. Ranger optimizer suggests 0.95.')
 parser.add_argument('--wd', '--weight-decay', default=1e-2, type=float,
                     metavar='W', help='weight decay (default: 1e-2)',
                     dest='weight_decay')
+parser.add_argument('-k', '--ranger-k', default=6, type=int,
+                    metavar='K', help='Ranger (Lookahead) optimizer k value (default: 6)',
+                    dest='optim_k')
+parser.add_argument('--alpha', default=0.999, type=float,
+                    metavar='N', help='Optimizer alpha parameter (default: 0.999)',
+                    dest='optim_alpha')
+parser.add_argument('--eps', default=1e-8, type=float,
+                    metavar='N', help='Optimizer eps parameter (default: 1e-8)',
+                    dest='optim_eps')
 parser.add_argument('-p', '--print-freq', default=-1, type=int,
                     metavar='N', help='print frequency (default: -1)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
@@ -74,14 +89,22 @@ parser.add_argument('--gpu', default=None, type=int,
                     help='GPU id to use.')
 parser.add_argument('--random_split', dest='use_random_split', action='store_true',
                     help='use random_split to create train and val set instead of train and val folders')
+parser.add_argument('--relu_to_mish', dest='relu_to_mish', action='store_true',
+                    help='convert any relu activations to mish activations')
 parser.add_argument('--feature_extract', choices=["normal", "advanced"],
                     help='If False, we finetune the whole model. When normal we only update the reshaped layer params. When advanced use fastai version of feature extracting (add fancy group of layers and only update this group and BatchNorm)')
 parser.add_argument('--find_lr', dest='use_find_lr', action='store_true',
                     help='Flag for lr_finder.')
 parser.add_argument('-o', '--optimizer', default='adamw', dest='optim',
                     help='Optimizer to use (default=AdamW)')
+parser.add_argument('--tensorboard-model', dest='tensorboard_model', action='store_true',
+                    help='Flag to write the model to tensorboard. Action is RAM intensive.')
+parser.add_argument('--tensorboard', default='', type=str, metavar='PATH',
+                    help='Path to tensorboard logdir. Tensorboard not used if not set.')
 
 best_acc1 = 0
+torch.manual_seed(42)
+np.random.seed(42)
 
 def set_parameter_requires_grad(model, feature_extracting):
     """This helper function sets the .requires_grad attribute of the parameters in 
@@ -109,6 +132,11 @@ def main():
     
     args = parser.parse_args()
 
+    if args.tensorboard:
+        writer = SummaryWriter(args.tensorboard)
+    else:
+        writer = None
+
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -124,10 +152,10 @@ def main():
 
     ngpus_per_node = torch.cuda.device_count()
     # Simply call main_worker function
-    main_worker(args.gpu, ngpus_per_node, args)
+    main_worker(args.gpu, ngpus_per_node, args, writer)
 
 
-def main_worker(gpu, ngpus_per_node, args):
+def main_worker(gpu, ngpus_per_node, args, writer=None):
     global best_acc1
     args.gpu = gpu
 
@@ -150,6 +178,10 @@ def main_worker(gpu, ngpus_per_node, args):
     # Create model
     model, input_size, params_to_update = initialize_model(len(classes), args.feature_extract, args)
     print("Model:\n" + str(model))
+
+    if args.tensorboard and args.tensorboard_model:
+        images, labels = next(iter(train_loader))
+        writer.add_graph(model, images)
 
     if args.gpu is not None:
         torch.cuda.set_device(args.gpu)
@@ -177,9 +209,16 @@ def main_worker(gpu, ngpus_per_node, args):
         optimizer = torch.optim.SGD(params_to_update, args.lr,
                                     momentum=args.momentum,
                                     weight_decay=args.weight_decay)
+    elif args.optim == "ranger":
+        from ranger.ranger import Ranger
+        optimizer = Ranger(params_to_update, args.lr, k=args.optim_k, 
+                            betas=(args.momentum,args.optim_alpha), 
+                            eps=args.optim_eps, weight_decay=args.weight_decay)
     else:
-        optimizer = torch.optim.Adam(params_to_update, args.lr,
-                                weight_decay=args.weight_decay)
+        optimizer = torch.optim.Adam(params_to_update, args.lr, 
+                                    betas=(args.momentum,args.optim_alpha), 
+                                    eps=args.optim_eps,
+                                    weight_decay=args.weight_decay)
     
     # optionally resume from a checkpoint
     if args.resume:
@@ -212,16 +251,16 @@ def main_worker(gpu, ngpus_per_node, args):
         epochs=args.epochs)
 
     if args.evaluate:
-        validate(val_loader, model, criterion, args)
+        validate(val_loader, model, criterion, writer, args)
         final_evaluate(val_loader, model, classes, args)
         return
 
     for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Overall"):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, scheduler, epoch, args)
+        train(train_loader, model, criterion, optimizer, scheduler, epoch, writer, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1 = validate(val_loader, model, criterion, writer, args, epoch=epoch)
 
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
@@ -321,9 +360,19 @@ def initialize_model(num_classes, feature_extract, args):
         return params_to_update
     
     # Initialize these variables which will be set in this if statement. Each of these
-    # variables is model specific.
-    model_ft = models.__dict__[args.arch](pretrained=args.pretrained)
+    # variables is model specific. EfficientNet is separate because it has not been
+    # implemented in the main pytorch repository yet. Instead this script uses the 
+    # lukemelas/EfficientNet-PyTorch package. 
+    if args.arch.startswith("efficientnet"):
+        if args.pretrained:
+            model_ft = EfficientNet.from_pretrained(args.arch)
+        else:
+            model_ft = EfficientNet.from_name(args.arch)
+    else:
+        model_ft = models.__dict__[args.arch](pretrained=args.pretrained)
+    
     input_size = 0
+
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
     else:
@@ -345,6 +394,16 @@ def initialize_model(num_classes, feature_extract, args):
             # Reshape model so last layer has 512 input features and num_classes output features
             model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 224
+
+    elif args.arch.startswith("efficientnet"):
+        """ EfficientNet """
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft._fc.in_features
+        model_ft._fc = nn.Linear(num_ftrs, num_classes)
+        model_type = args.arch.split('-', 1)[-1] # get everything after "-"
+        if model_type.startswith("b"):
+            input_sizes = [224, 240, 260, 300, 380, 456, 528, 600, 672]
+            input_size = input_sizes[int(model_type[-1:])] # select size from array that matches last character of `model_type`
 
     elif args.arch.startswith("alexnet"):
         """ Alexnet """
@@ -391,11 +450,23 @@ def initialize_model(num_classes, feature_extract, args):
         print("Invalid model name, exiting...")
         exit()
 
+    if args.relu_to_mish:
+        convert_relu_to_mish(model_ft)
+
     params_to_update = get_updateable_params(model_ft, feature_extract)
 
     return model_ft, input_size, params_to_update
 
-def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
+# TODO: This has never been tested
+def convert_relu_to_mish(model):
+    from mish import mish
+    for child_name, child in model.named_children():
+        if isinstance(child, nn.ReLU):
+            setattr(model, child_name, mish(inplace = True))
+        else:
+            convert_relu_to_mish(child)
+
+def train(train_loader, model, criterion, optimizer, scheduler, epoch, writer, args):
     num_batches = len(train_loader)
     batch_time = AverageMeter('Time', ':5.3f')
     data_time = AverageMeter('Data', ':5.3f')
@@ -456,8 +527,11 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args):
             progress.display(i)
     progress.display(average=True)
 
+    if args.tensorboard:
+        progress.to_tensorboard(epoch, writer, "train")
 
-def validate(val_loader, model, criterion, args):
+
+def validate(val_loader, model, criterion, writer, args, epoch=None):
     batch_time = AverageMeter('Time', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':5.3f')
@@ -503,6 +577,9 @@ def validate(val_loader, model, criterion, args):
                 progress.display(i)
 
         progress.display(average=True)
+
+        if args.tensorboard:
+            progress.to_tensorboard(epoch, writer, "validate")
 
     return top1.avg
 
@@ -555,6 +632,9 @@ class AverageMeter(object):
     def avg_string(self):
         fmtstr = '{name} {avg' + self.fmt + '}'
         return fmtstr.format(**self.__dict__)
+    
+    def to_tensorboard(self, y_axis, writer, extra_title):
+        writer.add_scalar(self.name + "/" + extra_title, self.avg, y_axis)
 
     def __str__(self):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
@@ -581,6 +661,10 @@ class ProgressMeter(object):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
+    
+    def to_tensorboard(self, y_axis, writer, extra_title=""):
+        for meter in self.meters:
+            meter.to_tensorboard(y_axis, writer, extra_title=extra_title)
 
 def plot_confusion_matrix(y_pred, y_true, classes,
                           normalize=False,

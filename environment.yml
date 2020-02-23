@@ -27,8 +27,12 @@ dependencies:
   - pillow=6.1
   - sox
   - pyaudio
+  - tensorboard
+  - isodate
   - pip
   - pip: 
     - deepspeech-gpu
     - webrtcvad
     - halo
+    - efficientnet-pytorch
+    - setuptools==41.0.0

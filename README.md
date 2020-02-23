@@ -130,6 +130,38 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
 
 > All of the machine learning model code used in this project is located here.
 
+#### Slide Classifier
+
+This model classifies a video frame from a lecture video according to the following 9 categories:
+
+* audience
+* audience_presenter
+* audience_presenter_slide
+* demo
+* presenter
+* presenter_slide
+* presenter_whiteboard
+* slide
+* whiteboard
+
+##### Training Configurations (Commands)
+
+1. **efficientnet-ranger:** python slide-classifier-pytorch.py -a efficientnet-b0 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/efficientnet-adamw
+2. **efficientnet-adamw:** python slide-classifier-pytorch.py -a efficientnet-b0 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/efficientnet-adamw-optimized --momentum 0.95 --eps 1e-5 --wd 0
+3. **resnet34-adamw:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-adamw
+4. **resnet34-ranger:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-ranger -o ranger -k 3 --momentum 0.95 --eps 1e-5 --wd 0
+5. **resnet34-adamw-mish:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-adamw-mish --relu_to_mish
+
+##### Pretrained Models
+
+Not completed yet.
+
+##### Raw Data Download
+
+Not completed yet.
+
+##### Script Descriptions
+
 * **class_cluster_scikit**: Implements `KMeans` and `AffinityPropagation` from `sklearn.cluster` to provde a `Cluster` class. Code is documented in file. Purpose is to add feature vectors using `add()`, then cluster the features, and finally return a list of files and their corresponding cluster centroids with `create_move_list()`. Two important functions and their use cases follow:
     * `create_move_list()` function is what is called by [cluster.py](End-To-End/cluster.py) and returns a list of filenames and their coresponding clusters.
     * `calculate_best_k()` function generates a graph (saved to `best_k_value.png` if using Agg matplotlib backend) that graphs the cost (squared error) as a function of the number of centroids (value of k) if the algorithm is `"kmeans"`.
@@ -143,11 +175,13 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
     ```
     usage: slide-classifier-pytorch.py [-h] [-a ARCH] [-j N] [--epochs N]
                                    [--start-epoch N] [-b N] [--lr LR]
-                                   [--momentum M] [--wd W] [-p N]
-                                   [--resume PATH] [-e] [--pretrained]
-                                   [--seed SEED] [--gpu GPU] [--random_split]
+                                   [--momentum M] [--wd W] [-k K] [--alpha N]
+                                   [--eps N] [-p N] [--resume PATH] [-e]
+                                   [--pretrained] [--seed SEED] [--gpu GPU]
+                                   [--random_split] [--relu_to_mish]
                                    [--feature_extract {normal,advanced}]
                                    [--find_lr] [-o OPTIM]
+                                   [--tensorboard-model] [--tensorboard PATH]
                                    DIR
 
     PyTorch Slide Classifier Training
@@ -162,24 +196,31 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
                             | resnet101 | resnet152 | resnet18 | resnet34 |
                             resnet50 | squeezenet1_0 | squeezenet1_1 | vgg11 |
                             vgg11_bn | vgg13 | vgg13_bn | vgg16 | vgg16_bn | vgg19
-                            | vgg19_bn (default: resnet34)
+                            | vgg19_bn | efficientnet-b0 | efficientnet-b1 |
+                            efficientnet-b2 | efficientnet-b3 | efficientnet-b4 |
+                            efficientnet-b5 | efficientnet-b6 (default: resnet34)
     -j N, --workers N     number of data loading workers (default: 4)
     --epochs N            number of total epochs to run (default: 6)
     --start-epoch N       manual epoch number (useful on restarts)
     -b N, --batch-size N  mini-batch size (default: 16)
     --lr LR, --learning-rate LR
                             initial learning rate
-    --momentum M          momentum
+    --momentum M          momentum. Ranger optimizer suggests 0.95.
     --wd W, --weight-decay W
                             weight decay (default: 1e-2)
-    -p N, --print-freq N  print frequency (default: 10)
+    -k K, --ranger-k K    Ranger (Lookahead) optimizer k value (default: 6)
+    --alpha N             Optimizer alpha parameter (default: 0.999)
+    --eps N               Optimizer eps parameter (default: 1e-8)
+    -p N, --print-freq N  print frequency (default: -1)
     --resume PATH         path to latest checkpoint (default: none)
-    -e, --evaluate        evaluate model on validation set
+    -e, --evaluate        evaluate model on validation set and generate overall
+                            statistics/confusion matrix
     --pretrained          use pre-trained model
     --seed SEED           seed for initializing training.
     --gpu GPU             GPU id to use.
     --random_split        use random_split to create train and val set instead
                             of train and val folders
+    --relu_to_mish        convert any relu activations to mish activations
     --feature_extract {normal,advanced}
                             If False, we finetune the whole model. When normal we
                             only update the reshaped layer params. When advanced
@@ -189,7 +230,13 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
     --find_lr             Flag for lr_finder.
     -o OPTIM, --optimizer OPTIM
                             Optimizer to use (default=AdamW)
+    --tensorboard-model   Flag to write the model to tensorboard. Action is RAM
+                            intensive.
+    --tensorboard PATH    Path to tensorboard logdir. Tensorboard not used if
+                            not set.
     ```
+
+#### Summarizer
 
 ### End-To-End
 
