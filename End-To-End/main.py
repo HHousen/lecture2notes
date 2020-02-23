@@ -66,7 +66,7 @@ if args.skip_to <= 1:
 if args.skip_to <= 2:
     from slide_classifier import classify_frames
     frames_dir = root_process_folder / "frames"
-    frames_sorted_dir = classify_frames(frames_dir)
+    frames_sorted_dir, _, _ = classify_frames(frames_dir)
 
 # 3. Cluster slides
 if args.skip_to <= 3: 

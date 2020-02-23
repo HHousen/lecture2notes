@@ -140,3 +140,6 @@ best_k_value.png
 End-To-End/process
 *secret*
 deepspeech-models
+.vscode
+Models/slide-classifier/runs
+Dataset/mass-download*

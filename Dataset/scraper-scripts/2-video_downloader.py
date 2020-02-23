@@ -2,6 +2,7 @@ import os, sys
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
+from shared_functions import download_video
 
 method = sys.argv[1]
 csv_path = Path("../videos-dataset.csv")
@@ -13,20 +14,7 @@ if method == "csv":
     df = pd.read_csv(csv_path, index_col=0)
     for index, row in tqdm(df.iterrows(), total=len(df.index), desc="Downloading Videos"):
         if row['downloaded'] == False:
-            video_id = row['video_id']
-            if row['provider'] == "youtube":
-                os.system('youtube-dl -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" ' + video_id + ' -o ' + output_dir_yt)
-            elif row['provider'] == "website":
-                download_link = row['download_link']
-                file_extension = download_link.split(".")[-1]
-                output_dir = video_dir / video_id
-
-                if not os.path.exists(output_dir):
-                    os.makedirs(output_dir)
-
-                output_file_website = output_dir / (video_id + '.' + file_extension)
-                print("Saving to " + str(output_file_website))
-                os.system('wget -O ' + str(output_file_website) + ' ' + download_link)
+            download_video(row, video_dir, output_dir_yt)
             row['downloaded'] = True # NOT WORKING
 elif method == "youtube":
     # python video_downloader.py youtube 1Qws70XGSq4
