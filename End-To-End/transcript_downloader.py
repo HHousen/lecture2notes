@@ -12,7 +12,8 @@ class TranscriptDownloader:
         else:
             self.youtube = youtube
 
-    def check_suffix(self, output_path):
+    @staticmethod
+    def check_suffix(output_path):
         sub_format = output_path.suffix[1:]
         if output_path.suffix == "":
             output_path = output_path.with_suffix('.vtt')
