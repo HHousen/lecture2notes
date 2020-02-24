@@ -658,7 +658,7 @@ class ProgressMeter(object):
         print('\t'.join(entries))
 
     @staticmethod
-    def _get_batch_fmtstr(self, num_batches):
+    def _get_batch_fmtstr(num_batches):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
