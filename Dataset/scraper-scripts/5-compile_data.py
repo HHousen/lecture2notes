@@ -21,8 +21,8 @@ for item in tqdm(videos, total=len(videos), desc="Compiling Videos"):
             data_category_path = data_dir / category
             copy_tree(str(video_category_path), str(data_category_path))
 
-# slide_images = os.listdir(slides_dir)
-# for item in tqdm(slide_images, total=len(slide_images), desc="Compiling Slideshow Images"):
-#     current_dir = slides_dir / item
-#     data_dir_slide = data_dir / "slide"
-#     copy_tree(str(current_dir), str(data_dir_slide))
+slide_images = os.listdir(slides_dir)
+for item in tqdm(slide_images, total=len(slide_images), desc="Compiling Slideshow Images"):
+    current_dir = slides_dir / item
+    data_dir_slide = data_dir / "slide"
+    copy_tree(str(current_dir), str(data_dir_slide))

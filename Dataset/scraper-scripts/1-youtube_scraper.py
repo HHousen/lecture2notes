@@ -18,6 +18,8 @@ PARSER.add_argument('-n', '--num_pages', default=10, type=int, metavar='N',
                     help='Number of pages of videos to scape if mode is `channel`')
 PARSER.add_argument('-t', '--transcript', dest='get_transcript', action='store_true',
                     help='Download transcript for each video scraped.')
+PARSER.add_argument('--transcript-use-yt-api', dest='transcript_use_api', action='store_true',
+                    help='Use the YouTube API instead of youtube-dl to download transcripts. `--transcript` must be specified for this option to take effect.')
 PARSER.add_argument('-l', '--min_length_check', default=None, type=int, metavar='N',
                     help='Minimum video length to be scraped. Only works when `mode` is "channel"')
 PARSER.add_argument('-f', '--file', metavar='PATH', default='../videos-dataset.csv',
@@ -54,12 +56,15 @@ def get_youtube_results(youtube, page="", channel=None, video_id=None, parts="sn
 
 
 if ARGS.mode == "transcript" or ARGS.get_transcript:
-    youtube = init_youtube(oauth=True)
     transcript_dir = Path("../transcripts")
     if not os.path.exists(transcript_dir):
         os.makedirs(transcript_dir)
+
+if ARGS.transcript_use_api:
+    youtube = init_youtube(oauth=True)
 else:
     youtube = init_youtube(oauth=False)
+
 
 if ARGS.mode == "video":
     response = get_youtube_results(youtube, video_id=ARGS.id)
@@ -77,16 +82,17 @@ if ARGS.mode == "video":
         df.loc[len(df.index)] = [date,"youtube",video_id,0,0,title,description,thumbnail_default,thumbnail_medium,thumbnail_high,False]
 
         if ARGS.get_transcript:
-            output_path = transcript_dir / video_id + ".srt"
+            output_path = transcript_dir / (video_id + ".vtt")
             if not output_path.is_file():
-                downloader = TranscriptDownloader(youtube)
+                downloader = TranscriptDownloader(youtube, ytdl=(not ARGS.transcript_use_api))
                 downloader.download(video_id, output_path)
     
     df.to_csv(csv_path)
 elif ARGS.mode == "channel":
-    if ARGS.get_transcript:
+    if ARGS.get_transcript and ARGS.transcript_use_api:
         api_cost = 100 * int(ARGS.num_pages) + 50 * int(ARGS.num_pages) * 250 # 100 tokens * num_pages + 50 videos per page * num_pages * 250 tokens per video (50 for caption search and 200 for transcript)
         print("> YouTube Scraper: [WARNING] This operation is expensive. You have specified to download transcripts for " + str(ARGS.num_pages) + " pages from channel " + str(ARGS.id) + ". This will cost 100 api tokens per page and 250 api tokens per video transcript totaling " + api_cost + " tokens.")
+        input("> YouTube Scraper: Press enter to confirm execution or Ctrl+C to cancel.")
     next_page=""
     for i in range(int(ARGS.num_pages)):
         response = get_youtube_results(youtube, next_page, channel=ARGS.id)
@@ -114,16 +120,16 @@ elif ARGS.mode == "channel":
                 df.loc[len(df.index)]=[date,"youtube",video_id,0,0,title,description,thumbnail_default,thumbnail_medium,thumbnail_high,False]
 
             if ARGS.get_transcript:
-                output_path = transcript_dir / video_id + ".srt"
+                output_path = transcript_dir / (video_id + ".vtt")
                 if not output_path.is_file():
-                    downloader = TranscriptDownloader(youtube)
+                    downloader = TranscriptDownloader(youtube, ytdl=(not ARGS.transcript_use_api))
                     downloader.download(video_id, output_path)
 
         df.to_csv(csv_path)
 elif ARGS.mode == "transcript":
-    output_path = transcript_dir / (ARGS.id + ".srt")
+    output_path = transcript_dir / (ARGS.id + ".vtt")
     if not output_path.is_file():
-        downloader = TranscriptDownloader(youtube)
+        downloader = TranscriptDownloader(youtube, ytdl=(not ARGS.transcript_use_api))
         downloader.download(ARGS.id, output_path)
 else:
     raise Exception("Invalid `mode` specified.")

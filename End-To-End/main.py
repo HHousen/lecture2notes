@@ -103,7 +103,7 @@ if ARGS.skip_to <= 5:
         try:
             transcript_path = transcribe.get_youtube_transcript(ARGS.video_id, yt_output_file)
             if ARGS.yt_convert_to_str:
-                transcript = transcribe.srt_to_string(transcript_path)
+                transcript = transcribe.caption_file_to_string(transcript_path)
                 transcribe.write_to_file(transcript, transcript_output_file)
         except:
             youtube_transcription_failed = True

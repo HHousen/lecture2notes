@@ -22,7 +22,6 @@ dependencies:
   - google-api-python-client
   - google-auth-oauthlib
   - google-auth-httplib2
-  - srt
   - spacy
   - pillow=6.1
   - sox
@@ -34,5 +33,6 @@ dependencies:
     - deepspeech-gpu
     - webrtcvad
     - halo
+    - webvtt-py
     - efficientnet-pytorch
     - setuptools==41.0.0

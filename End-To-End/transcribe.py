@@ -7,6 +7,7 @@ from tqdm import tqdm
 from helpers import make_dir_if_not_exist
 from transcript_downloader import TranscriptDownloader
 import srt
+import webvtt
 import spacy
 import numpy as np
 
@@ -126,26 +127,28 @@ def process_chunks(chunk_dir, save_file, method="sphinx", model_dir=None):
                 transcript = transcribe_audio(chunk_path, method)
             write_to_file(transcript, save_file)
 
-def srt_to_string(transcript_path, remove_speakers=False):
+def caption_file_to_string(transcript_path, remove_speakers=False):
     """
-    Converts a .srt file saved at `transcript_path` to a python string. 
+    Converts a .srt or .vtt file saved at `transcript_path` to a python string. 
     Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
     """
     assert transcript_path.is_file()
-    transcript_srt_string = open(transcript_path, "r")
-    subtitle_generator = srt.parse(transcript_srt_string)
-    subtitles = list(subtitle_generator)
+    if transcript_path.suffix == ".srt":
+        subtitles = webvtt.from_srt(transcript_path)
+    else:
+        subtitles = webvtt.read(transcript_path)
+
     transcript = ""
     for subtitle in subtitles:
-        content = subtitle.content.replace('\n',' ') # replace newlines with space
+        content = subtitle.text.replace('\n', ' ') # replace newlines with space
         if remove_speakers:
             content = content.split(': ', 1)[-1] # remove everything before ": "
         transcript += (content+" ") # add space after each subtitle block in srt file
     return transcript
 
-def get_youtube_transcript(video_id, output_path):
+def get_youtube_transcript(video_id, output_path, use_youtube_dl=True):
     """Downloads the transcript for `video_id` and saves it to `output_path`"""
-    downloader = TranscriptDownloader()
+    downloader = TranscriptDownloader(ytdl=use_youtube_dl)
     transcript_path = downloader.download(video_id, output_path)
     return transcript_path
 
@@ -165,8 +168,10 @@ def check_transcript(generated_transcript, ground_truth_transcript):
 # create_chunks("process/audio-short.wav", "process/chunks", 5, 2000)
 # process_chunks("process/chunks", "process/output.txt")
 
-# transcript = srt_to_string(Path("test.srt"))
+# transcript = caption_file_to_string(Path("test.srt"))
 # print(transcript)
+
+# print(get_youtube_transcript("TtaWB0bL3zQ", Path("subtitles.vtt")))
 
 # generated_transcript = open(Path("process/audio.txt"), "r").read()
 # ground_truth_transcript = transcript
