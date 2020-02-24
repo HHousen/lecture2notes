@@ -332,7 +332,7 @@ def get_datasets(args, input_size):
 def create_head(out_features):
     layers = [
         AdaptiveConcatPool2d(1),
-        Flatten(),
+        nn.Flatten(),
         nn.BatchNorm1d(1024),
         nn.Dropout(0.25),
         nn.Linear(1024, 512),
@@ -657,6 +657,7 @@ class ProgressMeter(object):
             entries += [str(meter) for meter in self.meters]
         print('\t'.join(entries))
 
+    @staticmethod
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'

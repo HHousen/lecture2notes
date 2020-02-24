@@ -10,6 +10,7 @@ date = sys.argv[1]
 page_link = sys.argv[2]
 video_download_link = sys.argv[3]
 
+
 if len(sys.argv) > 4: # if sys.argv[4] is supplied
     description = sys.argv[4]
 else:
@@ -25,7 +26,11 @@ else:
 datetime_object = datetime.strptime(date, '%m-%d-%Y')
 date = datetime_object.isoformat("T") + "Z"
 
-soup = BeautifulSoup(urllib.urlopen(page_link), features="html.parser")
+if page_link.lower().startswith('http'):
+    soup = BeautifulSoup(urllib.urlopen(page_link), features="html.parser")
+else:
+    raise ValueError from None
+
 page_title = soup.title.string
 
 video_id = hashlib.sha1(page_title.encode("UTF-8")).hexdigest()[:11]

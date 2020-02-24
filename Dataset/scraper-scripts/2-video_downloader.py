@@ -14,7 +14,7 @@ if METHOD == "csv":
     # python video_downloader.py csv
     df = pd.read_csv(CSV_PATH, index_col=0)
 
-    not_downloaded_df = df.loc[df['downloaded'] == False]
+    not_downloaded_df = df.loc[df['downloaded'] == False] #pylint: disable=singleton-comparison
     for index, row in tqdm(not_downloaded_df.iterrows(), total=len(not_downloaded_df.index), desc="Downloading Videos"):
         download_video(row, VIDEO_DIR, OUTPUT_DIR_YT)
         df.at[index, "downloaded"] = True
