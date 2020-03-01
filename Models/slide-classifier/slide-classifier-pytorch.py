@@ -4,6 +4,7 @@ import random
 import shutil
 import time
 import warnings
+import logging
 
 import torch
 import torch.nn as nn
@@ -32,8 +33,10 @@ from tqdm import tqdm
 
 from custom_nnmodules import * #pylint: disable=wildcard-import
 
+logger = logging.getLogger(__name__)
+
 if os.environ.get('DISPLAY', '') == '':
-    print('=> MatPlotLib: No display found. Using non-interactive Agg backend')
+    logging.debug('=> MatPlotLib: No display found. Using non-interactive Agg backend')
     mpl.use('Agg')
 
 MODEL_NAMES = sorted(name for name in models.__dict__
@@ -106,8 +109,6 @@ parser.add_argument('--tensorboard', default='', type=str, metavar='PATH',
                     help='Path to tensorboard logdir. Tensorboard not used if not set.')
 
 best_acc1 = 0
-torch.manual_seed(42)
-np.random.seed(42)
 
 def set_parameter_requires_grad(model, feature_extracting):
     """This helper function sets the .requires_grad attribute of the parameters in
@@ -132,7 +133,6 @@ def unfreeze_model(model):
         param.requires_grad = True
 
 def main():
-    
     args = parser.parse_args()
 
     if args.tensorboard:
@@ -142,6 +142,7 @@ def main():
 
     if args.seed is not None:
         random.seed(args.seed)
+        np.random.seed(args.seed)
         torch.manual_seed(args.seed)
         cudnn.deterministic = True
         warnings.warn('You have chosen to seed training. '
@@ -163,7 +164,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
     args.gpu = gpu
 
     if args.gpu is not None:
-        print("Use GPU: {} for training".format(args.gpu))
+        logging.info("Use GPU: {} for training".format(args.gpu))
 
     input_size = get_input_size(args.arch)
     train_dataset, val_dataset, classes = get_datasets(args, input_size)
@@ -181,7 +182,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
 
     # Create model
     model, params_to_update = initialize_model(len(classes), args.feature_extract, args)
-    print("Model:\n" + str(model))
+    logging.debug("Model:\n%s", model)
 
     if args.tensorboard and args.tensorboard_model:
         images, _ = next(iter(train_loader))
@@ -227,7 +228,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
+            logging.info("=> loading checkpoint '{}'".format(args.resume))
             if args.gpu is None:
                 checkpoint = torch.load(args.resume)
             else:
@@ -241,10 +242,10 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
                 best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
+            logging.info("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            logging.error("=> no checkpoint found at '{}'".format(args.resume))
 
     cudnn.benchmark = True
 
@@ -364,18 +365,18 @@ def initialize_model(num_classes, feature_extract, args):
         If feature_extract is None then params is model.named_parameters()
         """
         params_to_update = model.parameters()
-        print("Params to learn:")
+        logging.debug("Params to learn:\n")
         if feature_extract:
             params_to_update = []
-            for name,param in model.named_parameters():
+            for name, param in model.named_parameters():
                 if param.requires_grad:
                     params_to_update.append(param)
-                    print("\t",name)
+                    logging.debug("\t%s", name)
         else:
             params_to_update = model_ft.parameters()
-            for name,param in model.named_parameters():
+            for name, param in model.named_parameters():
                 if param.requires_grad:
-                    print("\t",name)
+                    logging.debug("\t%s", name)
         return params_to_update
     
     # Initialize these variables which will be set in this if statement. Each of these
@@ -391,9 +392,9 @@ def initialize_model(num_classes, feature_extract, args):
         model_ft = models.__dict__[args.arch](pretrained=args.pretrained)
 
     if args.pretrained:
-        print("=> using pre-trained model '{}'".format(args.arch))
+        logging.info("=> using pre-trained model '{}'".format(args.arch))
     else:
-        print("=> creating model '{}'".format(args.arch))
+        logging.info("=> creating model '{}'".format(args.arch))
 
     if args.arch.startswith("resnet"):
         set_parameter_requires_grad(model_ft, feature_extract)
@@ -446,7 +447,7 @@ def initialize_model(num_classes, feature_extract, args):
         model_ft.fc = nn.Linear(num_ftrs,num_classes)
 
     else:
-        print("Invalid model name, exiting...")
+        logging.critical("Invalid model name, exiting...")
         exit()
 
     if args.relu_to_mish:
@@ -600,7 +601,7 @@ def final_evaluate(val_loader, model, classes, args):
     # print("Preds: " + str(preds))
     # print("Targets: " + str(targets))
     plot_confusion_matrix(preds, targets, classes)
-    print(classification_report(targets, preds, target_names=classes))
+    logging.info(classification_report(targets, preds, target_names=classes))
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
@@ -655,7 +656,7 @@ class ProgressMeter(object):
         else:
             entries = [self.prefix + ": " + self.batch_fmtstr.format(batch)]
             entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries))
+        logging.info('\t'.join(entries))
 
     @staticmethod
     def _get_batch_fmtstr(num_batches):

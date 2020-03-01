@@ -29,6 +29,8 @@ PARSER.add_argument('-rm', '--remove', dest='remove', action='store_true',
                     help='remove `process_dir` once conversion is complete')
 PARSER.add_argument('-c', '--chunk', dest='chunk', action='store_true',
                     help='split the audio into small chunks on silence')
+PARSER.add_argument('-sm', '--sum_model', default="bart", choices=["bart", "presumm"],
+                    help='summarization model')
 PARSER.add_argument('-tm', '--transcription_method', default="deepspeech", choices=["sphinx", "google", "youtube", "deepspeech"],
                     help='''specify the program that should be used for transcription. 
                     CMU Sphinx: use pocketsphinx (works offline)
@@ -96,35 +98,35 @@ if ARGS.skip_to <= 5:
     import transcribe
     EXTRACT_FROM_VIDEO = ARGS.video_path
     AUDIO_PATH = ROOT_PROCESS_FOLDER / "audio.wav"
-    transcript_output_file = ROOT_PROCESS_FOLDER / "audio.txt"
+    TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
 
     if ARGS.transcription_method == "youtube":
-        yt_output_file = ROOT_PROCESS_FOLDER / "audio.srt"
+        YT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.srt"
         try:
-            transcript_path = transcribe.get_youtube_transcript(ARGS.video_id, yt_output_file)
+            TRANSCRIPT_PATH = transcribe.get_youtube_transcript(ARGS.video_id, YT_OUTPUT_FILE)
             if ARGS.yt_convert_to_str:
-                transcript = transcribe.caption_file_to_string(transcript_path)
-                transcribe.write_to_file(transcript, transcript_output_file)
+                TRANSCRIPT = transcribe.caption_file_to_string(TRANSCRIPT_PATH)
+                transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
         except:
-            youtube_transcription_failed = True
+            YT_TRANSCRIPTION_FAILED = True
             ARGS.transcription_method = PARSER.get_default("transcription_method")
             print("> Main Process: Error detected in grabbing transcript from YouTube. Falling back to " + PARSER.get_default("transcription_method") + " transcription.")
-    if ARGS.transcription_method != "youtube" or youtube_transcription_failed:
+    if ARGS.transcription_method != "youtube" or YT_TRANSCRIPTION_FAILED:
         transcribe.extract_audio(EXTRACT_FROM_VIDEO, AUDIO_PATH)
         try:
             if ARGS.chunk:
-                chunk_dir = ROOT_PROCESS_FOLDER / "chunks"
-                transcribe.create_chunks(AUDIO_PATH, chunk_dir, 5, 2000)
+                CHUNK_DIR = ROOT_PROCESS_FOLDER / "chunks"
+                transcribe.create_chunks(AUDIO_PATH, CHUNK_DIR, 5, 2000)
                 if ARGS.transcription_method == "deepspeech":
-                    transcribe.process_chunks(chunk_dir, transcript_output_file, model_dir=ARGS.deepspeech_model_dir, method=ARGS.transcription_method)
+                    transcribe.process_chunks(CHUNK_DIR, TRANSCRIPT_OUTPUT_FILE, model_dir=ARGS.deepspeech_model_dir, method=ARGS.transcription_method)
                 else:
-                    transcribe.process_chunks(chunk_dir, transcript_output_file, method=ARGS.transcription_method)
+                    transcribe.process_chunks(CHUNK_DIR, TRANSCRIPT_OUTPUT_FILE, method=ARGS.transcription_method)
             else:
                 if ARGS.transcription_method == "deepspeech":
-                    transcript = transcribe.transcribe_audio_deepspeech(AUDIO_PATH, ARGS.deepspeech_model_dir)
+                    TRANSCRIPT = transcribe.transcribe_audio_deepspeech(AUDIO_PATH, ARGS.deepspeech_model_dir)
                 else:
-                    transcript = transcribe.transcribe_audio(AUDIO_PATH, method=ARGS.transcription_method)
-                transcribe.write_to_file(transcript, transcript_output_file)
+                    TRANSCRIPT = transcribe.transcribe_audio(AUDIO_PATH, method=ARGS.transcription_method)
+                transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
         except:
             print("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")
 
@@ -132,21 +134,25 @@ if ARGS.skip_to <= 5:
 if ARGS.skip_to <= 6:
     if ARGS.skip_to >= 6: # if step 5 transcription was skipped
         import transcribe
-        transcript_output_file = ROOT_PROCESS_FOLDER / "audio.txt"
-        transcript_file = open(transcript_output_file, "r")
-        transcript = transcript_file.read()
-        transcript_file.close()
-    transcript_summarized_output_file = ROOT_PROCESS_FOLDER / "audio_summarized.txt"
-    import bart_sum
-    bart = bart_sum.load_bart()
+        TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
+        TRANSCRIPT_FILE = open(TRANSCRIPT_OUTPUT_FILE, "r")
+        TRANSCRIPT = TRANSCRIPT_FILE.read()
+        TRANSCRIPT_FILE.close()
+    TRANSCRIPT_SUMMARIZED_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio_summarized.txt"
+    if ARGS.sum_model == "bart":
+        import bart_sum
+        SUMMARIZER = bart_sum.BartSumSummarizer()
+    elif ARGS.sum_model == "presumm":
+        import presumm.presumm as presumm
+        SUMMARIZER = presumm.PreSummSummarizer()
 
-    transcript_length = len(transcript.split())
-    min_len = int(transcript_length/6)
-    if min_len > 500:
+    TRANSCRIPT_LENGTH = len(TRANSCRIPT.split())
+    MIN_LEN = int(TRANSCRIPT_LENGTH/6)
+    if MIN_LEN > 500:
         # If the length is too long the model will start to repeat
-        min_len = 500
-    transcript_summarized = bart_sum.summarize(bart, transcript, min_len=min_len, max_len_b=min_len+200)
-    transcribe.write_to_file(transcript_summarized, transcript_summarized_output_file)
+        MIN_LEN = 500
+    TRANSCRIPT_SUMMARIZED = SUMMARIZER.summarize_string(TRANSCRIPT, min_len=MIN_LEN, max_len_b=MIN_LEN+200)
+    transcribe.write_to_file(TRANSCRIPT_SUMMARIZED, TRANSCRIPT_SUMMARIZED_OUTPUT_FILE)
 
 if ARGS.remove:
     rmtree(ROOT_PROCESS_FOLDER)
