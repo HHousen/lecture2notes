@@ -19,7 +19,7 @@ def init_youtube(oauth=False):
         youtube = googleapiclient.discovery.build(
             api_service_name, api_version, credentials=credentials)
     else:
-        DEVELOPER_KEY = "AIzaSyBEjf7WknjMp6wmzhnpeJIsWDhGk3Uq-MM"
+        DEVELOPER_KEY = os.environ["YT_API_KEY"]
         youtube = googleapiclient.discovery.build(
             api_service_name, api_version, developerKey = DEVELOPER_KEY)
 

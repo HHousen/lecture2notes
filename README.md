@@ -25,6 +25,10 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
 1. Clone this repository: `git clone https://github.com/HHousen/lecture2notes.git`.
 2. Change to project diretory: `cd lecture2notes`.
 3. Run installation command: `conda env create`.
+4. **(Optional)** YouTube API
+    1. Run `cp .env.example .env` to create a copy of the example `.env` file.
+    2. Add your YouTube API key (if you want to scraping YouTube with the [Dataset/scraper-scripts](Dataset/scraper-scripts)) to your `.env` file. 
+    3. Place your `client_secret.json` in the [Dataset/scraper-scripts](Dataset/scraper-scripts) folder (if you want to download transcripts with the `scraper-scripts`) or in [End-To-End](End-To-End) (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes) if you want to download video transcripts with the YouTube API (the default is to use `youtube-dl` which needs no key).
 
 ## Components
 
