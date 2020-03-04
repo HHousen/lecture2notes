@@ -36,3 +36,4 @@ dependencies:
     - webvtt-py
     - efficientnet-pytorch
     - setuptools==41.0.0
+    - opencv-python

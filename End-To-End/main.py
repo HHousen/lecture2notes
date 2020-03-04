@@ -83,9 +83,18 @@ if ARGS.skip_to <= 3:
     BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
     # cluster_dir = make_clusters(slides_dir)
 
-# 4. OCR slides
-if ARGS.skip_to <= 4: 
+# 4. Perspective crop images of slides to contain only the slide (helps OCR)
+if ARGS.skip_to <= 4:
     if ARGS.skip_to >= 4: # if step 3 (cluster slides) was skipped
+        FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+        CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
+        BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
+    import corner_crop_transform
+    cropped_imgs_paths = corner_crop_transform.all_in_folder(BEST_SAMPLES_DIR, remove_original=False)
+input("end")
+# 5. OCR slides
+if ARGS.skip_to <= 5: 
+    if ARGS.skip_to >= 5: # if step 4 (perspective crop) was skipped
         CLUSTER_DIR = ROOT_PROCESS_FOLDER / "slide_clusters"
         BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
     import ocr
@@ -93,8 +102,8 @@ if ARGS.skip_to <= 4:
     results = ocr.all_in_folder(BEST_SAMPLES_DIR)
     ocr.write_to_file(results, save_file)
 
-# 5. Transcribe Audio
-if ARGS.skip_to <= 5:
+# 6. Transcribe Audio
+if ARGS.skip_to <= 6:
     import transcribe
     EXTRACT_FROM_VIDEO = ARGS.video_path
     AUDIO_PATH = ROOT_PROCESS_FOLDER / "audio.wav"
@@ -130,9 +139,9 @@ if ARGS.skip_to <= 5:
         except:
             print("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")
 
-# 6. Summarize Transcript
-if ARGS.skip_to <= 6:
-    if ARGS.skip_to >= 6: # if step 5 transcription was skipped
+# 7. Summarize Transcript
+if ARGS.skip_to <= 7:
+    if ARGS.skip_to >= 7: # if step 6 transcription was skipped
         import transcribe
         TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
         TRANSCRIPT_FILE = open(TRANSCRIPT_OUTPUT_FILE, "r")
