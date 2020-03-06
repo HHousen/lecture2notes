@@ -43,6 +43,8 @@ PARSER.add_argument('--yt_convert_to_str', action='store_true',
                     help='if the method is `youtube` and this option is specified then the transcript will be saved as a txt file instead of a srt file.')
 PARSER.add_argument('--deepspeech_model_dir', type=str, metavar='DIR',
                     help='path containing the DeepSpeech model files. See the documentation for details.')
+PARSER.add_argument('--tensorboard', default='', type=str, metavar='PATH',
+                    help='Path to tensorboard logdir. Tensorboard not used if not set. Tensorboard only used to visualize cluster primarily for debugging.')
 
 ARGS = PARSER.parse_args()
 
@@ -71,27 +73,37 @@ if ARGS.skip_to <= 2:
     FRAMES_DIR = ROOT_PROCESS_FOLDER / "frames"
     FRAMES_SORTED_DIR, _, _ = classify_frames(FRAMES_DIR)
 
-# 3. Cluster slides
-if ARGS.skip_to <= 3: 
+# 3. Perspective crop images of presenter_slide to contain only the slide (helps OCR)
+# Options:
+# 1. Cluster presenter_slide and slide --> crop presenter_slide --> add --> cluster
+# 2. Crop presenter_slide --> add --> cluster
+if ARGS.skip_to <= 3:
     if ARGS.skip_to >= 3: # if step 2 (classify slides) was skipped
         FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+    PRESENTER_SLIDE_DIR = FRAMES_SORTED_DIR / "presenter_slide"
+    IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
+    import corner_crop_transform
+    cropped_imgs_paths = corner_crop_transform.all_in_folder(PRESENTER_SLIDE_DIR, remove_original=False)
+    copy_all(cropped_imgs_paths, IMGS_TO_CLUSTER_DIR)
+
+# 4. Cluster slides
+if ARGS.skip_to <= 4:
+    if ARGS.skip_to >= 4: # if step 2 (classify slides) and 3 (perspective crop) were skipped
+        FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+        IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
     SLIDES_DIR = FRAMES_SORTED_DIR / "slide"
+
+    copy_all(SLIDES_DIR, IMGS_TO_CLUSTER_DIR)
+
     from cluster import ClusterFilesystem
-    CLUSTER_FILESYSTEM = ClusterFilesystem(SLIDES_DIR, algorithm_name="affinity_propagation", preference=-8, damping=0.72, max_iter=1000)
+    CLUSTER_FILESYSTEM = ClusterFilesystem(IMGS_TO_CLUSTER_DIR, algorithm_name="affinity_propagation", preference=-8, damping=0.72, max_iter=1000)
     CLUSTER_FILESYSTEM.extract_and_add_features()
+    if ARGS.tensorboard:
+        CLUSTER_FILESYSTEM.visualize(ARGS.tensorboard)
     CLUSTER_DIR, BEST_SAMPLES_DIR = CLUSTER_FILESYSTEM.transfer_to_filesystem()
     BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
     # cluster_dir = make_clusters(slides_dir)
 
-# 4. Perspective crop images of slides to contain only the slide (helps OCR)
-if ARGS.skip_to <= 4:
-    if ARGS.skip_to >= 4: # if step 3 (cluster slides) was skipped
-        FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
-        CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
-        BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
-    import corner_crop_transform
-    cropped_imgs_paths = corner_crop_transform.all_in_folder(BEST_SAMPLES_DIR, remove_original=False)
-input("end")
 # 5. OCR slides
 if ARGS.skip_to <= 5: 
     if ARGS.skip_to >= 5: # if step 4 (perspective crop) was skipped

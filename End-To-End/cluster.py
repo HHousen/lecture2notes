@@ -1,5 +1,6 @@
 import sys, os, shutil
 from tqdm import tqdm
+import numpy as np
 from helpers import make_dir_if_not_exist
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))

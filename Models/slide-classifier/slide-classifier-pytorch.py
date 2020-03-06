@@ -107,6 +107,9 @@ parser.add_argument('--tensorboard-model', dest='tensorboard_model', action='sto
                     help='Flag to write the model to tensorboard. Action is RAM intensive.')
 parser.add_argument('--tensorboard', default='', type=str, metavar='PATH',
                     help='Path to tensorboard logdir. Tensorboard not used if not set.')
+parser.add_argument("-l", "--log", dest="logLevel", default='INFO',
+                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                    help="Set the logging level (default: 'Info').")
 
 best_acc1 = 0
 
@@ -139,6 +142,8 @@ def main():
         writer = SummaryWriter(args.tensorboard)
     else:
         writer = None
+    
+    logging.basicConfig(level=logging.getLevelName(args.logLevel))
 
     if args.seed is not None:
         random.seed(args.seed)

@@ -1,7 +1,15 @@
-import os, numpy
+import os
+import sys
+import numpy as np
 from sklearn.cluster import KMeans, AffinityPropagation
 from sklearn.metrics import pairwise_distances_argmin_min
 import matplotlib as mpl
+from PIL import Image
+
+sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
+import inference
+
+
 if os.environ.get('DISPLAY','') == '':
     print('=> Class Cluster: No display found. Using non-interactive Agg backend')
     mpl.use('Agg')
@@ -33,6 +41,12 @@ class Cluster:
         """Adds a filename and its coresponding feature vector to the cluster object"""
         self.vectors[filename] = vector
 
+    def get_vectors(self):
+        return self.vectors
+
+    def get_labels(self):
+        return self.labels
+
     def create_algorithm_if_none(self):
         """Creates algorithm if it has not been created (if it equals None) based on algorithm_name set in __init__"""
         if self.algorithm is None:
@@ -49,11 +63,12 @@ class Cluster:
     def get_vector_array(self):
         """Return a numpy array of the list of vectors stored in self.vectors"""
         vector_list = list(self.vectors.values())
-        vector_array = numpy.stack(vector_list)
+        vector_array = np.stack(vector_list)
         return vector_array
 
     def create_affinity_propagation(self, preference, damping, max_iter, store=True):
         """Create and fit an affinity propagation cluster"""
+        print("> Class Cluster: Creating and fitting affinity propagation cluster")
         vector_array = self.get_vector_array()
 
         affinity_propagation = AffinityPropagation(preference=preference, damping=damping, max_iter=max_iter)
@@ -71,6 +86,7 @@ class Cluster:
 
     def create_kmeans(self, num_centroids, store=True):
         """Create and fit a kmeans cluster"""
+        print("> Class Cluster: Creating and fitting kmeans cluster")
         vector_array = self.get_vector_array()
 
         kmeans = KMeans(n_clusters=num_centroids, random_state=0)
@@ -130,6 +146,23 @@ class Cluster:
             closest_filenames.append(filename)
         self.closest_filenames = closest_filenames
         return closest_filenames
+
+    def visualize(self, tensorboard_dir):
+        """Creates tensorboard projection of cluster for simplified viewing and understanding"""
+        print("> Class Cluster: Visualizing cluster")
+        import torch
+        from torch.utils.tensorboard import SummaryWriter
+
+        images = list()
+        for current_image, _ in self.vectors.items():
+            img = Image.open(self.slides_dir / current_image)
+            images.append(inference.transform_image(img).float())
+
+        feature_vectors = self.get_vector_array()
+
+        writer = SummaryWriter(tensorboard_dir)
+        writer.add_embedding(feature_vectors, metadata=self.labels, label_img=torch.cat(images, 0))
+        writer.close()
 
     def calculate_best_k(self, max_k=50):
         """

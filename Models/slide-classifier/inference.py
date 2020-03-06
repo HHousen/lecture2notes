@@ -44,24 +44,25 @@ def initialize_model(arch, num_classes):
     return model
 
 # Load saved model
-model_best = torch.load("model_best.pth.tar")
-class_index = model_best['class_index']
-input_size = model_best['input_size']
-if model_best['model']:
-    MODEL = model_best['model']
+MODEL_BEST = torch.load("model_best.pth.tar")
+CLASS_INDEX = MODEL_BEST['class_index']
+INPUT_SIZE = MODEL_BEST['input_size']
+ARCH = MODEL_BEST['arch']
+if MODEL_BEST['model']:
+    MODEL = MODEL_BEST['model']
     MODEL = MODEL.cuda()
 else:
     # Load model arch from models
-    MODEL = initialize_model(model_best['arch'], num_classes=len(model_best['class_index']))
+    MODEL = initialize_model(ARCH, num_classes=len(MODEL_BEST['class_index']))
     MODEL = torch.nn.DataParallel(MODEL).cuda()
-MODEL.load_state_dict(model_best['state_dict'])
+MODEL.load_state_dict(MODEL_BEST['state_dict'])
 MODEL.eval()
 
 sm = torch.nn.Softmax(dim=1)
 
 def transform_image(image):
     my_transforms = transforms.Compose([transforms.Resize((480,640)),
-                                        transforms.CenterCrop(input_size),
+                                        transforms.CenterCrop(INPUT_SIZE),
                                         transforms.ToTensor(),
                                         transforms.Normalize(
                                             [0.485, 0.456, 0.406],
@@ -72,10 +73,15 @@ def get_prediction(image, percent=False, extract_features=True):
     tensor = transform_image(image)
 
     if extract_features:
-        extracted_features = torch.zeros(1, 512)
         def copy_data(m, i, o):
-            extracted_features.copy_(o.data)
-        hook = MODEL.module[1][6].register_forward_hook(copy_data)
+            # https://stackoverflow.com/questions/19326004/access-a-function-variable-outside-the-function-without-using-global
+            copy_data.extracted_features = torch.clone(o.data).detach().cpu().squeeze()
+
+        # .module needed in both cases below because model wrapped in DataParallel
+        if ARCH.startswith("efficientnet"):
+            hook = MODEL.module._avg_pooling.register_forward_hook(copy_data)
+        else:
+            hook = MODEL.module[1][6].register_forward_hook(copy_data)
     else:
         extracted_features = 0
 
@@ -83,15 +89,15 @@ def get_prediction(image, percent=False, extract_features=True):
 
     if extract_features:
         hook.remove()
-        extracted_features = extracted_features.numpy()[0, :]
+        extracted_features = copy_data.extracted_features.numpy()
 
     _, y_hat = outputs.max(1)
     probs = sm(outputs).cpu().detach().numpy().tolist()[0]
     if percent:
         probs = [i*100 for i in probs]
-    probs = dict(zip(class_index, probs))
+    probs = dict(zip(CLASS_INDEX, probs))
     predicted_idx = int(y_hat.item())
-    class_name = class_index[int(predicted_idx)]
+    class_name = CLASS_INDEX[int(predicted_idx)]
     return class_name, predicted_idx, probs, extracted_features
 
 #print(get_prediction(Image.open("test.png")))
