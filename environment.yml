@@ -1,18 +1,19 @@
 name: lecture2notes
 channels:
   - conda-forge
+  - powerai
   - pytorch
-  - fastai
   - local
 dependencies:
-  - pytorch
+  - pytorch=1.4.0
   - torchvision
-  - cudatoolkit=10.0
-  - cudnn=7.6
+  - cudatoolkit
+  # - cudatoolkit=10.0
+  - cudnn
+  # - cudnn=7.6
   # - faiss-gpu
   - matplotlib
   - pytesseract
-  - fastai
   - termcolor
   - tqdm
   - scikit-learn
@@ -28,6 +29,10 @@ dependencies:
   - pyaudio
   - tensorboard
   - isodate
+  # DocSum
+  - appdirs
+  - gdown
+  # - fairseq # for Semsim model import in DocSum BartSumSummarizer
   - pip
   - pip: 
     - deepspeech-gpu
@@ -37,3 +42,5 @@ dependencies:
     - efficientnet-pytorch
     - setuptools==41.0.0
     - opencv-python
+    # DocSum
+    - transformers
