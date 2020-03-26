@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import numpy as np
 from sklearn.cluster import KMeans, AffinityPropagation
 from sklearn.metrics import pairwise_distances_argmin_min
@@ -9,9 +10,10 @@ from PIL import Image
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
 import inference
 
+logger = logging.getLogger(__name__)
 
 if os.environ.get('DISPLAY','') == '':
-    print('=> Class Cluster: No display found. Using non-interactive Agg backend')
+    logger.debug('No display found. Using non-interactive Agg backend')
     mpl.use('Agg')
 import matplotlib.pyplot as plt
 from collections import OrderedDict
@@ -68,7 +70,7 @@ class Cluster:
 
     def create_affinity_propagation(self, preference, damping, max_iter, store=True):
         """Create and fit an affinity propagation cluster"""
-        print("> Class Cluster: Creating and fitting affinity propagation cluster")
+        logger.info("Creating and fitting affinity propagation cluster")
         vector_array = self.get_vector_array()
 
         affinity_propagation = AffinityPropagation(preference=preference, damping=damping, max_iter=max_iter)
@@ -86,7 +88,7 @@ class Cluster:
 
     def create_kmeans(self, num_centroids, store=True):
         """Create and fit a kmeans cluster"""
-        print("> Class Cluster: Creating and fitting kmeans cluster")
+        logger.info("Creating and fitting kmeans cluster")
         vector_array = self.get_vector_array()
 
         kmeans = KMeans(n_clusters=num_centroids, random_state=0)
@@ -149,7 +151,7 @@ class Cluster:
 
     def visualize(self, tensorboard_dir):
         """Creates tensorboard projection of cluster for simplified viewing and understanding"""
-        print("> Class Cluster: Visualizing cluster")
+        logger.info("Visualizing cluster")
         import torch
         from torch.utils.tensorboard import SummaryWriter
 
@@ -177,7 +179,7 @@ class Cluster:
         for i in range(1, max_k):
             kmeans, _, cost, _ = self.create_kmeans(num_centroids=i, store=False)
             costs.append(cost)
-            print("Iteration " + str(i) + ": " + cost)
+            logger.info("Iteration " + str(i) + ": " + cost)
         
         costs = [int(float(cost)) for cost in costs]
 

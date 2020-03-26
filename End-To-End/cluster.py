@@ -1,4 +1,5 @@
 import sys, os, shutil
+import logging
 from tqdm import tqdm
 import numpy as np
 from helpers import make_dir_if_not_exist
@@ -8,6 +9,8 @@ from class_cluster_scikit import Cluster #pylint: disable=import-error,wrong-imp
 from custom_nnmodules import * #pylint: disable=import-error,wrong-import-position,wildcard-import
 import inference
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 class ClusterFilesystem(Cluster):
     def __init__(self, slides_dir, algorithm_name="kmeans", num_centroids=20, preference=None, damping=0.5, max_iter=200):
@@ -19,7 +22,7 @@ class ClusterFilesystem(Cluster):
         slides = os.listdir(self.slides_dir)
         num_slides = len(slides)
 
-        print("> AI Clustering Engine: Extracting features from " + str(num_slides) + " slides")
+        logger.info("Extracting features from " + str(num_slides) + " slides")
         for idx, slide in tqdm(enumerate(slides), total=num_slides, desc="> AI Clustering Engine: Feature extraction"):
             current_slide_path = os.path.join(self.slides_dir, slide)
             _, _, _, extracted_features = inference.get_prediction(Image.open(current_slide_path))

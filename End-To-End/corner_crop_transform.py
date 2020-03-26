@@ -5,6 +5,9 @@ import os
 import numpy as np
 from tqdm import tqdm
 import cv2
+import logging
+
+logger = logging.getLogger(__name__)
 
 # TODO: Figure out what `SMALL_HEIGHT` does
 SMALL_HEIGHT = 800
@@ -140,7 +143,6 @@ def all_in_folder(path, remove_original=False):
     images = os.listdir(path)
     images.sort()
     for item in tqdm(images, total=len(images), desc="> Corner Crop Transform: Progress"):
-        # print("> OCR: Processing file " + item)
         current_path = os.path.join(path, item)
         if os.path.isfile(current_path) and OUTPUT_PATH_MODIFIER not in str(current_path):
             # Above checks that file exists and does not contain `OUTPUT_PATH_MODIFIER` because that would 
@@ -149,5 +151,5 @@ def all_in_folder(path, remove_original=False):
             cropped_imgs_paths.append(output_path)
             if remove_original:
                 os.remove(current_path)
-    print("> Corner Crop Transform: Returning cropped image paths")
+    logger.debug("> Corner Crop Transform: Returning cropped image paths")
     return cropped_imgs_paths

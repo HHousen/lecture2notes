@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -6,39 +7,40 @@ from pydub.silence import split_on_silence
 from tqdm import tqdm
 from helpers import make_dir_if_not_exist
 from transcript_downloader import TranscriptDownloader
-import srt
 import webvtt
 import spacy
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
 def extract_audio(video_path, output_path):
     """Extracts audio from video at `video_path` and saves it to `output_path`"""
-    print("> Transcriber: Extracting audio from " + str(video_path) + " and saving to " + str(output_path))
+    logger.info("Extracting audio from " + str(video_path) + " and saving to " + str(output_path))
     command = 'ffmpeg -i ' + str(video_path) + ' -f wav -ab 192000 -vn ' + str(output_path)
     os.system(command)
     return output_path
 
 def transcribe_audio(audio_path, method="sphinx"):
     assert method in ["sphinx", "google"]
-    print("> Transcriber: Initializing speech_recognition library")
+    logger.debug("Initializing speech_recognition library")
     r = sr.Recognizer()
     with sr.AudioFile(str(audio_path)) as source:
         audio = r.record(source)
 
     try:
-        print("> Transcriber: Transcribing file at " + str(audio_path))
+        logger.info("Transcribing file at " + str(audio_path))
         if method == "sphinx":
             transcript = r.recognize_sphinx(audio)
         elif method == "google":
             transcript = r.recognize_google(audio)
         else:
-            print("> Transcriber: Incorrect method to transcribe audio")
+            logger.error("Incorrect method to transcribe audio")
             return -1
         return transcript
     except sr.UnknownValueError:
-        print("> Transcriber: Could not understand audio")
+        logger.error("Could not understand audio")
     except sr.RequestError as e:
-        print("> Transcriber: Error; {0}".format(e))
+        logger.error("Error; {0}".format(e))
 
 def transcribe_audio_deepspeech(audio_path, model_dir, model='output_graph.pb', beam_width=500, lm="lm.binary", trie="trie", lm_alpha=0.75, lm_beta=1.85):
     import deepspeech
@@ -56,7 +58,7 @@ def transcribe_audio_deepspeech(audio_path, model_dir, model='output_graph.pb', 
     sampling_rate, audio = wav.read(audio_path)
 
     if audio.ndim == 2:
-        print("> Transcriber: [WARNING] Your audio has 2 channels. The second one will automatically be removed. While this will work, it is better to resample to 1 channel before running this function.")
+        logger.warning("[WARNING] Your audio has 2 channels. The second one will automatically be removed. While this will work, it is better to resample to 1 channel before running this function.")
         audio = audio[:, 0]
     elif audio.ndim > 2:
         raise Exception("> Transcriber: Your audio has " + str(audio.ndim) + " dimensions/channels. The maximum is two. Please resample to 1 channel.")
@@ -73,18 +75,18 @@ def transcribe_audio_deepspeech(audio_path, model_dir, model='output_graph.pb', 
 
 def write_to_file(results, save_file):
     file_results = open(save_file, "a+")
-    print("> Transcriber: Writing results to file " + str(save_file))
+    logger.info("Writing results to file " + str(save_file))
     file_results.write(results + " ")
     file_results.close()
 
 def create_chunks(audio_path, output_path, silence_thresh_offset, min_silence_len):
-    print("> Transcriber: Loading audio")
+    logger.info("Loading audio")
     audio = AudioSegment.from_wav(audio_path)
-    print("> Transcriber: Average loudness of audio track is " + str(audio.dBFS))
+    logger.info("Average loudness of audio track is " + str(audio.dBFS))
     silence_thresh = audio.dBFS - silence_thresh_offset
-    print("> Transcriber: Silence Threshold of audio track is " + str(silence_thresh))
-    print("> Transcriber: Minimum silence length for audio track is " + str(min_silence_len) + " ms")
-    print("> Transcriber: Creating chunks")
+    logger.info("Silence Threshold of audio track is " + str(silence_thresh))
+    logger.info("Minimum silence length for audio track is " + str(min_silence_len) + " ms")
+    logger.info("Creating chunks")
     chunks = split_on_silence(
         # Use the loaded audio.
         audio, 
@@ -93,7 +95,7 @@ def create_chunks(audio_path, output_path, silence_thresh_offset, min_silence_le
         # Consider a chunk silent if it's quieter than -16 dBFS.
         silence_thresh = silence_thresh
     )
-    print("> Transcriber: Created " + str(len(chunks)) + " chunks")
+    logger.info("Created " + str(len(chunks)) + " chunks")
 
     make_dir_if_not_exist(output_path)
 
@@ -105,7 +107,7 @@ def create_chunks(audio_path, output_path, silence_thresh_offset, min_silence_le
 
         # Export the audio chunk with new bitrate.
         chunk_number = "chunk" + f'{i:05}' + ".wav"
-        print("Exporting " + chunk_number)
+        logger.debug("Exporting " + chunk_number)
         save_path = Path(output_path) / chunk_number
         audio_chunk.export(
             str(save_path.resolve()),
@@ -154,14 +156,14 @@ def get_youtube_transcript(video_id, output_path, use_youtube_dl=True):
 
 def check_transcript(generated_transcript, ground_truth_transcript):
     """Compares `generated_transcript` to `ground_truth_transcript` to check for accuracy using spacy similarity measurement."""
-    nlp = spacy.load("en_vectors_web_lg")
-    print("> Transcriber: Loaded Spacy `en_vectors_web_lg`")
+    nlp = spacy.load("en_core_web_lg")
+    logger.info("Loaded Spacy `en_vectors_web_lg`")
     gen_doc = nlp(generated_transcript)
-    print("> Transcriber: NLP done on generated_transcript")
+    logger.info("NLP done on generated_transcript")
     real_doc = nlp(ground_truth_transcript)
-    print("> Transcriber: NLP done on ground_truth_transcript")
+    logger.info("NLP done on ground_truth_transcript")
     similarity = gen_doc.similarity(real_doc)
-    print("> Transcriber: Similarity Computed: " + str(similarity))
+    logger.info("Similarity Computed: " + str(similarity))
     return similarity
 
 # extract_audio("nykOeWgQcHM.mp4", "process/audio.wav")

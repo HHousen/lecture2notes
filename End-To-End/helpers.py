@@ -1,13 +1,16 @@
 import os
 import hashlib
 import shutil
+import logging
 from pathlib import Path
 from distutils.dir_util import copy_tree, remove_tree
+
+logger = logging.getLogger(__name__)
 
 def make_dir_if_not_exist(path):
     """Makes directory `path` if it does not exist"""
     if not os.path.exists(path):
-        print("> Helper Functions: Creating directory " + str(path))
+        logger.info("Creating directory " + str(path))
         os.makedirs(path)
 
 def gen_unique_id(input_data, k):
