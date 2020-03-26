@@ -8,6 +8,7 @@ import spacy
 from shutil import rmtree
 from pathlib import Path
 from helpers import *
+from spell_check import SpellChecker
 from summarization_approaches import (full_sents,
                                       keyword_based_ext,
                                       get_complete_sentences,
@@ -29,6 +30,9 @@ def main(ARGS):
     if ARGS.auto_id:
         UNIQUE_ID = gen_unique_id(ARGS.video_path, 12)
         ROOT_PROCESS_FOLDER = ROOT_PROCESS_FOLDER / UNIQUE_ID
+
+    if ARGS.spell_check:
+        spell_checker = SpellChecker()
 
     # 1. Extract frames
     if ARGS.skip_to <= 1: 
@@ -76,11 +80,14 @@ def main(ARGS):
     # 5. OCR slides
     if ARGS.skip_to <= 5: 
         if ARGS.skip_to >= 5: # if step 4 (perspective crop) was skipped
-            CLUSTER_DIR = ROOT_PROCESS_FOLDER / "slide_clusters"
+            FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+            CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
         import ocr
         OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "ocr.txt"
         OCR_RESULTS = ocr.all_in_folder(BEST_SAMPLES_DIR)
+        if "ocr" in ARGS.spell_check:
+            OCR_RESULTS = spell_checker.check_all(OCR_RESULTS)
         ocr.write_to_file(OCR_RESULTS, OCR_OUTPUT_FILE)
 
     # 6. Transcribe Audio
@@ -97,7 +104,6 @@ def main(ARGS):
             try:
                 TRANSCRIPT_PATH = transcribe.get_youtube_transcript(ARGS.video_id, YT_OUTPUT_FILE)
                 TRANSCRIPT = transcribe.caption_file_to_string(TRANSCRIPT_PATH)
-                transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
             except:
                 YT_TRANSCRIPTION_FAILED = True
                 ARGS.transcription_method = PARSER.get_default("transcription_method")
@@ -117,9 +123,12 @@ def main(ARGS):
                         TRANSCRIPT = transcribe.transcribe_audio_deepspeech(AUDIO_PATH, ARGS.deepspeech_model_dir)
                     else:
                         TRANSCRIPT = transcribe.transcribe_audio(AUDIO_PATH, method=ARGS.transcription_method)
-                    transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
             except:
                 logger.error("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")
+        
+        if "transcript" in ARGS.spell_check:
+            TRANSCRIPT = spell_checker.check(TRANSCRIPT)
+        transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
 
     # 7. Summarization
     if ARGS.skip_to <= 7:
@@ -211,6 +220,8 @@ if __name__ == "__main__":
                         Google Speech Recognition: probably will require chunking
                         YouTube: pull a video transcript from YouTube based on video_id
                         DeepSpeech: Use the deepspeech library (works offline with great accuracy)''')
+    PARSER.add_argument('-sc', '--spell_check', default=["ocr"], choices=["ocr", "transcript"], nargs="+",
+                        help='option to perform spell checking on the ocr results of the slides or the voice transcript or both')
     PARSER.add_argument('--video_id', type=str, metavar='ID',
                         help='id of youtube video to get subtitles from')
     PARSER.add_argument('--deepspeech_model_dir', type=str, metavar='DIR',
