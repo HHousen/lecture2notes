@@ -135,6 +135,9 @@ def unfreeze_model(model):
     for param in model.parameters():
         param.requires_grad = True
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 def main():
     args = parser.parse_args()
 
@@ -143,7 +146,7 @@ def main():
     else:
         writer = None
     
-    logging.basicConfig(level=logging.getLevelName(args.logLevel))
+    logging.basicConfig(format="%(asctime)s|%(name)s|%(levelname)s> %(message)s", level=logging.getLevelName(args.logLevel))
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -188,6 +191,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
     # Create model
     model, params_to_update = initialize_model(len(classes), args.feature_extract, args)
     logging.debug("Model:\n%s", model)
+    logging.debug(f'The model has {count_parameters(model):,} trainable parameters')
 
     if args.tensorboard and args.tensorboard_model:
         images, _ = next(iter(train_loader))
@@ -472,8 +476,8 @@ def convert_relu_to_mish(model):
 
 def train(train_loader, model, criterion, optimizer, scheduler, epoch, writer, args):
     num_batches = len(train_loader)
-    batch_time = AverageMeter('Time', ':5.3f')
-    data_time = AverageMeter('Data', ':5.3f')
+    batch_time = AverageMeter('Batch Time', ':5.3f')
+    data_time = AverageMeter('Data Loading Time', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':5.3f')
     precision_metric = AverageMeter('Precision', ':5.3f')
@@ -536,7 +540,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, writer, a
 
 
 def validate(val_loader, model, criterion, writer, args, epoch=None):
-    batch_time = AverageMeter('Time', ':5.3f')
+    batch_time = AverageMeter('Batch Time', ':5.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':5.3f')
     precision_metric = AverageMeter('Precision', ':5.3f')
@@ -553,7 +557,7 @@ def validate(val_loader, model, criterion, writer, args, epoch=None):
 
     with torch.no_grad():
         end = time.time()
-        for i, (images, target) in tqdm(enumerate(val_loader), total=len(val_loader), desc=("Test")):
+        for i, (images, target) in tqdm(enumerate(val_loader), total=len(val_loader), desc="Test"):
             if args.gpu is not None:
                 images = images.cuda(args.gpu, non_blocking=True)
             target = target.cuda(args.gpu, non_blocking=True)
