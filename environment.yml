@@ -42,5 +42,8 @@ dependencies:
     - efficientnet-pytorch
     - setuptools==41.0.0
     - opencv-python
+    - summa
+    - sumy
+    - symspellpy
     # DocSum
     - transformers
