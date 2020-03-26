@@ -8,26 +8,11 @@ videos_dir = Path('../videos')
 sorted_videos_list = []
 csv_path = Path("../to-be-sorted.csv")
 
-if sys.argv[1] == "fastai":
-    from fastai.vision import *
-    models_path = Path("../../Models/slide-classifier/saved-models/")
-    learn = load_learner(models_path)
-else:
-    import inspect
-    # Hack to import modules from different parent directory
-    sys.path.insert(1, os.path.join(sys.path[0], '../../Models/slide-classifier'))
-    from custom_nnmodules import * #pylint: disable=import-error,wildcard-import
-    from inference import * #pylint: disable=import-error,wildcard-import
-
-def model_predict_fastai(img_path, percent=False):
-    img = open_image(img_path)
-    pred_class,pred_idx,outputs = learn.predict(img)
-    model_results = outputs.numpy().tolist()
-    if percent:
-        model_results = [i * 100 for i in model_results]
-    classes = learn.data.classes
-    probs = dict(zip(classes, model_results))
-    return pred_class, pred_idx, probs
+import inspect
+# Hack to import modules from different parent directory
+sys.path.insert(1, os.path.join(sys.path[0], '../../Models/slide-classifier'))
+from custom_nnmodules import * #pylint: disable=import-error,wildcard-import
+from inference import * #pylint: disable=import-error,wildcard-import
 
 if csv_path.is_file():
     df = pd.read_csv(csv_path, index_col=0)
@@ -48,10 +33,7 @@ for item in os.listdir(videos_dir):
             print("Progress: " + str(idx+1) + "/" + str(num_frames))
             current_frame_path = os.path.join(frames_dir, frame)
             # run classification
-            if sys.argv[1] == "fastai":
-                best_guess, best_guess_idx, probs = model_predict(current_frame_path)
-            else:
-                best_guess, best_guess_idx, probs, _ = get_prediction(Image.open(current_frame_path), extract_features=False)
+            best_guess, best_guess_idx, probs, _ = get_prediction(Image.open(current_frame_path), extract_features=False)
             prob_max_correct = list(probs.values())[best_guess_idx]
             print("AI Predicts: " + best_guess)
             print("Probabilities: " + str(probs))

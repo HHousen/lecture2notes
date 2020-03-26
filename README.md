@@ -8,7 +8,7 @@ Brief Summary: A
 
 While this project was designed to process presentations with slides, it will work if there are no slides, but only audio will be used for summarization.
 
-Some code supports fastai since that was the library that was initially used to train `Models/slide-classifier`. However, certain sections do not support fastai (most noteably is [Models/slide-classifier/inference.py](Models/slide-classifier/inference.py) which feature extraction component that is necessary for clustering). For this reason, it is recommended to use only pytorch, although the sections that support fastai should work (but have not been tested in a while).
+<!-- Some code supports fastai since that was the library that was initially used to train `Models/slide-classifier`. However, certain sections do not support fastai (most noteably is [Models/slide-classifier/inference.py](Models/slide-classifier/inference.py) which feature extraction component that is necessary for clustering). For this reason, it is recommended to use only pytorch, although the sections that support fastai should work (but have not been tested in a while). -->
 
 ## Install
 Installation is made easy due to conda environments. Simply run this command from the root project directory: `conda env create` and conda will create and environment called `lecture2notes` with all the required packages in [environment.yml](environment.yml).
