@@ -13,19 +13,22 @@ While this project was designed to process presentations with slides, it will wo
 ## Install
 Installation is made easy due to conda environments. Simply run this command from the root project directory: `conda env create` and conda will create and environment called `lecture2notes` with all the required packages in [environment.yml](environment.yml).
 
-NOTE: The `srt` package is on pypi but not conda. Therefore you have to build it locally. More details can be found in the [conda documentation](https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs-skeleton.html). This can de done by performing the following steps:
-1. `conda skeleton pypi srt`
-2. Open the `srt` folder that was created in your workign directory and edit the `meta.yaml` file `requirements` section so that python version 3.6 is used. Change `python` under the `host` and `run` sections to `python 3.6`.
-3. `conda build srt`
-4. You're done. The `srt` package is now ready to be installed from the `local` channel. You can now create the conda environment using `conda env create`.
-
-Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on [the spacy documentation](https://spacy.io/models/en-starters). More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](End-To-End/transcribe.py) file.
+Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on the spacy [starter models](https://spacy.io/models/en-starters) and [core models](https://spacy.io/models/en) documentation. More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](End-To-End/transcribe.py) file.
 
 ### Step-by-Step Instructions
 1. Clone this repository: `git clone https://github.com/HHousen/lecture2notes.git`.
 2. Change to project diretory: `cd lecture2notes`.
 3. Run installation command: `conda env create`.
-4. **(Optional)** YouTube API
+4. If you will be running the [End-To-End/main.py](End-To-End/main.py) script then run the following command in the project root:
+    ```bash
+    python -m spacy download en_core_web_sm
+    ```
+    Optionally, download the large model by running:
+    ```bash
+    python -m spacy download en_core_web_sm
+    ```
+    to use certain similarity features (as discussed above) or to use spacy as a feature extractor in [End-To-End/summarization_approaches.py](End-To-End/summarization_approaches.py) with the default options (note: the default is *not* to use spacy for feature extraction but the large model *is* the default if spacy is manually chosen).
+5. **(Optional)** YouTube API
     1. Run `cp .env.example .env` to create a copy of the example `.env` file.
     2. Add your YouTube API key (if you want to scraping YouTube with the [Dataset/scraper-scripts](Dataset/scraper-scripts)) to your `.env` file. 
     3. Place your `client_secret.json` in the [Dataset/scraper-scripts](Dataset/scraper-scripts) folder (if you want to download transcripts with the `scraper-scripts`) or in [End-To-End](End-To-End) (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes) if you want to download video transcripts with the YouTube API (the default is to use `youtube-dl` which needs no key).
@@ -241,6 +244,7 @@ Not completed yet.
     ```
 
 #### Summarizer
+
 
 ### End-To-End
 

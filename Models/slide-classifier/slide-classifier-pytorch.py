@@ -72,7 +72,7 @@ parser.add_argument('--wd', '--weight-decay', default=1e-2, type=float,
                     metavar='W', help='weight decay (default: 1e-2)',
                     dest='weight_decay')
 parser.add_argument('-k', '--ranger-k', default=6, type=int,
-                    metavar='K', help='Ranger (Lookahead) optimizer k value (default: 6)',
+                    metavar='K', help='Ranger (LookAhead) optimizer k value (default: 6)',
                     dest='optim_k')
 parser.add_argument('--alpha', default=0.999, type=float,
                     metavar='N', help='Optimizer alpha parameter (default: 0.999)',

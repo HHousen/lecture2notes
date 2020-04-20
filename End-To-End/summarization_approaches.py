@@ -22,19 +22,18 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 # Sumy Imports for generic_extractive_sumy()
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
-
 from sumy.summarizers.lsa import LsaSummarizer
 from sumy.summarizers.luhn import LuhnSummarizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 from sumy.summarizers.edmundson import EdmundsonSummarizer
 from sumy.summarizers.random import RandomSummarizer
-
 from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
 
-# sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
-# from class_cluster_scikit import Cluster #pylint: disable=import-error,wrong-import-position
+# Import transformers and sentence_transformers for neural based feature extraction from text
+from transformers import pipeline
+from sentence_transformers import SentenceTransformer
 
 sys.path.insert(1, os.path.join(sys.path[0], '../Models/summarizer'))
 
@@ -125,16 +124,17 @@ def get_best_sentences(sentences, count, rating, *args, **kwargs):
 
     return tuple(i.sentence for i in infos)
 
-def get_sentences(text):
+def get_sentences(text, model="en_core_web_sm"):
     logger.debug("Tokenizing text...")
-    nlp = spacy.load("en_core_web_lg")
+    nlp = spacy.load(model)
     NLP_DOC = nlp(text)
     logger.debug("Text tokenized successfully")
     NLP_SENTENCES = [str(sentence) for sentence in list(NLP_DOC.sents)]
+    NLP_SENTENCES_SPAN = list(NLP_DOC.sents)
     NLP_SENTENCES_LEN = len(NLP_SENTENCES)
     NLP_SENTENCES_LEN_RANGE = range(NLP_SENTENCES_LEN)
 
-    return NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE
+    return NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_SPAN, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE
 
 def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
     from summa import keywords
@@ -148,7 +148,7 @@ def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
 
     vectorizer = TfidfVectorizer(vocabulary=vocab, stop_words="english")
 
-    _, NLP_SENTENCES, NLP_SENTENCES_LEN, _ = get_sentences(text)
+    _, NLP_SENTENCES, _, NLP_SENTENCES_LEN, _ = get_sentences(text)
 
     NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
     logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
@@ -171,38 +171,15 @@ def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
 
     return " ".join(sentences) # return as string with space between each sentence
 
-def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summarizer="extractive",
-            title_generation=False, num_topics=10, use_hashing=False, use_idf=True, n_features=10000,
-            lsa_num_components=False, minibatch=False):
-    """Summarize `text` to `coverage_percentage` length of the original document by extracting features
-    from the text, clustering based on those features, and finally summarizing each cluster.
-    See the scikit-learn documentation on clustering text for more information since several chunks
-    of this function were borrowed from that example: https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html
+def extract_features_bow(data, return_lsa_svd=False, use_hashing=False, use_idf=True, n_features=10000,
+                         lsa_num_components=False):
+    """Extract features using a bag of words statistical word-frequency approach. 
     
     Arguments:
-        text {str} -- a string of text to summarize
+        data {list} -- List of sentences to extract features from
     
     Keyword Arguments:
-        coverage_percentage {float} -- The length of the summary as a percentage of the original document. (default: {0.70})
-        final_sort_by {str} -- If `cluster_summarizer` is extractive and `title_generation` is False then
-                               this argument is available. If specified, it will sort the final cluster
-                               summaries by the specified string. (options: {"order", "rating"}) (default: {None})
-        cluster_summarizer {str} -- Which summarization method to use to summarize each individual cluster.
-                                    "Extractive" uses the same approach as the keyword_based_ext() function
-                                    but instead of using keywords from another document, the keywords are
-                                    calculated in the TfidfVectorizer or HashingVectorizer. Each keyword
-                                    is a feature in the document-term matrix, thus the number of words to use
-                                    is specified by the `n_features` parameter. (options: {"extractive", "abstractive"}) (default: {"extractive"})
-        title_generation {bool} -- Option to generate titles for each cluster. Can not be used if
-                                   `final_sort_by` is set. Generates titles by summarizing the text using
-                                   BART finetuned on XSum (a dataset of news articles and one sentence
-                                   summaries aka headline generation) and forcing results to be from 1 to
-                                   10 words long. (default: {False})
-        num_topics {int} -- The number of clusters to create. This should be set to the number of topics
-                            discussed in the lecture if generating good titles is desired. If separating
-                            into groups is not very important and a final summary is desired then this
-                            parameter is not incredibly important, it just should not be set super
-                            low (3) or super high (50) unless your document in super short or long. (default: {10})
+        return_lsa_svd {bool} -- [description] (default: {False})
         use_hashing {bool} -- Use a HashingVectorizer instead of a CountVectorizer. (default: {False})
                               A HashingVectorizer should only be used with large datasets. Large to the
                               degree that you'll probably never pass enough data through this function
@@ -232,39 +209,11 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
                             if `use_hasing` is set to True. (default: {10000})
         lsa_num_components {int} -- If set then preprocess the data using latent semantic analysis to
                                     reduce the dimensionality to `lsa_num_components` components. (default: {False})
-        minibatch {bool} -- Two clusterign algorithms are used: ordinary k-means and its more scalable
-                            cousin minibatch k-means. Setting this to True will use minibatch k-means
-                            with a batch size set to the number of clusters set in `num_topics`. (default: {False})
-    
-    Raises:
-        Exception: If incorrect parameters are passed.
     
     Returns:
-        [str] -- The summarized text as a normal string. Line breaks will be included if
-        `title_generation` is true
+        [list] -- list of features extracted
+        [tup] -- (optional) the u, sigma, and v of the svd calculation on the document-term matrix. only returns if return_lsa_svd set to True.
     """    
-    assert cluster_summarizer in ["extractive", "abstractive"]
-    if final_sort_by:
-        assert final_sort_by in ["order", "rating"]
-        
-        if title_generation: # if final_sort_by and title_generation
-            raise Exception("Cannot sort by " + str(final_sort_by) + " and generate titles. Only one option can be specified at a time. In order to generate titles the clusters must not be resorted so each title coresponds to a cluster.")
-    
-    vectorizer = TfidfVectorizer(stop_words="english")
-
-    _, NLP_SENTENCES, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE = get_sentences(text)
-
-    if cluster_summarizer == "abstractive":
-        NLP_WORDS = [token.text for token in NLP_DOC if token.is_stop != True and token.is_punct != True]
-        NLP_WORDS_LEN = len(NLP_WORDS)
-        ABS_MIN_LENGTH = int(coverage_percentage * NLP_WORDS_LEN / num_topics)
-        logger.debug(str(NLP_WORDS_LEN) + " (Number of Words in Document) * " + str(coverage_percentage) + " (Coverage Percentage) / " + str(num_topics) + " (Number Topics/Clusters) = " + str(ABS_MIN_LENGTH) + " (Abstractive Summary Minimum Length per Cluster)")
-    else:
-        NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
-        logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
-        NUM_SENTENCES_PER_CLUSTER = int(NUM_SENTENCES_IN_SUMMARY / num_topics)
-        logger.debug(str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary) / " + str(num_topics) + " (Number Topics/Clusters) = " + str(NUM_SENTENCES_PER_CLUSTER) + " (Number of Sentences per Cluster")
-
     logger.debug("Extracting features using a sparse vectorizer")
     t0 = time()
     if use_hashing:
@@ -282,19 +231,16 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
         vectorizer = TfidfVectorizer(max_df=0.5, max_features=n_features,
                                      min_df=2, stop_words='english',
                                      use_idf=use_idf)
-    X = vectorizer.fit_transform(NLP_SENTENCES)
+    features = vectorizer.fit_transform(data)
     
     logger.debug("done in %fs" % (time() - t0))
-    logger.debug("n_samples: %d, n_features: %d" % X.shape)
+    logger.debug("n_samples: %d, n_features: %d" % features.shape)
 
-    if cluster_summarizer == "extractive":
-        doc_term_matrix = X.toarray()
+    if return_lsa_svd:
+        doc_term_matrix = features.toarray()
         doc_term_matrix = doc_term_matrix.transpose(1, 0)
-        u, sigma, v = np.linalg.svd(doc_term_matrix, full_matrices=False)
+        lsa_svd = np.linalg.svd(doc_term_matrix, full_matrices=False)
         logger.debug("SVD successfully calculated")
-
-        ranks = compute_ranks(sigma, v)
-        logger.debug("Ranks calculated")
 
     if lsa_num_components:
         logger.debug("Performing dimensionality reduction using LSA")
@@ -306,19 +252,162 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
         normalizer = Normalizer(copy=False)
         lsa = make_pipeline(svd, normalizer)
 
-        X = lsa.fit_transform(X)
+        features = lsa.fit_transform(features)
 
         logger.debug("done in %fs" % (time() - t0))
 
         explained_variance = svd.explained_variance_ratio_.sum()
         logger.debug("Explained variance of the SVD step: {}%".format(int(explained_variance * 100)))
+    
+    if return_lsa_svd:
+        return features, lsa_svd
+    else:
+        return features
+
+def extract_features_neural_hf(sentences, model="roberta-base", tokenizer="roberta-base", n_hidden=768, squeeze=True, **kwargs):
+    """ Extract features using a transformer model from the huggingface/transformers library """
+    nlp = pipeline('feature-extraction', model=model, tokenizer=tokenizer, **kwargs)
+    features = list()
+    vec = np.zeros((len(sentences), n_hidden))
+    logger.debug("Extracting features using the " + str(model) + " huggingface neural model")
+    for idx, text in tqdm(enumerate(sentences), desc="Extracting Features", total=len(sentences)):
+        hidden_state = nlp(text)
+        # "mean" averaging approach discussed for beginners at: https://github.com/BramVanroy/bert-for-inference/blob/master/introduction-to-bert.ipynb
+        sentence_embedding = np.mean(hidden_state, axis=1)
+        if squeeze: # removes the batch dimension
+            sentence_embedding = sentence_embedding.squeeze()
+        vec[idx] = sentence_embedding
+    return vec
+
+def extract_features_neural_sbert(sentences, model="roberta-base-nli-mean-tokens"):
+    """ Extract features using Sentence-BERT or SRoBERTa( SBERT or SRoBERTa) from the sentence-transformers library """
+    if model == "roberta":
+        model = "roberta-base-nli-mean-tokens"
+    elif model == "bert":
+        model = "bert-base-nli-mean-tokens"
+    nlp = SentenceTransformer(model)
+    logger.debug("Extracting features using the sentence level " + str(model) + " model. This is the best method.")
+    sentence_embeddings = nlp.encode(sentences)
+    return np.array(sentence_embeddings)
+
+def extract_features_spacy(sentences):
+    tokens = list()
+    logger.debug("Extracting features using spacy. This method cannot tell which spacy model was used but it is highly recommended to use the medium or large model because the small model only includes context-sensitive tensors.")
+    for sentence in sentences:
+        # https://spacy.io/api/span#vector
+        # A real-valued meaning representation. Defaults to an average of the token vectors.
+        tokens.append(sentence.vector)
+    return np.array(tokens)
+
+def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summarizer="extractive",
+            title_generation=False, num_topics=10, minibatch=False, feature_extraction="neural_sbert", **kwargs):
+    """Summarize `text` to `coverage_percentage` length of the original document by extracting features
+    from the text, clustering based on those features, and finally summarizing each cluster.
+    See the scikit-learn documentation on clustering text for more information since several chunks
+    of this function were borrowed from that example: https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html
+    
+    Arguments:
+        text {str} -- a string of text to summarize
+    
+    Keyword Arguments:
+        coverage_percentage {float} -- The length of the summary as a percentage of the original document. (default: {0.70})
+        final_sort_by {str} -- If `cluster_summarizer` is extractive and `title_generation` is False then
+                               this argument is available. If specified, it will sort the final cluster
+                               summaries by the specified string. (options: {"order", "rating"}) (default: {None})
+        cluster_summarizer {str} -- Which summarization method to use to summarize each individual cluster.
+                                    "Extractive" uses the same approach as the keyword_based_ext() function
+                                    but instead of using keywords from another document, the keywords are
+                                    calculated in the TfidfVectorizer or HashingVectorizer. Each keyword
+                                    is a feature in the document-term matrix, thus the number of words to use
+                                    is specified by the `n_features` parameter. (options: {"extractive", "abstractive"}) (default: {"extractive"})
+        title_generation {bool} -- Option to generate titles for each cluster. Can not be used if
+                                   `final_sort_by` is set. Generates titles by summarizing the text using
+                                   BART finetuned on XSum (a dataset of news articles and one sentence
+                                   summaries aka headline generation) and forcing results to be from 1 to
+                                   10 words long. (default: {False})
+        num_topics {int} -- The number of clusters to create. This should be set to the number of topics
+                            discussed in the lecture if generating good titles is desired. If separating
+                            into groups is not very important and a final summary is desired then this
+                            parameter is not incredibly important, it just should not be set super
+                            low (3) or super high (50) unless your document in super short or long. (default: {10})
+        minibatch {bool} -- Two clustering algorithms are used: ordinary k-means and its more scalable
+                            cousin minibatch k-means. Setting this to True will use minibatch k-means
+                            with a batch size set to the number of clusters set in `num_topics`. (default: {False})
+        feature_extraction {str} -- Specify how features should be extracted from the text.
+                                    `neural_hf`: uses a huggingface/transformers pipeline with the roberta model by default
+                                    `neural_sbert`: special bert and roberta models fine-tuned to extract sentence embeddings 
+                                                    GitHub: https://github.com/UKPLab/sentence-transformers
+                                                    Paper: https://arxiv.org/abs/1908.10084
+                                    `spacy`: uses spacy model. All other options use the small spacy model to split
+                                             the text into sentences since sentence detection does not improve
+                                             with larger models. However, if spacy is specified for `feature_selection`
+                                             than the `en_core_web_lg` model will be used to extract high-quality embeddings
+                                    `bow`: bow = "bag of words". this method is extremely fast since it is based on
+                                           word frequencies throughout the input text. The extract_features_bow()
+                                           function contains more details on recommended parameters that you can
+                                           pass to this function because of **kwargs.
+                                (options: {"neural_hf", "neural_sbert", "spacy", "bow"}) (default: {"neural_sbert"})
+        **kwargs is passed to the feature extraction function, which is either extract_features_bow() or
+        extract_features_neural() depending on the `feature_extraction` argument. 
+
+    Raises:
+        Exception: If incorrect parameters are passed.
+    
+    Returns:
+        [str] -- The summarized text as a normal string. Line breaks will be included if
+        `title_generation` is true
+    """    
+    assert cluster_summarizer in ["extractive", "abstractive"]
+    assert feature_extraction in ["neural_hf", "neural_sbert", "spacy", "bow"]
+    if (cluster_summarizer == "extractive") and (feature_extraction != "bow"):
+        raise Exception("If cluster_summarizer is set to 'extractive', feature_extraction cannot be set to 'bow' because extractive summarization is based off the ranks calculated from the document-term matrix used for 'bow' feature extraction.")
+    if final_sort_by:
+        assert final_sort_by in ["order", "rating"]
+        
+        if title_generation: # if final_sort_by and title_generation
+            raise Exception("Cannot sort by " + str(final_sort_by) + " and generate titles. Only one option can be specified at a time. In order to generate titles the clusters must not be resorted so each title coresponds to a cluster.")
+    
+    # If spacy is selected then return the `NLP_SENTENCES` as spacy Span objects instead of strings
+    # so they have the `vector` property. Also use the large model to get *real* word vectors.
+    # See: https://spacy.io/usage/vectors-similarity
+    if feature_extraction == "spacy":
+        NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_SPAN, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE = get_sentences(text, model="en_core_web_lg")
+    else:
+        NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_SPAN, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE = get_sentences(text)
+
+    if cluster_summarizer == "abstractive":
+        NLP_WORDS = [token.text for token in NLP_DOC if token.is_stop != True and token.is_punct != True]
+        NLP_WORDS_LEN = len(NLP_WORDS)
+        ABS_MIN_LENGTH = int(coverage_percentage * NLP_WORDS_LEN / num_topics)
+        logger.debug(str(NLP_WORDS_LEN) + " (Number of Words in Document) * " + str(coverage_percentage) + " (Coverage Percentage) / " + str(num_topics) + " (Number Topics/Clusters) = " + str(ABS_MIN_LENGTH) + " (Abstractive Summary Minimum Length per Cluster)")
+    else:
+        NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
+        logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
+        NUM_SENTENCES_PER_CLUSTER = int(NUM_SENTENCES_IN_SUMMARY / num_topics)
+        logger.debug(str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary) / " + str(num_topics) + " (Number Topics/Clusters) = " + str(NUM_SENTENCES_PER_CLUSTER) + " (Number of Sentences per Cluster")
+    
+    if feature_extraction == "bow":
+        if cluster_summarizer == "extractive":
+            X, lsa_svd = extract_features_bow(NLP_SENTENCES, return_lsa_svd=True, **kwargs)
+            u, sigma, v = lsa_svd
+            ranks = compute_ranks(sigma, v)
+            logger.debug("Ranks calculated")
+        else:
+            X = extract_features_bow(NLP_SENTENCES, **kwargs)
+    elif feature_extraction == "spacy":
+        X = extract_features_spacy(NLP_SENTENCES_SPAN)
+    else: # `feature_extraction` contains "neural"
+        if "sbert" in feature_extraction:
+            X = extract_features_neural_sbert(NLP_SENTENCES, **kwargs)
+        else:
+            X = extract_features_neural_hf(NLP_SENTENCES, **kwargs)
 
     if minibatch:
         km = MiniBatchKMeans(n_clusters=num_topics, init_size=1000, batch_size=1000)
     else:
         km = KMeans(n_clusters=num_topics, max_iter=100)
 
-    logger.debug("Clustering sparse data with %s" % km)
+    logger.debug("Clustering data with %s" % km)
     t0 = time()
     km.fit(X)
     logger.debug("done in %0.3fs" % (time() - t0))
@@ -458,7 +547,7 @@ def create_sumy_summarizer(algorithm, language="english"):
     return summarizer
 
 def generic_extractive_sumy(text, coverage_percentage=0.70, algorithm="text_rank", language="english"):
-    _, _, NLP_SENTENCES_LEN, _ = get_sentences(text)
+    _, _, _, NLP_SENTENCES_LEN, _ = get_sentences(text)
 
     # text = " ".join([token.text for token in NLP_DOC if token.is_stop != True])
 

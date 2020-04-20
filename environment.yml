@@ -45,5 +45,5 @@ dependencies:
     - summa
     - sumy
     - symspellpy
-    # DocSum
+    - sentence-transformers
     - transformers

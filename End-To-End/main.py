@@ -173,8 +173,8 @@ def main(ARGS):
         
         # Extractive Summarization
         if ARGS.summarization_ext != "none" and ARGS.summarization_ext is not None: # if extractive method was specified
-            if "cluster" in ARGS.summarization_ext:
-                SUMMARIZED_EXT = cluster(SUMMARIZED_MOD, title_generation=True, cluster_summarizer="abstractive")
+            if ARGS.summarization_ext == "cluster":
+                SUMMARIZED_EXT = cluster(SUMMARIZED_MOD, title_generation=False, cluster_summarizer="abstractive")
             else: # one of the generic options was specified
                 SUMMARIZED_EXT = generic_extractive_sumy(SUMMARIZED_MOD, algorithm=ARGS.summarization_ext)
         else:
