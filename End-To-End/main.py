@@ -5,6 +5,7 @@ import os
 import argparse
 import logging
 import spacy
+import traceback
 from shutil import rmtree
 from pathlib import Path
 from helpers import *
@@ -68,14 +69,25 @@ def main(ARGS):
 
         copy_all(SLIDES_DIR, IMGS_TO_CLUSTER_DIR)
 
-        from cluster import ClusterFilesystem
-        CLUSTER_FILESYSTEM = ClusterFilesystem(IMGS_TO_CLUSTER_DIR, algorithm_name="affinity_propagation", preference=-8, damping=0.72, max_iter=1000)
-        CLUSTER_FILESYSTEM.extract_and_add_features()
-        if ARGS.tensorboard:
-            CLUSTER_FILESYSTEM.visualize(ARGS.tensorboard)
-        CLUSTER_DIR, BEST_SAMPLES_DIR = CLUSTER_FILESYSTEM.transfer_to_filesystem()
-        BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
-        # cluster_dir = make_clusters(slides_dir)
+        if ARGS.remove_duplicates:
+            import imghash
+            images_hashed = imghash.sort_by_duplicates(IMGS_TO_CLUSTER_DIR)
+            imghash.remove_duplicates(IMGS_TO_CLUSTER_DIR, images_hashed)
+
+        if ARGS.cluster_method == "normal":
+            from cluster import ClusterFilesystem
+            CLUSTER_FILESYSTEM = ClusterFilesystem(IMGS_TO_CLUSTER_DIR, algorithm_name="affinity_propagation", preference=-8, damping=0.72, max_iter=1000)
+            CLUSTER_FILESYSTEM.extract_and_add_features()
+            if ARGS.tensorboard:
+                CLUSTER_FILESYSTEM.visualize(ARGS.tensorboard)
+            CLUSTER_DIR, BEST_SAMPLES_DIR = CLUSTER_FILESYSTEM.transfer_to_filesystem()
+            # BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
+            # cluster_dir = make_clusters(slides_dir)
+        elif ARGS.cluster_method == "segment":
+            from segment_cluster import SegmentCluster
+            SEGMENT_CLUSTER = SegmentCluster(IMGS_TO_CLUSTER_DIR)
+            SEGMENT_CLUSTER.extract_and_add_features()
+            CLUSTER_DIR, BEST_SAMPLES_DIR = SEGMENT_CLUSTER.transfer_to_filesystem()
 
     # 5. OCR slides
     if ARGS.skip_to <= 5: 
@@ -123,9 +135,11 @@ def main(ARGS):
                         TRANSCRIPT = transcribe.transcribe_audio_deepspeech(AUDIO_PATH, ARGS.deepspeech_model_dir)
                     else:
                         TRANSCRIPT = transcribe.transcribe_audio(AUDIO_PATH, method=ARGS.transcription_method)
-            except:
-                logger.error("Audio transcription failed. Retry by running this script with the skip_to parameter set to 5.")
-        
+            except Exception as e:
+                logger.error("Audio transcription failed. Retry by running this script with the skip_to parameter set to 6.")
+                logger.error("Full error: " + str(e))
+                traceback.print_exc()
+
         if "transcript" in ARGS.spell_check:
             TRANSCRIPT = spell_checker.check(TRANSCRIPT)
         transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
@@ -165,8 +179,9 @@ def main(ARGS):
             SUMMARIZED_COMBINED = OCR_RESULTS_FLAT + TRANSCRIPT
 
         # Modifications
-        if "full_sents" in ARGS.summarization_mods:
-            SUMMARIZED_MOD = get_complete_sentences(SUMMARIZED_COMBINED, return_string=True)
+        if ARGS.summarization_mods != "none" and ARGS.summarization_mods is not None:
+            if "full_sents" in ARGS.summarization_mods:
+                SUMMARIZED_MOD = get_complete_sentences(SUMMARIZED_COMBINED, return_string=True)
         else:
             SUMMARIZED_MOD = SUMMARIZED_COMBINED
             logger.debug("Skipping summarization_mods")
@@ -196,16 +211,20 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(description='End-to-End Conversion of Lecture Videos to Notes using ML')
     PARSER.add_argument('video_path', metavar='DIR',
                         help='path to video')
-    PARSER.add_argument('-s', '--skip-to', default=0, type=int, metavar='N',
+    PARSER.add_argument('-s', '--skip_to', default=0, type=int, metavar='N',
                         help='set to > 0 to skip specific processing steps')
     PARSER.add_argument('-d', '--process_dir', default='./', type=str, metavar='PATH',
                         help='path to the proessing directory (where extracted frames and other files are saved), set to "automatic" to use the video\'s folder (default: ./)')
-    PARSER.add_argument('-id', '--auto-id', dest='auto_id', action='store_true',
+    PARSER.add_argument('-id', '--auto_id', dest='auto_id', action='store_true',
                         help='automatically create a subdirectory in `process_dir` with a unique id for the video and change `process_dir` to this new directory')
     PARSER.add_argument('-rm', '--remove', dest='remove', action='store_true',
                         help='remove `process_dir` once conversion is complete')
     PARSER.add_argument('-c', '--chunk', dest='chunk', action='store_true',
                         help='split the audio into small chunks on silence')
+    PARSER.add_argument('-rd', "--remove_duplicates", action="store_true",
+                        help="remove duplicate slides before clusterting (helpful when `--cluster_method` is `segment`")
+    PARSER.add_argument('-cm', '--cluster_method', default="", choices=["normal", "segment"],
+                        help="which clustering method to use. `normal` uses a clustering algorithm from scikit-learn and `segment` uses the special method that iterates through frames in order and splits based on large visual differences")
     PARSER.add_argument('-ca', '--combination_algo', default="keyword_based", choices=["only_asr", "concat", "full_sents", "keyword_based"],
                         help='which extractive summarization approach to use. more information in documentation.')
     PARSER.add_argument('-sm', '--summarization_mods', default=None, choices=["none", "full_sents"], nargs="+",
