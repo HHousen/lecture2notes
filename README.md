@@ -13,7 +13,7 @@ While this project was designed to process presentations with slides, it will wo
 ## Install
 Installation is made easy due to conda environments. Simply run this command from the root project directory: `conda env create` and conda will create and environment called `lecture2notes` with all the required packages in [environment.yml](environment.yml).
 
-Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on the spacy [starter models](https://spacy.io/models/en-starters) and [core models](https://spacy.io/models/en) documentation. More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](End-To-End/transcribe.py) file.
+Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on the spacy [starter models](https://spacy.io/models/en-starters) and [core models](https://spacy.io/models/en) documentation. More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model (the `.pbmm` acoustic model and the scorer) from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](End-To-End/transcribe.py) file.
 
 ### Step-by-Step Instructions
 1. Clone this repository: `git clone https://github.com/HHousen/lecture2notes.git`.
@@ -25,7 +25,7 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
     ```
     Optionally, download the large model by running:
     ```bash
-    python -m spacy download en_core_web_sm
+    python -m spacy download en_core_web_lg
     ```
     to use certain similarity features (as discussed above) or to use spacy as a feature extractor in [End-To-End/summarization_approaches.py](End-To-End/summarization_approaches.py) with the default options (note: the default is *not* to use spacy for feature extraction but the large model *is* the default if spacy is manually chosen).
 5. **(Optional)** YouTube API
