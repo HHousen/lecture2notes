@@ -1,5 +1,5 @@
 import os, sys, shutil
-import loggin
+import logging
 from helpers import make_dir_if_not_exist
 from termcolor import colored
 from PIL import Image

@@ -7,8 +7,8 @@ channels:
 dependencies:
   - pytorch=1.4.0
   - torchvision
-  - cudatoolkit
-  # - cudatoolkit=10.0
+  # - cudatoolkit
+  - cudatoolkit=10.0
   - cudnn
   # - cudnn=7.6
   # - faiss-gpu
@@ -32,6 +32,8 @@ dependencies:
   # DocSum
   - appdirs
   - gdown
+  - imagehash
+  - tensorflow # needed for deepsegment
   # - fairseq # for Semsim model import in DocSum BartSumSummarizer
   - pip
   - pip: 
@@ -47,3 +49,4 @@ dependencies:
     - symspellpy
     - sentence-transformers
     - transformers
+    - deepsegment

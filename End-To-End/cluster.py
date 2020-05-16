@@ -34,6 +34,7 @@ class ClusterFilesystem(Cluster):
         cluster_dir = self.slides_dir.parents[0] / "slide_clusters" # cluster_dir = up one directory from slides_dir then into "slide_clusters"
         move_list = super().get_move_list()
         
+        best_samples_path = None
         if create_best_samples_folder:
             closest_filenames = super().get_closest_sample_filenames_to_centroids()
             best_samples_path = cluster_dir / "best_samples"

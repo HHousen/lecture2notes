@@ -148,7 +148,7 @@ def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
 
     vectorizer = TfidfVectorizer(vocabulary=vocab, stop_words="english")
 
-    _, NLP_SENTENCES, _, NLP_SENTENCES_LEN, _ = get_sentences(text)
+    _, NLP_SENTENCES, _, NLP_SENTENCES_LEN, _ = get_sentences(transcript_text)
 
     NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
     logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
