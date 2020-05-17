@@ -9,19 +9,23 @@ import traceback
 from shutil import rmtree
 from pathlib import Path
 from helpers import *
+from timeit import default_timer as timer
 from spell_check import SpellChecker
-from summarization_approaches import (full_sents,
-                                      keyword_based_ext,
-                                      get_complete_sentences,
-                                      generic_abstractive,
-                                      cluster,
-                                      generic_extractive_sumy)
+from summarization_approaches import (
+    full_sents,
+    keyword_based_ext,
+    get_complete_sentences,
+    generic_abstractive,
+    cluster,
+    generic_extractive_sumy,
+)
 
 logger = logging.getLogger(__name__)
 
 # Hack to import modules from different parent directory
-sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
-from custom_nnmodules import * #pylint: disable=import-error,wildcard-import,wrong-import-position
+sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
+from custom_nnmodules import *  # pylint: disable=import-error,wildcard-import,wrong-import-position
+
 
 def main(ARGS):
     if ARGS.process_dir == "automatic":
@@ -36,33 +40,52 @@ def main(ARGS):
         spell_checker = SpellChecker()
 
     # 1. Extract frames
-    if ARGS.skip_to <= 1: 
+    if ARGS.skip_to <= 1:
         from frames_extractor import extract_frames
+
+        start_time = timer()
+
         QUALITY = 5
         OUTPUT_PATH = ROOT_PROCESS_FOLDER / "frames"
         EXTRACT_EVERY_X_SECONDS = 1
         extract_frames(ARGS.video_path, QUALITY, OUTPUT_PATH, EXTRACT_EVERY_X_SECONDS)
 
+        end_time = timer() - start_time
+        logger.info("Stage 3 (Perspective Crop) took %s" % end_time)
+
     # 2. Classify slides
     if ARGS.skip_to <= 2:
         from slide_classifier import classify_frames
+
+        start_time = timer()
+
         FRAMES_DIR = ROOT_PROCESS_FOLDER / "frames"
         FRAMES_SORTED_DIR, _, _ = classify_frames(FRAMES_DIR)
 
+        end_time = timer() - start_time
+        logger.info("Stage 3 (Classify Slides) took %s" % end_time)
+
     # 3. Perspective crop images of presenter_slide to contain only the slide (helps OCR)
     if ARGS.skip_to <= 3:
-        if ARGS.skip_to >= 3: # if step 2 (classify slides) was skipped
+        if ARGS.skip_to >= 3:  # if step 2 (classify slides) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
         PRESENTER_SLIDE_DIR = FRAMES_SORTED_DIR / "presenter_slide"
         IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
         if os.path.exists(PRESENTER_SLIDE_DIR):
             import corner_crop_transform
-            cropped_imgs_paths = corner_crop_transform.all_in_folder(PRESENTER_SLIDE_DIR, remove_original=False)
+
+            cropped_imgs_paths = corner_crop_transform.all_in_folder(
+                PRESENTER_SLIDE_DIR, remove_original=False
+            )
             copy_all(cropped_imgs_paths, IMGS_TO_CLUSTER_DIR)
+
+        end_time = timer() - start_time
+        logger.info("Stage 3 (Perspective Crop) took %s" % end_time)
 
     # 4. Cluster slides
     if ARGS.skip_to <= 4:
-        if ARGS.skip_to >= 4: # if step 3 (perspective crop) was skipped
+        start_time = timer()
+        if ARGS.skip_to >= 4:  # if step 3 (perspective crop) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
         SLIDES_DIR = FRAMES_SORTED_DIR / "slide"
@@ -71,12 +94,20 @@ def main(ARGS):
 
         if ARGS.remove_duplicates:
             import imghash
+
             images_hashed = imghash.sort_by_duplicates(IMGS_TO_CLUSTER_DIR)
             imghash.remove_duplicates(IMGS_TO_CLUSTER_DIR, images_hashed)
 
         if ARGS.cluster_method == "normal":
             from cluster import ClusterFilesystem
-            CLUSTER_FILESYSTEM = ClusterFilesystem(IMGS_TO_CLUSTER_DIR, algorithm_name="affinity_propagation", preference=-8, damping=0.72, max_iter=1000)
+
+            CLUSTER_FILESYSTEM = ClusterFilesystem(
+                IMGS_TO_CLUSTER_DIR,
+                algorithm_name="affinity_propagation",
+                preference=-8,
+                damping=0.72,
+                max_iter=1000,
+            )
             CLUSTER_FILESYSTEM.extract_and_add_features()
             if ARGS.tensorboard:
                 CLUSTER_FILESYSTEM.visualize(ARGS.tensorboard)
@@ -85,26 +116,38 @@ def main(ARGS):
             # cluster_dir = make_clusters(slides_dir)
         elif ARGS.cluster_method == "segment":
             from segment_cluster import SegmentCluster
+
             SEGMENT_CLUSTER = SegmentCluster(IMGS_TO_CLUSTER_DIR)
             SEGMENT_CLUSTER.extract_and_add_features()
             CLUSTER_DIR, BEST_SAMPLES_DIR = SEGMENT_CLUSTER.transfer_to_filesystem()
 
-    # 5. OCR slides
-    if ARGS.skip_to <= 5: 
-        if ARGS.skip_to >= 5: # if step 4 (perspective crop) was skipped
+        end_time = timer() - start_time
+        logger.info("Stage 4 (Cluster Slides) took %s" % end_time)
+
+    # 5. OCR Slides
+    if ARGS.skip_to <= 5:
+        start_time = timer()
+        if ARGS.skip_to >= 5:  # if step 4 (perspective crop) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
         import ocr
+
         OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "ocr.txt"
         OCR_RESULTS = ocr.all_in_folder(BEST_SAMPLES_DIR)
         if "ocr" in ARGS.spell_check:
             OCR_RESULTS = spell_checker.check_all(OCR_RESULTS)
         ocr.write_to_file(OCR_RESULTS, OCR_OUTPUT_FILE)
 
+        end_time = timer() - start_time
+        logger.info("Stage 5 (OCR Slides) took %s" % end_time)
+
     # 6. Transcribe Audio
     if ARGS.skip_to <= 6:
-        import transcribe
+        from transcribe import transcribe
+
+        start_time = timer()
+
         EXTRACT_FROM_VIDEO = ARGS.video_path
         AUDIO_PATH = ROOT_PROCESS_FOLDER / "audio.wav"
         TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
@@ -114,29 +157,57 @@ def main(ARGS):
         if ARGS.transcription_method == "youtube":
             YT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.vtt"
             try:
-                TRANSCRIPT_PATH = transcribe.get_youtube_transcript(ARGS.video_id, YT_OUTPUT_FILE)
+                TRANSCRIPT_PATH = transcribe.get_youtube_transcript(
+                    ARGS.video_id, YT_OUTPUT_FILE
+                )
                 TRANSCRIPT = transcribe.caption_file_to_string(TRANSCRIPT_PATH)
             except:
                 YT_TRANSCRIPTION_FAILED = True
                 ARGS.transcription_method = PARSER.get_default("transcription_method")
-                logger.error("Error detected in grabbing transcript from YouTube. Falling back to " + PARSER.get_default("transcription_method") + " transcription.")
+                logger.error(
+                    "Error detected in grabbing transcript from YouTube. Falling back to "
+                    + PARSER.get_default("transcription_method")
+                    + " transcription."
+                )
+
         if ARGS.transcription_method != "youtube" or YT_TRANSCRIPTION_FAILED:
             transcribe.extract_audio(EXTRACT_FROM_VIDEO, AUDIO_PATH)
             try:
-                if ARGS.chunk:
+                if ARGS.chunk == "silence":
                     CHUNK_DIR = ROOT_PROCESS_FOLDER / "chunks"
-                    transcribe.create_chunks(AUDIO_PATH, CHUNK_DIR, 5, 2000)
+                    transcribe.chunk_by_silence(AUDIO_PATH, CHUNK_DIR)
+                    TRANSCRIPT = transcribe.process_chunks(
+                        CHUNK_DIR,
+                        model_dir=ARGS.deepspeech_model_dir,
+                        method=ARGS.transcription_method,
+                    )
+
+                elif ARGS.chunk == "speech":
+                    ds_model = transcribe.load_deepspeech_model(
+                        ARGS.deepspeech_model_dir
+                    )
+                    desired_sample_rate = ds_model.sampleRate()
+                    segments, _, audio_length = transcribe.chunk_by_speech(
+                        AUDIO_PATH, desired_sample_rate=desired_sample_rate
+                    )
+                    TRANSCRIPT = transcribe.process_segments(
+                        segments, ds_model, audio_length=audio_length
+                    )
+
+                else:  # if not chunking
                     if ARGS.transcription_method == "deepspeech":
-                        transcribe.process_chunks(CHUNK_DIR, TRANSCRIPT_OUTPUT_FILE, model_dir=ARGS.deepspeech_model_dir, method=ARGS.transcription_method)
+                        TRANSCRIPT = transcribe.transcribe_audio_deepspeech(
+                            AUDIO_PATH, ARGS.deepspeech_model_dir
+                        )
+                        TRANSCRIPT = transcribe.segment_sentences(TRANSCRIPT)
                     else:
-                        transcribe.process_chunks(CHUNK_DIR, TRANSCRIPT_OUTPUT_FILE, method=ARGS.transcription_method)
-                else:
-                    if ARGS.transcription_method == "deepspeech":
-                        TRANSCRIPT = transcribe.transcribe_audio_deepspeech(AUDIO_PATH, ARGS.deepspeech_model_dir)
-                    else:
-                        TRANSCRIPT = transcribe.transcribe_audio(AUDIO_PATH, method=ARGS.transcription_method)
+                        TRANSCRIPT = transcribe.transcribe_audio(
+                            AUDIO_PATH, method=ARGS.transcription_method
+                        )
             except Exception as e:
-                logger.error("Audio transcription failed. Retry by running this script with the skip_to parameter set to 6.")
+                logger.error(
+                    "Audio transcription failed. Retry by running this script with the skip_to parameter set to 6."
+                )
                 logger.error("Full error: " + str(e))
                 traceback.print_exc()
 
@@ -144,26 +215,37 @@ def main(ARGS):
             TRANSCRIPT = spell_checker.check(TRANSCRIPT)
         transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
 
+        end_time = timer() - start_time
+        logger.info("Stage 6 (Transcribe Audio) took %s" % end_time)
+
     # 7. Summarization
     if ARGS.skip_to <= 7:
-        if ARGS.skip_to >= 6: # if step 6 transcription or step 5 ocr was skipped
+        start_time = timer()
+
+        if ARGS.skip_to >= 6:  # if step 6 transcription or step 5 ocr was skipped
             OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "ocr.txt"
             OCR_FILE = open(OCR_OUTPUT_FILE, "r")
             OCR_RESULTS_FLAT = OCR_FILE.read()
             OCR_FILE.close()
 
-            import transcribe
+            from transcribe import transcribe
+
             TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
             TRANSCRIPT_FILE = open(TRANSCRIPT_OUTPUT_FILE, "r")
             TRANSCRIPT = TRANSCRIPT_FILE.read()
             TRANSCRIPT_FILE.close()
         else:
-            OCR_RESULTS_FLAT = " ".join(OCR_RESULTS) # converts list of strings into one string where each item is separated by a space
+            OCR_RESULTS_FLAT = " ".join(
+                OCR_RESULTS
+            )  # converts list of strings into one string where each item is separated by a space
         LECTURE_SUMMARIZED_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "summarized.txt"
 
-        OCR_RESULTS_FLAT = OCR_RESULTS_FLAT.replace('\n', ' ').replace('\r', '') # remove line breaks
+        OCR_RESULTS_FLAT = OCR_RESULTS_FLAT.replace("\n", " ").replace(
+            "\r", ""
+        )  # remove line breaks
 
         # Combination Algorithm
+        logger.info("Stage 7 (Summarization): Combination Algorithm")
         if ARGS.combination_algo == "only_asr":
             SUMMARIZED_COMBINED = TRANSCRIPT
         elif ARGS.combination_algo == "only_slides":
@@ -174,99 +256,242 @@ def main(ARGS):
             SUMMARIZED_COMBINED = full_sents(OCR_RESULTS_FLAT, TRANSCRIPT)
         elif ARGS.combination_algo == "keyword_based":
             SUMMARIZED_COMBINED = keyword_based_ext(OCR_RESULTS_FLAT, TRANSCRIPT)
-        else: # if no combination algorithm was specified, which should never happen since argparse checks
+        else:  # if no combination algorithm was specified, which should never happen since argparse checks
             logger.warn("No combination algorithm selected. Defaulting to `concat`.")
             SUMMARIZED_COMBINED = OCR_RESULTS_FLAT + TRANSCRIPT
 
         # Modifications
+        logger.info("Stage 7 (Summarization): Modifications")
         if ARGS.summarization_mods != "none" and ARGS.summarization_mods is not None:
             if "full_sents" in ARGS.summarization_mods:
-                SUMMARIZED_MOD = get_complete_sentences(SUMMARIZED_COMBINED, return_string=True)
+                SUMMARIZED_MOD = get_complete_sentences(
+                    SUMMARIZED_COMBINED, return_string=True
+                )
         else:
             SUMMARIZED_MOD = SUMMARIZED_COMBINED
             logger.debug("Skipping summarization_mods")
-        
+
         # Extractive Summarization
-        if ARGS.summarization_ext != "none" and ARGS.summarization_ext is not None: # if extractive method was specified
+        logger.info("Stage 7 (Summarization): Extractive")
+        ext_start_time = timer()
+        if (
+            ARGS.summarization_ext != "none" and ARGS.summarization_ext is not None
+        ):  # if extractive method was specified
             if ARGS.summarization_ext == "cluster":
-                SUMMARIZED_EXT = cluster(SUMMARIZED_MOD, title_generation=False, cluster_summarizer="abstractive")
-            else: # one of the generic options was specified
-                SUMMARIZED_EXT = generic_extractive_sumy(SUMMARIZED_MOD, algorithm=ARGS.summarization_ext)
+                SUMMARIZED_EXT = cluster(
+                    SUMMARIZED_MOD,
+                    title_generation=False,
+                    cluster_summarizer="abstractive",
+                )
+            else:  # one of the generic options was specified
+                SUMMARIZED_EXT = generic_extractive_sumy(
+                    SUMMARIZED_MOD, algorithm=ARGS.summarization_ext
+                )
         else:
             logger.debug("Skipping summarization_ext")
+        ext_end_time = timer() - ext_start_time
+        logger.info("Stage 7 (Summarization): Extractive took %s" % ext_end_time)
 
         # Abstractive Summarization
-        if ARGS.summarization_abs != "none" and ARGS.summarization_abs is not None: # if abstractive method was specified
-            LECTURE_SUMMARIZED = generic_abstractive(SUMMARIZED_EXT, ARGS.summarization_abs)
-        else: # if no abstractive summarization method was specified
+        logger.info("Stage 7 (Summarization): Abstractive")
+        abs_start_time = timer()
+        if (
+            ARGS.summarization_abs != "none" and ARGS.summarization_abs is not None
+        ):  # if abstractive method was specified
+            LECTURE_SUMMARIZED = generic_abstractive(
+                SUMMARIZED_EXT, ARGS.summarization_abs
+            )
+        else:  # if no abstractive summarization method was specified
             LECTURE_SUMMARIZED = SUMMARIZED_EXT
             logger.debug("Skipping summarization_abs")
+        abs_end_time = timer() - abs_start_time
+        logger.info("Stage 7 (Summarization): Abstractive took %s" % abs_end_time)
 
         transcribe.write_to_file(LECTURE_SUMMARIZED, LECTURE_SUMMARIZED_OUTPUT_FILE)
+
+        end_time = timer() - start_time
+        logger.info("Stage 7 (Summarization) took %s" % end_time)
 
     if ARGS.remove:
         rmtree(ROOT_PROCESS_FOLDER)
 
+
 if __name__ == "__main__":
-    PARSER = argparse.ArgumentParser(description='End-to-End Conversion of Lecture Videos to Notes using ML')
-    PARSER.add_argument('video_path', metavar='DIR',
-                        help='path to video')
-    PARSER.add_argument('-s', '--skip_to', default=0, type=int, metavar='N',
-                        help='set to > 0 to skip specific processing steps')
-    PARSER.add_argument('-d', '--process_dir', default='./', type=str, metavar='PATH',
-                        help='path to the proessing directory (where extracted frames and other files are saved), set to "automatic" to use the video\'s folder (default: ./)')
-    PARSER.add_argument('-id', '--auto_id', dest='auto_id', action='store_true',
-                        help='automatically create a subdirectory in `process_dir` with a unique id for the video and change `process_dir` to this new directory')
-    PARSER.add_argument('-rm', '--remove', dest='remove', action='store_true',
-                        help='remove `process_dir` once conversion is complete')
-    PARSER.add_argument('-c', '--chunk', dest='chunk', action='store_true',
-                        help='split the audio into small chunks on silence')
-    PARSER.add_argument('-rd', "--remove_duplicates", action="store_true",
-                        help="remove duplicate slides before clusterting (helpful when `--cluster_method` is `segment`")
-    PARSER.add_argument('-cm', '--cluster_method', default="", choices=["normal", "segment"],
-                        help="which clustering method to use. `normal` uses a clustering algorithm from scikit-learn and `segment` uses the special method that iterates through frames in order and splits based on large visual differences")
-    PARSER.add_argument('-ca', '--combination_algo', default="keyword_based", choices=["only_asr", "concat", "full_sents", "keyword_based"],
-                        help='which extractive summarization approach to use. more information in documentation.')
-    PARSER.add_argument('-sm', '--summarization_mods', default=None, choices=["none", "full_sents"], nargs="+",
-                        help='modifications to perform during summarization process. each modification is run between the combination and extractive stages. more information in documentation.')
-    PARSER.add_argument('-sx', '--summarization_ext', default="text_rank", choices=["none", "cluster", "lsa", "luhn", "lex_rank", "text_rank", "edmundson", "random"],
-                        help='which extractive summarization approach to use. more information in documentation.')
-    PARSER.add_argument('-sa', '--summarization_abs', default="bart", choices=["none", "bart", "presumm"],
-                        help='which abstractive summarization approach/model to use. more information in documentation.')
-    PARSER.add_argument('-tm', '--transcription_method', default="deepspeech", choices=["sphinx", "google", "youtube", "deepspeech"],
-                        help='''specify the program that should be used for transcription. 
+    PARSER = argparse.ArgumentParser(
+        description="End-to-End Conversion of Lecture Videos to Notes using ML"
+    )
+    PARSER.add_argument("video_path", metavar="DIR", help="path to video")
+    PARSER.add_argument(
+        "-s",
+        "--skip_to",
+        default=0,
+        type=int,
+        metavar="N",
+        help="set to > 0 to skip specific processing steps",
+    )
+    PARSER.add_argument(
+        "-d",
+        "--process_dir",
+        default="./",
+        type=str,
+        metavar="PATH",
+        help='path to the proessing directory (where extracted frames and other files are saved), set to "automatic" to use the video\'s folder (default: ./)',
+    )
+    PARSER.add_argument(
+        "-id",
+        "--auto_id",
+        action="store_true",
+        help="automatically create a subdirectory in `process_dir` with a unique id for the video and change `process_dir` to this new directory",
+    )
+    PARSER.add_argument(
+        "-rm",
+        "--remove",
+        action="store_true",
+        help="remove `process_dir` once conversion is complete",
+    )
+    PARSER.add_argument(
+        "-c",
+        "--chunk",
+        default="speech",
+        choices=["silence", "speech", "none"],
+        help="split the audio into small chunks on `silence` using PyDub or voice activity `speech` using py-webrtcvad. set to 'none' to disable. (default: 'speech').",
+    )
+    PARSER.add_argument(
+        "-rd",
+        "--remove_duplicates",
+        action="store_true",
+        help="remove duplicate slides before clusterting (helpful when `--cluster_method` is `segment`",
+    )
+    PARSER.add_argument(
+        "-cm",
+        "--cluster_method",
+        default="",
+        choices=["normal", "segment"],
+        help="which clustering method to use. `normal` uses a clustering algorithm from scikit-learn and `segment` uses the special method that iterates through frames in order and splits based on large visual differences",
+    )
+    PARSER.add_argument(
+        "-ca",
+        "--combination_algo",
+        default="keyword_based",
+        choices=["only_asr", "concat", "full_sents", "keyword_based"],
+        help="which extractive summarization approach to use. more information in documentation.",
+    )
+    PARSER.add_argument(
+        "-sm",
+        "--summarization_mods",
+        default=None,
+        choices=["none", "full_sents"],
+        nargs="+",
+        help="modifications to perform during summarization process. each modification is run between the combination and extractive stages. more information in documentation.",
+    )
+    PARSER.add_argument(
+        "-sx",
+        "--summarization_ext",
+        default="text_rank",
+        choices=[
+            "none",
+            "cluster",
+            "lsa",
+            "luhn",
+            "lex_rank",
+            "text_rank",
+            "edmundson",
+            "random",
+        ],
+        help="which extractive summarization approach to use. more information in documentation.",
+    )
+    PARSER.add_argument(
+        "-sa",
+        "--summarization_abs",
+        default="bart",
+        choices=["none", "bart", "presumm"],
+        help="which abstractive summarization approach/model to use. more information in documentation.",
+    )
+    PARSER.add_argument(
+        "-tm",
+        "--transcription_method",
+        default="deepspeech",
+        choices=["sphinx", "google", "youtube", "deepspeech"],
+        help="""specify the program that should be used for transcription. 
                         CMU Sphinx: use pocketsphinx (works offline)
                         Google Speech Recognition: probably will require chunking
                         YouTube: pull a video transcript from YouTube based on video_id
-                        DeepSpeech: Use the deepspeech library (works offline with great accuracy)''')
-    PARSER.add_argument('-sc', '--spell_check', default=["ocr"], choices=["ocr", "transcript"], nargs="+",
-                        help='option to perform spell checking on the ocr results of the slides or the voice transcript or both')
-    PARSER.add_argument('--video_id', type=str, metavar='ID',
-                        help='id of youtube video to get subtitles from')
-    PARSER.add_argument('--deepspeech_model_dir', type=str, metavar='DIR',
-                        help='path containing the DeepSpeech model files. See the documentation for details.')
-    PARSER.add_argument('--tensorboard', default='', type=str, metavar='PATH',
-                        help='Path to tensorboard logdir. Tensorboard not used if not set. Tensorboard only used to visualize cluster primarily for debugging.')
-    PARSER.add_argument('--bart_checkpoint', default=None, type=str, metavar='PATH',
-                        help='[BART Abstractive Summarizer Only] Path to optional checkpoint. Semsim is better model but will use more memory and is an additional 5GB download. (default: none, recommended: semsim)')
-    PARSER.add_argument('--bart_state_dict_key', default='model', type=str, metavar='PATH',
-                        help='[BART Abstractive Summarizer Only] model state_dict key to load from pickle file specified with --bart_checkpoint (default: "model")')
-    PARSER.add_argument('--bart_fairseq', action='store_true',
-                        help='[BART Abstractive Summarizer Only] Use fairseq model from torch hub instead of huggingface transformers library models. Can not use --bart_checkpoint if this option is supplied.')
-    PARSER.add_argument("-l", "--log", dest="logLevel", default='INFO',
-                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                        help="Set the logging level (default: 'Info').")
+                        DeepSpeech: Use the deepspeech library (works offline with great accuracy)""",
+    )
+    PARSER.add_argument(
+        "-sc",
+        "--spell_check",
+        default=["ocr"],
+        choices=["ocr", "transcript"],
+        nargs="+",
+        help="option to perform spell checking on the ocr results of the slides or the voice transcript or both",
+    )
+    PARSER.add_argument(
+        "--video_id",
+        type=str,
+        metavar="ID",
+        help="id of youtube video to get subtitles from",
+    )
+    PARSER.add_argument(
+        "--deepspeech_model_dir",
+        type=str,
+        metavar="DIR",
+        help="path containing the DeepSpeech model files. See the documentation for details.",
+    )
+    PARSER.add_argument(
+        "--tensorboard",
+        default="",
+        type=str,
+        metavar="PATH",
+        help="Path to tensorboard logdir. Tensorboard not used if not set. Tensorboard only used to visualize cluster primarily for debugging.",
+    )
+    PARSER.add_argument(
+        "--bart_checkpoint",
+        default=None,
+        type=str,
+        metavar="PATH",
+        help="[BART Abstractive Summarizer Only] Path to optional checkpoint. Semsim is better model but will use more memory and is an additional 5GB download. (default: none, recommended: semsim)",
+    )
+    PARSER.add_argument(
+        "--bart_state_dict_key",
+        default="model",
+        type=str,
+        metavar="PATH",
+        help='[BART Abstractive Summarizer Only] model state_dict key to load from pickle file specified with --bart_checkpoint (default: "model")',
+    )
+    PARSER.add_argument(
+        "--bart_fairseq",
+        action="store_true",
+        help="[BART Abstractive Summarizer Only] Use fairseq model from torch hub instead of huggingface transformers library models. Can not use --bart_checkpoint if this option is supplied.",
+    )
+    PARSER.add_argument(
+        "-l",
+        "--log",
+        dest="logLevel",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level (default: 'Info').",
+    )
 
     ARGS = PARSER.parse_args()
 
     # Perform argument checks
     if ARGS.transcription_method == "deepspeech" and ARGS.deepspeech_model_dir is None:
-        PARSER.error("DeepSpeech method requires --deepspeech_model_dir to be set to the directory containing the deepspeech models. See the documentation for details.")
-    
-    if (ARGS.summarization_mods is not None) and ("none" in ARGS.summarization_mods and len(ARGS.summarization_mods) > 1): # None and another option were specified
-        PARSER.error("If 'none' is specified in --summarization_mods then no other options can be selected.")
+        PARSER.error(
+            "DeepSpeech method requires --deepspeech_model_dir to be set to the directory containing the deepspeech models. See the documentation for details."
+        )
+
+    if (ARGS.summarization_mods is not None) and (
+        "none" in ARGS.summarization_mods and len(ARGS.summarization_mods) > 1
+    ):  # None and another option were specified
+        PARSER.error(
+            "If 'none' is specified in --summarization_mods then no other options can be selected."
+        )
 
     # Setup logging config
-    logging.basicConfig(format="%(asctime)s|%(name)s|%(levelname)s> %(message)s", level=logging.getLevelName(ARGS.logLevel))
+    logging.basicConfig(
+        format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
+        level=logging.getLevelName(ARGS.logLevel),
+    )
 
     main(ARGS)
