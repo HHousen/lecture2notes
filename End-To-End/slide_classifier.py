@@ -11,7 +11,21 @@ sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
 from custom_nnmodules import * #pylint: disable=import-error,wrong-import-position,wildcard-import
 import inference #pylint: disable=wrong-import-position
 
-def classify_frames(frames_dir, do_move=True, incorrect_treshold=0.60):
+def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
+    """Classifies images in a directory using the slide classifier model.
+
+    Args:
+        frames_dir (str): path to directory containing images to classify
+        do_move (bool, optional): move the images to their sorted folders instead 
+            of copying them. Defaults to True.
+        incorrect_threshold (float, optional): the certainity value that the model must 
+            be below for a prediction to be marked "probably incorrect". Defaults to 0.60.
+
+    Returns:
+        [tuple]: (frames_sorted_dir, certainties, percent_wrong)
+    """
+    model = inference.load_model()
+
     certainties = []
     frames_sorted_dir = frames_dir.parents[0] / "frames_sorted"
     logger.debug("Received inputs:\nframes_dir=" + str(frames_dir))
@@ -24,7 +38,7 @@ def classify_frames(frames_dir, do_move=True, incorrect_treshold=0.60):
         logger.info("Progress: " + str(idx+1) + "/" + str(num_frames))
         current_frame_path = os.path.join(frames_dir, frame)
         # run classification
-        best_guess, best_guess_idx, probs, _ = inference.get_prediction(Image.open(current_frame_path), extract_features=False) #pylint: disable=no-member
+        best_guess, best_guess_idx, probs, _ = inference.get_prediction(model, Image.open(current_frame_path), extract_features=False) #pylint: disable=no-member
         prob_max_correct = list(probs.values())[best_guess_idx]
         certainties.append(prob_max_correct)
         logger.info("Prediction is " + best_guess)

@@ -143,3 +143,4 @@ deepspeech-models
 .vscode
 Models/slide-classifier/runs
 Dataset/mass-download*
+doc/_build

@@ -144,7 +144,7 @@ def main(ARGS):
 
     # 6. Transcribe Audio
     if ARGS.skip_to <= 6:
-        from transcribe import transcribe
+        from transcribe import transcribe_main as transcribe
 
         start_time = timer()
 
@@ -195,7 +195,7 @@ def main(ARGS):
                     )
 
                 else:  # if not chunking
-                    if ARGS.transcription_method == "deepspeech":
+                    if ARGS.transcription_method == "deepspeech" or YT_TRANSCRIPTION_FAILED:
                         TRANSCRIPT = transcribe.transcribe_audio_deepspeech(
                             AUDIO_PATH, ARGS.deepspeech_model_dir
                         )
@@ -415,7 +415,7 @@ if __name__ == "__main__":
         help="""specify the program that should be used for transcription. 
                         CMU Sphinx: use pocketsphinx (works offline)
                         Google Speech Recognition: probably will require chunking
-                        YouTube: pull a video transcript from YouTube based on video_id
+                        YouTube: pull a video transcript from YouTube based on `--video_id`
                         DeepSpeech: Use the deepspeech library (works offline with great accuracy)""",
     )
     PARSER.add_argument(
@@ -430,7 +430,7 @@ if __name__ == "__main__":
         "--video_id",
         type=str,
         metavar="ID",
-        help="id of youtube video to get subtitles from",
+        help="id of youtube video to get subtitles from. set `--transcription_method` to `youtube` for this argument to take effect.",
     )
     PARSER.add_argument(
         "--deepspeech_model_dir",

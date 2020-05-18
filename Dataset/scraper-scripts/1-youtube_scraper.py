@@ -15,13 +15,13 @@ PARSER.add_argument('mode', choices=["video", "channel", "transcript"],
 PARSER.add_argument('id', type=str, metavar='STR',
                     help='Channel or video id depending on mode')
 PARSER.add_argument('-n', '--num_pages', default=10, type=int, metavar='N',
-                    help='Number of pages of videos to scape if mode is `channel`')
+                    help='Number of pages of videos to scape if mode is `channel`. 50 videos per page.')
 PARSER.add_argument('-t', '--transcript', dest='get_transcript', action='store_true',
                     help='Download transcript for each video scraped.')
 PARSER.add_argument('--transcript-use-yt-api', dest='transcript_use_api', action='store_true',
                     help='Use the YouTube API instead of youtube-dl to download transcripts. `--transcript` must be specified for this option to take effect.')
 PARSER.add_argument('-l', '--min_length_check', default=None, type=int, metavar='N',
-                    help='Minimum video length to be scraped. Only works when `mode` is "channel"')
+                    help='Minimum video length in minutes to be scraped. Only works when `mode` is "channel"')
 PARSER.add_argument('-f', '--file', metavar='PATH', default='../videos-dataset.csv',
                     help='File to add scraped results to.')
 ARGS = PARSER.parse_args()

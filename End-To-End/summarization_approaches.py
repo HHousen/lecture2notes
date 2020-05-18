@@ -40,7 +40,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '../Models/summarizer'))
 logger = logging.getLogger(__name__)
 
 def get_complete_sentences(text, return_string=False):
-    nlp = spacy.load("en_core_web_lg")
+    nlp = spacy.load("en_core_web_sm")
     complete_sentences = list()
 
     text = text.replace('\n', ' ').replace('\r', '')
@@ -176,43 +176,39 @@ def extract_features_bow(data, return_lsa_svd=False, use_hashing=False, use_idf=
     """Extract features using a bag of words statistical word-frequency approach. 
     
     Arguments:
-        data {list} -- List of sentences to extract features from
-    
-    Keyword Arguments:
-        return_lsa_svd {bool} -- [description] (default: {False})
-        use_hashing {bool} -- Use a HashingVectorizer instead of a CountVectorizer. (default: {False})
-                              A HashingVectorizer should only be used with large datasets. Large to the
-                              degree that you'll probably never pass enough data through this function
-                              to warrent the usage of a HashingVectorizer. HashingVectorizers use very
-                              little memory and are thus scalable to large datasets because there is no 
-                              need to store a vocabulary dictionary in memory.
-                              More information can be found in the scikit-learn documentation:
-                              https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.HashingVectorizer.html
-        use_idf {bool} -- Option to use inverse document-frequency. In the case of `use_hasing`
-                          a TfidfTransformer will be appended in a pipeline after the HashingVectorizer.
-                          If not `use_hashing` then the `use_idf` parameter of the TfidfVectorizer will
-                          be set to use_idf. This step is important because, as explained by the
-                          scikit-learn documentation:
-                          "In a large text corpus, some words will be very present (e.g. "the", "a",
-                          "is" in English) hence carrying very little meaningful information about the
-                          actual contents of the document. If we were to feed the direct count data
-                          directly to a classifier those very frequent terms would shadow the frequencies
-                          of rarer yet more interesting terms. In order to re-weight the count features
-                          into floating point values suitable for usage by a classifier it is very common
-                          to use the tf–idf transform."
-                          More info: https://scikit-learn.org/stable/modules/feature_extraction.html#tfidf-term-weighting (default: {True})
-        n_features {int} -- Specifies the number of features/words to use in the vocabulary (which are 
-                            the rows of the document-term matrix). In the case of the TfidfVectorizer
-                            the `n_features` acts as a maximum since the max_df and min_df parameters
-                            choose words to add to the vocabulary (to use as features) that occur within
-                            the bounds specified by these parameters. This value should probably be lowered
-                            if `use_hasing` is set to True. (default: {10000})
-        lsa_num_components {int} -- If set then preprocess the data using latent semantic analysis to
-                                    reduce the dimensionality to `lsa_num_components` components. (default: {False})
+        data (list): List of sentences to extract features from
+        return_lsa_svd (bool, optional): Return the features and ``lsa_svd``. See "Returns"
+            section below. Defaults to False.
+        use_hashing (bool, optional): Use a HashingVectorizer instead of a CountVectorizer. Defaults to False.
+            A HashingVectorizer should only be used with large datasets. Large to the
+            degree that you'll probably never pass enough data through this function
+            to warrent the usage of a HashingVectorizer. HashingVectorizers use very
+            little memory and are thus scalable to large datasets because there is no 
+            need to store a vocabulary dictionary in memory.
+            More information can be found in the `HashingVectorizer scikit-learn documentation <https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.HashingVectorizer.html>`_.
+        use_idf (bool, optional): Option to use inverse document-frequency. Defaults to True. In the case of ``use_hasing``
+            a TfidfTransformer will be appended in a pipeline after the HashingVectorizer.
+            If not ``use_hashing`` then the ``use_idf`` parameter of the TfidfVectorizer will
+            be set to use_idf. This step is important because, as explained by the
+            `scikit-learn documentation <https://scikit-learn.org/stable/modules/feature_extraction.html#tfidf-term-weighting>`_:
+            "In a large text corpus, some words will be very present (e.g. 'the', 'a',
+            'is' in English) hence carrying very little meaningful information about the
+            actual contents of the document. If we were to feed the direct count data
+            directly to a classifier those very frequent terms would shadow the frequencies
+            of rarer yet more interesting terms. In order to re-weight the count features
+            into floating point values suitable for usage by a classifier it is very common
+            to use the tf–idf transform."
+        n_features (int, optional): Specifies the number of features/words to use in the vocabulary (which are 
+            the rows of the document-term matrix). In the case of the TfidfVectorizer
+            the ``n_features`` acts as a maximum since the max_df and min_df parameters
+            choose words to add to the vocabulary (to use as features) that occur within
+            the bounds specified by these parameters. This value should probably be lowered
+            if ``use_hasing`` is set to True. Defaults to 10000.
+        lsa_num_components (int, optional): If set then preprocess the data using latent semantic analysis to
+            reduce the dimensionality to ``lsa_num_components`` components. Defaults to False.
     
     Returns:
-        [list] -- list of features extracted
-        [tup] -- (optional) the u, sigma, and v of the svd calculation on the document-term matrix. only returns if return_lsa_svd set to True.
+        [list or tuple]: list of features extracted and optionally the u, sigma, and v of the svd calculation on the document-term matrix. only returns if ``return_lsa_svd`` set to True.
     """    
     logger.debug("Extracting features using a sparse vectorizer")
     t0 = time()
@@ -280,7 +276,7 @@ def extract_features_neural_hf(sentences, model="roberta-base", tokenizer="rober
     return vec
 
 def extract_features_neural_sbert(sentences, model="roberta-base-nli-mean-tokens"):
-    """ Extract features using Sentence-BERT or SRoBERTa( SBERT or SRoBERTa) from the sentence-transformers library """
+    """ Extract features using Sentence-BERT (SBERT) or SRoBERTa from the sentence-transformers library """
     if model == "roberta":
         model = "roberta-base-nli-mean-tokens"
     elif model == "bert":
@@ -301,61 +297,64 @@ def extract_features_spacy(sentences):
 
 def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summarizer="extractive",
             title_generation=False, num_topics=10, minibatch=False, feature_extraction="neural_sbert", **kwargs):
-    """Summarize `text` to `coverage_percentage` length of the original document by extracting features
+    """Summarize ``text`` to ``coverage_percentage`` length of the original document by extracting features
     from the text, clustering based on those features, and finally summarizing each cluster.
-    See the scikit-learn documentation on clustering text for more information since several chunks
-    of this function were borrowed from that example: https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html
+    See the `scikit-learn documentation on clustering text <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html>`_ 
+    for more information since several sections of this function were borrowed from that example.
     
+    Notes:
+        * ``**kwargs`` is passed to the feature extraction function, which is either :meth:`~summarization_approaches.extract_features_bow` or :meth:`summarization_approaches.extract_features_neural` depending on the ``feature_extraction`` argument.
+
     Arguments:
-        text {str} -- a string of text to summarize
-    
-    Keyword Arguments:
-        coverage_percentage {float} -- The length of the summary as a percentage of the original document. (default: {0.70})
-        final_sort_by {str} -- If `cluster_summarizer` is extractive and `title_generation` is False then
-                               this argument is available. If specified, it will sort the final cluster
-                               summaries by the specified string. (options: {"order", "rating"}) (default: {None})
-        cluster_summarizer {str} -- Which summarization method to use to summarize each individual cluster.
-                                    "Extractive" uses the same approach as the keyword_based_ext() function
-                                    but instead of using keywords from another document, the keywords are
-                                    calculated in the TfidfVectorizer or HashingVectorizer. Each keyword
-                                    is a feature in the document-term matrix, thus the number of words to use
-                                    is specified by the `n_features` parameter. (options: {"extractive", "abstractive"}) (default: {"extractive"})
-        title_generation {bool} -- Option to generate titles for each cluster. Can not be used if
-                                   `final_sort_by` is set. Generates titles by summarizing the text using
-                                   BART finetuned on XSum (a dataset of news articles and one sentence
-                                   summaries aka headline generation) and forcing results to be from 1 to
-                                   10 words long. (default: {False})
-        num_topics {int} -- The number of clusters to create. This should be set to the number of topics
-                            discussed in the lecture if generating good titles is desired. If separating
-                            into groups is not very important and a final summary is desired then this
-                            parameter is not incredibly important, it just should not be set super
-                            low (3) or super high (50) unless your document in super short or long. (default: {10})
-        minibatch {bool} -- Two clustering algorithms are used: ordinary k-means and its more scalable
-                            cousin minibatch k-means. Setting this to True will use minibatch k-means
-                            with a batch size set to the number of clusters set in `num_topics`. (default: {False})
-        feature_extraction {str} -- Specify how features should be extracted from the text.
-                                    `neural_hf`: uses a huggingface/transformers pipeline with the roberta model by default
-                                    `neural_sbert`: special bert and roberta models fine-tuned to extract sentence embeddings 
-                                                    GitHub: https://github.com/UKPLab/sentence-transformers
-                                                    Paper: https://arxiv.org/abs/1908.10084
-                                    `spacy`: uses spacy model. All other options use the small spacy model to split
-                                             the text into sentences since sentence detection does not improve
-                                             with larger models. However, if spacy is specified for `feature_selection`
-                                             than the `en_core_web_lg` model will be used to extract high-quality embeddings
-                                    `bow`: bow = "bag of words". this method is extremely fast since it is based on
-                                           word frequencies throughout the input text. The extract_features_bow()
-                                           function contains more details on recommended parameters that you can
-                                           pass to this function because of **kwargs.
-                                (options: {"neural_hf", "neural_sbert", "spacy", "bow"}) (default: {"neural_sbert"})
-        **kwargs is passed to the feature extraction function, which is either extract_features_bow() or
-        extract_features_neural() depending on the `feature_extraction` argument. 
+        text (str): a string of text to summarize
+        coverage_percentage (float, optional): The length of the summary as a percentage of the original document. Defaults to 0.70.
+        final_sort_by (str, optional): If `cluster_summarizer` is extractive and `title_generation` is False then
+            this argument is available. If specified, it will sort the final cluster
+            summaries by the specified string. Options are ``["order", "rating"]``. Defaults to None.
+        cluster_summarizer (str, optional): Which summarization method to use to summarize each individual cluster.
+            "Extractive" uses the same approach as :meth:`~summarization_approaches.keyword_based_ext` 
+            but instead of using keywords from another document, the keywords are
+            calculated in the ``TfidfVectorizer`` or ``HashingVectorizer``. Each keyword
+            is a feature in the document-term matrix, thus the number of words to use
+            is specified by the `n_features` parameter. Options are ``["extractive", "abstractive"].`` 
+            Defaults to "extractive".
+        title_generation (bool, optional): Option to generate titles for each cluster. Can not be used if
+            ``final_sort_by`` is set. Generates titles by summarizing the text using
+            BART finetuned on XSum (a dataset of news articles and one sentence
+            summaries aka headline generation) and forcing results to be from 1 to
+            10 words long. Defaults to False.
+        num_topics (int, optional): The number of clusters to create. This should be set to the number of topics
+            discussed in the lecture if generating good titles is desired. If separating
+            into groups is not very important and a final summary is desired then this
+            parameter is not incredibly important, it just should not be set super
+            low (3) or super high (50) unless your document in super short or long. Defaults to 10.
+        minibatch (bool, optional): Two clustering algorithms are used: ordinary k-means and its more scalable
+            cousin minibatch k-means. Setting this to True will use minibatch k-means
+            with a batch size set to the number of clusters set in ``num_topics``. Defaults to False.
+        feature_extraction (str, optional): Specify how features should be extracted from the text.
+            
+            * ``neural_hf``: uses a huggingface/transformers pipeline with the roberta model by default
+            * ``neural_sbert``: special bert and roberta models fine-tuned to extract sentence embeddings 
+                
+                * GitHub: https://github.com/UKPLab/sentence-transformers
+                * Paper: https://arxiv.org/abs/1908.10084
+
+            * ``spacy``: uses spacy model. All other options use the small spacy model to split
+                    the text into sentences since sentence detection does not improve
+                    with larger models. However, if spacy is specified for `feature_selection`
+                    than the `en_core_web_lg` model will be used to extract high-quality embeddings
+            * ``bow``: bow = "bag of words". this method is extremely fast since it is based on
+                    word frequencies throughout the input text. The :meth:`~summarization_approaches.extract_features_bow`
+                    function contains more details on recommended parameters that you can
+                    pass to this function because of ``**kwargs``.
+            
+            Options are ``["neural_hf", "neural_sbert", "spacy", "bow"]`` Default is "neural_sbert".
 
     Raises:
         Exception: If incorrect parameters are passed.
     
     Returns:
-        [str] -- The summarized text as a normal string. Line breaks will be included if
-        `title_generation` is true
+        [str]: The summarized text as a normal string. Line breaks will be included if ``title_generation`` is true.
     """    
     assert cluster_summarizer in ["extractive", "abstractive"]
     assert feature_extraction in ["neural_hf", "neural_sbert", "spacy", "bow"]

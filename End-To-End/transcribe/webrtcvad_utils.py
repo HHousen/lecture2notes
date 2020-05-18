@@ -52,15 +52,16 @@ def vad_collector(sample_rate, frame_duration_ms, padding_duration_ms, vad, fram
     amount of silence or the beginnings/endings of speech around the
     voiced frames.
 
-    Arguments:
+    Args:
 
-    sample_rate - The audio sample rate, in Hz.
-    frame_duration_ms - The frame duration in milliseconds.
-    padding_duration_ms - The amount to pad the window, in milliseconds.
-    vad - An instance of webrtcvad.Vad.
-    frames - a source of audio frames (sequence or generator).
+        sample_rate: The audio sample rate, in Hz.
+        frame_duration_ms: The frame duration in milliseconds.
+        padding_duration_ms: The amount to pad the window, in milliseconds.
+        vad: An instance of webrtcvad.Vad.
+        frames: a source of audio frames (sequence or generator).
 
-    Returns: A generator that yields PCM audio data.
+    Returns:
+        [generator]: A generator that yields PCM audio data.
     """
     num_padding_frames = int(padding_duration_ms / frame_duration_ms)
     # We use a deque for our sliding window/ring buffer.
@@ -112,15 +113,20 @@ def vad_collector(sample_rate, frame_duration_ms, padding_duration_ms, vad, fram
 def vad_segment_generator(wavFile, aggressiveness, desired_sample_rate=None):
     """
     Generate VAD segments. Filters out non-voiced audio frames.
-    @param waveFile: Input wav file to run VAD on.0
-    @Retval:
-    Returns tuple of
-        segments: a bytearray of multiple smaller audio frames
-                (The longer audio split into multiple smaller one's)
-        sample_rate: Sample rate of the input audio file
-        audio_length: Duraton of the input audio file
+
+    Args:
+        waveFile (str): Path to input wav file to run VAD on.
+    
+    Returns:
+        [tuple]:
+            ``segments``: a bytearray of multiple smaller audio frames
+            (The longer audio split into multiple smaller one's)
+            
+            ``sample_rate``: Sample rate of the input audio file
+            
+            ``audio_length``: Duration of the input audio file
     """
-    from transcribe.transcribe import read_wave
+    from transcribe.transcribe_main import read_wave
 
     logging.debug("Caught the wav file @: %s" % (wavFile))
     audio, sample_rate, audio_length = read_wave(wavFile, desired_sample_rate)

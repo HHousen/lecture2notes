@@ -23,6 +23,7 @@ dependencies:
   - google-api-python-client
   - google-auth-oauthlib
   - google-auth-httplib2
+  - pandas
   - spacy
   - pillow=6.1
   - sox
@@ -33,6 +34,7 @@ dependencies:
   - appdirs
   - gdown
   - imagehash
+  - sphinx
   - tensorflow # needed for deepsegment
   # - fairseq # for Semsim model import in DocSum BartSumSummarizer
   - pip

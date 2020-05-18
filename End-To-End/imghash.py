@@ -8,12 +8,14 @@ logger = logging.getLogger(__name__)
 
 def get_hash_func(hashmethod="phash"):
     """
+    Returns a hash function from the ``imagehash`` library.
+
     Hash Methods: 
-        ahash:      Average hash
-        phash:      Perceptual hash
-        dhash:      Difference hash
-        whash-haar: Haar wavelet hash
-        whash-db4:  Daubechies wavelet hash
+        * ahash: Average hash
+        * phash: Perceptual hash
+        * dhash: Difference hash
+        * whash-haar: Haar wavelet hash
+        * whash-db4: Daubechies wavelet hash
     """
     if hashmethod == 'ahash':
         hashfunc = imagehash.average_hash
@@ -29,6 +31,16 @@ def get_hash_func(hashmethod="phash"):
     return hashfunc
 
 def sort_by_duplicates(img_dir, hash_func="phash"):
+    """Find duplicate images in a directory.
+
+    Args:
+        img_dir (str): path to folder containing images to scan for duplicates
+        hash_func (str, optional): the hash function to use as given by 
+            :meth:`~imghash.get_hash_func`. Defaults to "phash".
+
+    Returns:
+        [dict]: dictionary in format {image hash: image filenames}
+    """
     logger.info("Identifying frames/slides that are potential duplicates")
     hashfunc = get_hash_func(hash_func)
 
@@ -48,6 +60,13 @@ def sort_by_duplicates(img_dir, hash_func="phash"):
     return images
 
 def remove_duplicates(img_dir, images):
+    """Remove duplicate frames/slides from disk.
+
+    Args:
+        img_dir (str): path to directory containing image files
+        images (dict): dictionary in format {image hash: image filenames} 
+            provided by :meth:`~imghash.sort_by_duplicates`.
+    """
     logger.info("Removing duplicate frames/slides from disk")
     for img_hash, img_paths in images.items():
         # if there is more than one image with the same path

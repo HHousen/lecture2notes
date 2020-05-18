@@ -15,8 +15,14 @@ from frames_extractor import extract_frames #pylint: disable=import-error,wrong-
 from slide_classifier import classify_frames #pylint: disable=import-error,wrong-import-position
 
 parser = argparse.ArgumentParser(description='Mass Data Collector')
-parser.add_argument('-k', '--top-k', dest='top_k', type=int, metavar='K', default=None,
+parser.add_argument('-k', '--top_k', type=int, metavar='K', default=None,
                     help='Add the top `k` most uncertain videos to the videos-dataset.')
+parser.add_argument('-nr', '--no_remove', action="store_true",
+                    help="""Don't remove the videos after they have been processed. This makes it 
+                    faster to manually look through the most uncertain videos since they don't have 
+                    to be redownloaded, but it will use more disk space.""")
+parser.add_argument('-r', '--resolution', type=int, default=None,
+                    help="The resolution of the videos to download. Default is maximum resolution.")
 
 args = parser.parse_args()
 
@@ -41,7 +47,7 @@ def process_videos():
             print("> Mass Data Collector: Video Root Process Folder is " + str(root_process_folder))
 
             print("> Mass Data Collector: Starting video " + video_id + " download")
-            download_video(row, root_process_folder, output_dir_yt)
+            download_video(row, root_process_folder, output_dir_yt, resolution=args.resolution)
             video_path = root_process_folder / (row['video_id'] + ".mp4")
             print("> Mass Data Collector: Video " + video_id + " downloaded to " + str(video_path))
 
@@ -59,7 +65,7 @@ def process_videos():
 
             # Classify frames
             print("> Mass Data Collector: Classify frames")
-            _, certainties, percent_incorrect = classify_frames(output_path, do_move=False, incorrect_treshold=0.70)
+            _, certainties, percent_incorrect = classify_frames(output_path, do_move=False, incorrect_threshold=0.70)
 
             average_certainty = sum(certainties) / len(certainties)
             num_incorrect = len([i for i in certainties if i < 0.70])
@@ -71,7 +77,8 @@ def process_videos():
             DOWNLOAD_DF.at[index, "downloaded"] = True
             DOWNLOAD_DF.to_csv(DOWNLOAD_CSV_PATH)
 
-            shutil.rmtree(root_process_folder)
+            if not args.no_remove:
+                shutil.rmtree(root_process_folder)
 
 def add_top_k(k=10, remove=True):
     RESULTS_DF.sort_values("average_certainty", ascending=True, inplace=True)

@@ -1,9 +1,15 @@
 import os
 
-def download_video(row, video_dir, output_dir_yt):
+def download_video(row, video_dir, output_dir_yt, resolution=None):
     video_id = row['video_id']
+
+    if resolution:
+        yt_format_string = "bestvideo[height<=" + str(resolution) + "]+bestaudio/best[height<=" + str(resolution) + "]"
+    else:
+        yt_format_string = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
+
     if row['provider'] == "youtube":
-        os.system('youtube-dl -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" -o ' + output_dir_yt + ' -- ' + video_id)
+        os.system('youtube-dl -f "' + yt_format_string + '" -o ' + output_dir_yt + ' -- ' + video_id)
     elif row['provider'] == "website":
         download_link = row['download_link']
         file_extension = download_link.split(".")[-1]

@@ -16,13 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class SegmentCluster:
+    """Iterates through frames in order and splits based on large visual differences
+        (measured by the cosine difference between the feature vectors from the slide classifier)"""
     def __init__(self, slides_dir):
         self.slides_dir = Path(slides_dir)
         self.slides_list = sorted(os.listdir(self.slides_dir))
+        self.model = inference.load_model()
         self.change_indexes = None
 
     def extract_and_add_features(self):
-        """Extracts features from the images in `slides_dir` and saves feature vectors"""
+        """Extracts features from the images in ``slides_dir`` and saves feature vectors"""
         num_slides = len(self.slides_list)
 
         all_features = []
@@ -34,10 +37,12 @@ class SegmentCluster:
         ):
             current_slide_path = os.path.join(self.slides_dir, slide)
             _, _, _, extracted_features = inference.get_prediction(
-                Image.open(current_slide_path)
+                self.model, Image.open(current_slide_path)
             )
             all_features.append(extracted_features)
 
+        # spatial.distance.cosine computes the cosine difference, a larger value means more different
+        # and a smaller value means more similar
         similarities = [
             spatial.distance.cosine(all_features[i - 1], all_features[i])
             for i in range(1, len(all_features))
@@ -58,7 +63,7 @@ class SegmentCluster:
         return change_indexes
 
     def transfer_to_filesystem(self, copy=True, create_best_samples_folder=True):
-        """Takes all images in directory `slides_dir` and saves each cluster to a subfolder in `cluster_dir` (directory in parent of `slides_dir`)"""
+        """Takes all images in directory ``slides_dir`` and saves each cluster to a subfolder in ``cluster_dir`` (directory in parent of ``slides_dir``)"""
         cluster_dir = (
             self.slides_dir.parents[0] / "slide_clusters"
         )  # cluster_dir = up one directory from slides_dir then into "slide_clusters"

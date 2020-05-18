@@ -5,6 +5,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from pathlib import Path
 
 class TranscriptDownloader:
+    """Download transcripts from YouTube using the YouTube API or ``youtube-dl``."""
     def __init__(self, youtube=None, ytdl=True):
         self.ytdl = ytdl
         if youtube is None and not ytdl:
@@ -14,6 +15,10 @@ class TranscriptDownloader:
 
     @staticmethod
     def check_suffix(output_path):
+        """
+        Gets the file extension from ``output_path`` and verifies it is either ".srt", ".vtt", or it is not present in ``output_path``.
+        The default is ".vtt".
+        """
         sub_format = output_path.suffix[1:]
         if output_path.suffix == "":
             output_path = output_path.with_suffix('.vtt')
@@ -23,6 +28,10 @@ class TranscriptDownloader:
         return output_path, sub_format
 
     def get_transcript_ytdl(self, video_id, output_path):
+        """
+        Gets the transcript for ``video_id`` using ``youtube-dl`` and saves it to ``output_path``.
+        The extension from ``output_path`` will be the ``--sub-format`` that is passed to the ``youtube-dl`` command.
+        """
         output_path, sub_format = self.check_suffix(output_path)
         output_path_no_extension = os.path.splitext(output_path)[0]
 
@@ -33,6 +42,15 @@ class TranscriptDownloader:
         return output_path
 
     def get_transcript_api(self, caption_id, output_path):
+        """Downloads a caption track by id directly from the YouTube API.
+
+        Args:
+            caption_id (str): the id of the caption track to download
+            output_path (str): path to save the captions. file extensions are parsed by :meth:`~transcript_downloader.check_suffix`
+
+        Returns:
+            [str]: the path where the transcript was saved (may not be the same as the ``output_path`` parameter)
+        """
         output_path, sub_format = self.check_suffix(output_path)
 
         request = self.youtube.captions().download(
@@ -50,7 +68,7 @@ class TranscriptDownloader:
         return output_path
 
     def get_caption_id(self, video_id, lang="en"):
-        
+        """Gets the caption id with language ``land`` for a video on YouTube with id ``video_id``."""
         request = self.youtube.captions().list(
             part="snippet",
             videoId=video_id
@@ -67,8 +85,8 @@ class TranscriptDownloader:
     
     def download(self, video_id, output_path):
         """
-        Convenience function to download transcript with one call
-        Calls `get_caption_id` and passes result to `get_transcript`
+        Convenience function to download transcript with one call.
+        Calls :meth:`~transcript_downloader.get_caption_id` and passes result to :meth:`~transcript_downloader.get_transcript`
         """
         if self.ytdl:
             output_path = self.get_transcript_ytdl(video_id, output_path)

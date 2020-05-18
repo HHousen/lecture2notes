@@ -24,10 +24,10 @@ except ImportError:
     from pipes import quote
 
 logger = logging.getLogger(__name__)
-
+print("yty")
 
 def extract_audio(video_path, output_path):
-    """Extracts audio from video at `video_path` and saves it to `output_path`"""
+    """Extracts audio from video at ``video_path`` and saves it to ``output_path``"""
     logger.info(
         "Extracting audio from "
         + str(video_path)
@@ -45,13 +45,12 @@ def transcribe_audio(audio_path, method="sphinx"):
     """Transcribe an audio file using CMU Sphinx or Google through the speech_recognition library
 
     Arguments:
-        audio_path {str} -- audio file path
-
-    Keyword Arguments:
-        method {str} -- which service to use for transcription ("google" or "sphinx") (default: {"sphinx"})
+        audio_path (str): audio file path
+        method (str, optional): which service to use for transcription ("google" or "sphinx").
+            Default is "sphinx".
 
     Returns:
-        [str] -- the transcript of the audio file
+        [str]: the transcript of the audio file
     """
     assert method in ["sphinx", "google"]
     logger.debug("Initializing speech_recognition library")
@@ -76,17 +75,15 @@ def transcribe_audio(audio_path, method="sphinx"):
 
 
 def read_wave(path, desired_sample_rate=None):
-    """Reads a ".wav" file and converts to `desired_sample_rate` with one channel
+    """Reads a ".wav" file and converts to `desired_sample_rate` with one channel.
 
     Arguments:
-        path {str} -- path to wave file to load
-
-    Keyword Arguments:
-        desired_sample_rate {int} -- resample the loaded pcm data from the wave file
-                                     to this sample rate (default: {None, no resampling})
+        path (str): path to wave file to load
+        desired_sample_rate (int, optional): resample the loaded pcm data from the wave file
+            to this sample rate Default is None, no resampling.
 
     Returns:
-        [tuple] -- (PCM audio data, sample rate, duration)
+        [tuple]: (PCM audio data, sample rate, duration)
     """
     with contextlib.closing(wave.open(str(path), "rb")) as wf:
         sample_width = wf.getsampwidth()
@@ -140,10 +137,10 @@ def segment_sentences(text):
     """Detect sentence boundaries without punctuation or capitalization.
 
     Arguments:
-        text {str} -- The string to segment by sentence
+        text {str}: The string to segment by sentence
 
     Returns:
-        [str] -- The punctuated string
+        [str]: The punctuated string
     """
     from deepsegment import DeepSegment
     
@@ -188,16 +185,16 @@ def convert_samplerate(audio_path, desired_sample_rate):
     """Use `SoX` to resample wave files to 16 bits, 1 channel, and `desired_sample_rate` sample rate.
 
     Arguments:
-        audio_path {str} -- path to wave file to process
-        desired_sample_rate {int} -- sample rate in hertz to convert the wave file to
+        audio_path (str): path to wave file to process
+        desired_sample_rate (int): sample rate in hertz to convert the wave file to
 
     Raises:
         RuntimeError: if SoX returns a non-zero status
         OSError: if SoX is not found
 
     Returns:
-        [tuple] -- (desired_sample_rate, output) where `desired_sample_rate` is the new 
-                   sample rate and `output` is the newly resampled pcm data
+        [tuple]: (desired_sample_rate, output) where ``desired_sample_rate`` is the new 
+            sample rate and ``output`` is the newly resampled pcm data
     """
     sox_cmd = "sox {} --type raw --bits 16 --channels 1 --rate {} --encoding signed-integer --endian little --compression 0.0 --no-dither - ".format(
         quote(str(audio_path)), desired_sample_rate
@@ -221,10 +218,10 @@ def resolve_models(dir_name):
     """Resolve directory path for deepspeech models and fetch each of them.
 
     Arguments:
-        dir_name {str} -- Path to the directory containing pre-trained models
+        dir_name (str): Path to the directory containing pre-trained models
 
     Returns:
-        [tuple] -- a tuple containing each of the model files (pb, scorer)
+        [tuple]: a tuple containing each of the model files (pb, scorer)
     """
 
     pb = glob.glob(dir_name + "/*.pbmm")[0]
@@ -237,18 +234,16 @@ def resolve_models(dir_name):
 
 
 def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None):
-    """Load the deepspeech model from `model_dir`
+    """Load the deepspeech model from ``model_dir``
 
     Arguments:
-        model_dir {str} -- path to folder containing the ".pbmm" and optionally ".scorer" files
-
-    Keyword Arguments:
-        beam_width {int} -- beam width for decoding (default: {500})
-        lm_alpha {float} -- alpha parameter of language model (default: {None})
-        lm_beta {float} -- beta parameter of langage model (default: {None})
+        model_dir (str): path to folder containing the ".pbmm" and optionally ".scorer" files
+        beam_width (int, optional): beam width for decoding. Default is 500.
+        lm_alpha (float, optional}: alpha parameter of language model. Default is None.
+        lm_beta (float, optional): beta parameter of langage model. Default is None.
 
     Returns:
-        [deepspeech model] -- the loaded deepspeech model
+        [deepspeech model]: the loaded deepspeech model
     """
     from deepspeech import Model
 
@@ -270,23 +265,21 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
 def transcribe_audio_deepspeech(
     audio_path_or_data, model, raw_audio_data=False, method=None
 ):
-    """Transribe an audio file or pcm data with the deepspeech model
+    """Transcribe an audio file or pcm data with the deepspeech model
 
-    Arguments:
-        audio_path_or_data {str or byte string} -- a path to a wave file or a byte string
-                                                   containing pcm data from a wave file.
-                                                   set `raw_audio_data` to True if pcm data
-                                                   is used.
-        model {deepspeech model or str} -- a deepspeech model object or a path to a folder
-                                           containing the model files (see `load_deepspeech_model()`)
-
-    Keyword Arguments:
-        raw_audio_data {bool} -- must be True if `audio_path_or_data` is raw pcm data (default: {False})
-        method {str} -- which method of the deepspeech model to use for speech-to-text.
-                        the default is `model.stt()`. (default: {None})
+    Args:
+        audio_path_or_data (str or byte string): a path to a wave file or a byte string
+            containing pcm data from a wave file. set ``raw_audio_data`` to True if pcm data
+            is used.
+        model (deepspeech model or str): a deepspeech model object or a path to a folder
+            containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`)
+        raw_audio_data (bool, optional): must be True if ``audio_path_or_data`` is 
+            raw pcm data. Defaults to False.
+        method (str, optional): which method of the deepspeech model to use for speech-to-text.
+            the default is ``model.stt()``. Defaults to None.
 
     Returns:
-        [str] -- the transcribed audio file in string format
+        [str]: the transcribed audio file in string format
     """
     if isinstance(model, str):
         model = load_deepspeech_model(model)
@@ -317,7 +310,7 @@ def transcribe_audio_deepspeech(
 
 
 def write_to_file(results, save_file):
-    """ Write `results` to `save_file` in append mode. """
+    """ Write ``results`` to ``save_file`` in append mode. """
     file_results = open(save_file, "a+")
     logger.info("Writing results to file " + str(save_file))
     file_results.write(results)
@@ -333,17 +326,17 @@ def chunk_by_speech(
     the WebRTC project is reportedly one of the best available, being fast, modern 
     and free.
 
-    Arguments:
-        audio_path {str} -- path to the audio file to process
-
-    Keyword Arguments:
-        output_path {str} -- path to save the chunk files. if not specified then no wave
-                             files will be written to disk and the raw pcm data will be 
-                             returned. (default: {None})
-        aggressiveness {int} -- determines how aggressive filtering out non-speech is. must 
-                                be an interger between 0 and 3. (default: {1})
-        desired_sample_rate {int} -- the sample rate of the returned segments. the default is
-                                     the same rate of the input audio file. (default: {None})
+    Args:
+        audio_path (str): path to the audio file to process
+        output_path (str, optional): path to save the chunk files. if not specified then no wave
+            files will be written to disk and the raw pcm data will be returned. Defaults to None.
+        aggressiveness (int, optional): determines how aggressive filtering out non-speech is. must 
+            be an interger between 0 and 3. Defaults to 1.
+        desired_sample_rate (int, optional): the sample rate of the returned segments. the default is
+            the same rate of the input audio file. Defaults to None.
+    
+    Returns:
+        [tuple]: segments, sample_rate, audio_length. See :meth:`~transcribe.webrtcvad_utils.vad_segment_generator`.
     """
     if desired_sample_rate:
         assert desired_sample_rate in (
@@ -373,17 +366,15 @@ def chunk_by_speech(
 def process_segments(segments, ds_model, audio_length="unknown"):
     """Transcribe a list of byte strings containing pcm data
 
-    Arguments:
-        segments {list} -- list of byte strings containing pcm data (generated by `chunk_by_speech()`)
-        ds_model {deepspeech model} -- a deepspeech model object or a path to a folder
-                                       containing the model files (see `load_deepspeech_model()`)
-
-    Keyword Arguments:
-        audio_length {str} -- the length of the audio file if known (used for logging statements)
-                               (default: {"unknown"})
+    Args:
+        segments (list): list of byte strings containing pcm data (generated by :meth:`~transcribe.transcribe_main.chunk_by_speech`)
+        ds_model (deepspeech model): a deepspeech model object or a path to a folder
+            containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`).
+        audio_length (str, optional): the length of the audio file if known (used for logging statements)
+            Default is "unknown".
 
     Returns:
-        [str] -- the combined transcript of all the items in `segments`
+        [str]: the combined transcript of all the items in `segments`.
     """
     if isinstance(ds_model, str):
         ds_model = load_deepspeech_model(ds_model)
@@ -423,14 +414,12 @@ def chunk_by_silence(
     """Split an audio file into chunks on areas of silence
 
     Arguments:
-        audio_path {str} -- path to a wave file
-        output_path {str} -- path to a folder where wave file chunks will be saved
-
-    Keyword Arguments:
-        silence_thresh_offset {int} -- a value subtracted from the mean dB volume of 
-                                       the file (default: {5})
-        min_silence_len {int} -- the length in milliseconds in which there must be no sound
-                                 in order to be marked as a splitting point (default: {2000})
+        audio_path (str): path to a wave file
+        output_path (str): path to a folder where wave file chunks will be saved
+        silence_thresh_offset (int, optional): a value subtracted from the mean dB volume of 
+            the file. Default is 5.
+        min_silence_len (int, optional): the length in milliseconds in which there must be no sound
+            in order to be marked as a splitting point. Default is 2000.
     """
     logger.info("Loading audio")
     audio = AudioSegment.from_wav(audio_path)
@@ -488,7 +477,7 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
 
 def caption_file_to_string(transcript_path, remove_speakers=False):
     """
-    Converts a .srt or .vtt file saved at `transcript_path` to a python string. 
+    Converts a .srt or .vtt file saved at ``transcript_path`` to a python string. 
     Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
     """
     assert transcript_path.is_file()
@@ -507,14 +496,14 @@ def caption_file_to_string(transcript_path, remove_speakers=False):
 
 
 def get_youtube_transcript(video_id, output_path, use_youtube_dl=True):
-    """Downloads the transcript for `video_id` and saves it to `output_path`"""
+    """Downloads the transcript for ``video_id`` and saves it to ``output_path``"""
     downloader = TranscriptDownloader(ytdl=use_youtube_dl)
     transcript_path = downloader.download(video_id, output_path)
     return transcript_path
 
 
 def check_transcript(generated_transcript, ground_truth_transcript):
-    """Compares `generated_transcript` to `ground_truth_transcript` to check for accuracy using spacy similarity measurement."""
+    """Compares ``generated_transcript`` to ``ground_truth_transcript`` to check for accuracy using spacy similarity measurement."""
     nlp = spacy.load("en_core_web_lg")
     logger.info("Loaded Spacy `en_vectors_web_lg`")
     gen_doc = nlp(generated_transcript)

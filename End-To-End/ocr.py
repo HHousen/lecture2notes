@@ -9,7 +9,7 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 def all_in_folder(path):
-    """Perform OCR on every file in folder and return results"""
+    """Perform OCR using ``pytesseract`` on every file in folder and return results"""
     results = []
     images = os.listdir(path)
     images.sort()

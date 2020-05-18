@@ -43,20 +43,23 @@ def initialize_model(arch, num_classes):
         
     return model
 
-# Load saved model
-MODEL_BEST = torch.load("model_best.pth.tar")
-CLASS_INDEX = MODEL_BEST['class_index']
-INPUT_SIZE = MODEL_BEST['input_size']
-ARCH = MODEL_BEST['arch']
-if MODEL_BEST['model']:
-    MODEL = MODEL_BEST['model']
-    MODEL = MODEL.cuda()
-else:
-    # Load model arch from models
-    MODEL = initialize_model(ARCH, num_classes=len(MODEL_BEST['class_index']))
-    MODEL = torch.nn.DataParallel(MODEL).cuda()
-MODEL.load_state_dict(MODEL_BEST['state_dict'])
-MODEL.eval()
+def load_model(model_path="model_best.pth.tar"):
+    """Load saved model"""
+    MODEL_BEST = torch.load(model_path)
+    CLASS_INDEX = MODEL_BEST['class_index']
+    INPUT_SIZE = MODEL_BEST['input_size']
+    ARCH = MODEL_BEST['arch']
+    if MODEL_BEST['model']:
+        MODEL = MODEL_BEST['model']
+        MODEL = MODEL.cuda()
+    else:
+        # Load model arch from models
+        MODEL = initialize_model(ARCH, num_classes=len(MODEL_BEST['class_index']))
+        MODEL = torch.nn.DataParallel(MODEL).cuda()
+    MODEL.load_state_dict(MODEL_BEST['state_dict'])
+    MODEL.eval()
+
+    return MODEL
 
 sm = torch.nn.Softmax(dim=1)
 
@@ -69,7 +72,7 @@ def transform_image(image):
                                             [0.229, 0.224, 0.225])])
     return my_transforms(image).unsqueeze(0)
 
-def get_prediction(image, percent=False, extract_features=True):
+def get_prediction(model, image, percent=False, extract_features=True):
     tensor = transform_image(image)
 
     if extract_features:
@@ -100,4 +103,4 @@ def get_prediction(image, percent=False, extract_features=True):
     class_name = CLASS_INDEX[int(predicted_idx)]
     return class_name, predicted_idx, probs, extracted_features
 
-#print(get_prediction(Image.open("test.png")))
+#print(get_prediction(model, Image.open("test.png")))

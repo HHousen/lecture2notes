@@ -117,10 +117,13 @@ class VADAudio(Audio):
                 yield self.read_resampled()
 
     def vad_collector(self, padding_ms=300, ratio=0.75, frames=None):
-        """Generator that yields series of consecutive audio frames comprising each utterence, separated by yielding a single None.
+        """Generator that yields series of consecutive audio frames comprising each utterance, separated by yielding a single None.
             Determines voice activity by ratio of frames in padding_ms. Uses a buffer to include padding_ms prior to being triggered.
-            Example: (frame, ..., frame, None, frame, ..., frame, None, ...)
-                      |---utterence---|        |---utterence---|
+            
+            .. code-block:: bash
+            
+                Example: (frame, ..., frame, None, frame, ..., frame, None, ...)
+                        |---utterance---|        |---utterance---|
         """
         if frames is None: frames = self.frame_generator()
         num_padding_frames = padding_ms // self.frame_duration_ms

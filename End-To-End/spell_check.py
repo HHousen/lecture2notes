@@ -4,6 +4,7 @@ from tqdm import tqdm
 from symspellpy.symspellpy import SymSpell, Verbosity
 
 class SpellChecker():
+    """A spell checker."""
     def __init__(self, max_edit_distance_dictionary=2, max_edit_distance_lookup=2, prefix_length=7):
         self.logger = logging.getLogger(__name__)
 
@@ -27,6 +28,14 @@ class SpellChecker():
         self.sym_spell = sym_spell
 
     def check(self, input_term):
+        """Checks an input string for spelling mistakes
+
+        Args:
+            input_term (str): the sequence to check for spelling errors
+
+        Returns:
+            [str]: the best corrected string
+        """
         # lookup suggestions for multi-word input strings (supports compound splitting & merging)
         # max edit distance per lookup is now per single word, not per whole input string
         suggestions = self.sym_spell.lookup_compound(input_term, self.max_edit_distance_lookup)
@@ -39,6 +48,14 @@ class SpellChecker():
         return output_term_list[0]
     
     def check_all(self, input_terms):
+        """Spell check multiple sequences by calling :meth:`~spell_check.check` for each item in ``input_terms``.
+
+        Args:
+            input_terms (list): a list of strings to be corrected with spell checking
+
+        Returns:
+            [list]: a list of corrected strings
+        """
         output_terms = list()
         for term in tqdm(input_terms, desc="Spell Checking"):
             checked_term = self.check(term)
