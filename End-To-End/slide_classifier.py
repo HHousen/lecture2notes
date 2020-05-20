@@ -18,7 +18,7 @@ def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
         frames_dir (str): path to directory containing images to classify
         do_move (bool, optional): move the images to their sorted folders instead 
             of copying them. Defaults to True.
-        incorrect_threshold (float, optional): the certainity value that the model must 
+        incorrect_threshold (float, optional): the certainty value that the model must 
             be below for a prediction to be marked "probably incorrect". Defaults to 0.60.
 
     Returns:
