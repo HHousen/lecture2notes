@@ -14,7 +14,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '../../Models/slide-classifier'))
 from custom_nnmodules import * #pylint: disable=import-error,wildcard-import
 from inference import * #pylint: disable=import-error,wildcard-import
 
-MODEL = load_model()
+MODEL, model_info = load_model()
 
 if csv_path.is_file():
     df = pd.read_csv(csv_path, index_col=0)
@@ -35,7 +35,7 @@ for item in os.listdir(videos_dir):
             print("Progress: " + str(idx+1) + "/" + str(num_frames))
             current_frame_path = os.path.join(frames_dir, frame)
             # run classification
-            best_guess, best_guess_idx, probs, _ = get_prediction(MODEL, Image.open(current_frame_path), extract_features=False)
+            best_guess, best_guess_idx, probs, _ = get_prediction(MODEL, Image.open(current_frame_path), model_info, extract_features=False)
             prob_max_correct = list(probs.values())[best_guess_idx]
             print("AI Predicts: " + best_guess)
             print("Probabilities: " + str(probs))

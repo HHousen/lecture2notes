@@ -74,6 +74,7 @@ def remove_duplicates(img_dir, images):
             # remove all but the last image
             img_paths = sorted(img_paths)
             for img in img_paths[:-1]:
+                logger.debug("Removing " + str(img))
                 os.remove(os.path.join(img_dir, img))
 
 # images = sort_by_duplicates("slide_clusters/best_samples")

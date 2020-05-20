@@ -45,35 +45,41 @@ def initialize_model(arch, num_classes):
 
 def load_model(model_path="model_best.pth.tar"):
     """Load saved model"""
-    MODEL_BEST = torch.load(model_path)
-    CLASS_INDEX = MODEL_BEST['class_index']
-    INPUT_SIZE = MODEL_BEST['input_size']
-    ARCH = MODEL_BEST['arch']
-    if MODEL_BEST['model']:
-        MODEL = MODEL_BEST['model']
-        MODEL = MODEL.cuda()
+    model_best = torch.load(model_path)
+    class_index = model_best['class_index']
+    input_size = model_best['input_size']
+    arch = model_best['arch']
+    if model_best['model']:
+        model = model_best['model']
+        model = model.cuda()
     else:
         # Load model arch from models
-        MODEL = initialize_model(ARCH, num_classes=len(MODEL_BEST['class_index']))
-        MODEL = torch.nn.DataParallel(MODEL).cuda()
-    MODEL.load_state_dict(MODEL_BEST['state_dict'])
-    MODEL.eval()
+        model = initialize_model(arch, num_classes=len(model_best['class_index']))
+        model = torch.nn.DataParallel(model).cuda()
+    model.load_state_dict(model_best['state_dict'])
+    model.eval()
 
-    return MODEL
+    model_info = {
+        "class_index": class_index,
+        "input_size": input_size,
+        "arch": arch,
+    }
+
+    return model, model_info
 
 sm = torch.nn.Softmax(dim=1)
 
-def transform_image(image):
+def transform_image(image, input_size):
     my_transforms = transforms.Compose([transforms.Resize((480,640)),
-                                        transforms.CenterCrop(INPUT_SIZE),
+                                        transforms.CenterCrop(input_size),
                                         transforms.ToTensor(),
                                         transforms.Normalize(
                                             [0.485, 0.456, 0.406],
                                             [0.229, 0.224, 0.225])])
     return my_transforms(image).unsqueeze(0)
 
-def get_prediction(model, image, percent=False, extract_features=True):
-    tensor = transform_image(image)
+def get_prediction(model, image, model_info, percent=False, extract_features=True):
+    tensor = transform_image(image, model_info["input_size"])
 
     if extract_features:
         def copy_data(m, i, o):
@@ -81,14 +87,14 @@ def get_prediction(model, image, percent=False, extract_features=True):
             copy_data.extracted_features = torch.clone(o.data).detach().cpu().squeeze()
 
         # .module needed in both cases below because model wrapped in DataParallel
-        if ARCH.startswith("efficientnet"):
-            hook = MODEL.module._avg_pooling.register_forward_hook(copy_data)
+        if model_info["arch"].startswith("efficientnet"):
+            hook = model.module._avg_pooling.register_forward_hook(copy_data)
         else:
-            hook = MODEL.module[1][6].register_forward_hook(copy_data)
+            hook = model.module[1][6].register_forward_hook(copy_data)
     else:
         extracted_features = 0
 
-    outputs = MODEL.forward(tensor)
+    outputs = model.forward(tensor)
 
     if extract_features:
         hook.remove()
@@ -98,9 +104,9 @@ def get_prediction(model, image, percent=False, extract_features=True):
     probs = sm(outputs).cpu().detach().numpy().tolist()[0]
     if percent:
         probs = [i*100 for i in probs]
-    probs = dict(zip(CLASS_INDEX, probs))
+    probs = dict(zip(model_info["class_index"], probs))
     predicted_idx = int(y_hat.item())
-    class_name = CLASS_INDEX[int(predicted_idx)]
+    class_name = model_info["class_index"][int(predicted_idx)]
     return class_name, predicted_idx, probs, extracted_features
 
 #print(get_prediction(model, Image.open("test.png")))

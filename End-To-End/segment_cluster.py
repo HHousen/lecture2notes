@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 class SegmentCluster:
     """Iterates through frames in order and splits based on large visual differences
         (measured by the cosine difference between the feature vectors from the slide classifier)"""
+
     def __init__(self, slides_dir):
         self.slides_dir = Path(slides_dir)
         self.slides_list = sorted(os.listdir(self.slides_dir))
-        self.model = inference.load_model()
+        self.model, self.model_info = inference.load_model()
         self.change_indexes = None
 
     def extract_and_add_features(self):
@@ -37,7 +38,9 @@ class SegmentCluster:
         ):
             current_slide_path = os.path.join(self.slides_dir, slide)
             _, _, _, extracted_features = inference.get_prediction(
-                self.model, Image.open(current_slide_path)
+                self.model,
+                Image.open(current_slide_path),
+                self.model_info,
             )
             all_features.append(extracted_features)
 
