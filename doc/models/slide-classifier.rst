@@ -1,6 +1,8 @@
 Slide Classifier
 ================
 
+.. _sc_overview:
+
 Overview
 --------
 

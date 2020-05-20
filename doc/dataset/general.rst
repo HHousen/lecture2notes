@@ -18,6 +18,8 @@ Directory Structure
 * **to-be-sorted.csv**: A list of videos and specific frames that have been sorted by :ref:`ss_auto_sort` but need to be checked by a human for correctness. When running :ref:`ss_auto_sort` any frames where the AI model's confidence level is below a threshold are added to this list as most likely incorrect.
 * **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by :ref:`ss_youtube_scraper` and :ref:`ss_website_scraper`. The `provider` column is used by :ref:`ss_video_downloader` to determine how to download the video.
 
+.. _dataset_general_walkthrough:
+
 Walkthrough (Step-by-Step Instructions to Create Dataset)
 ---------------------------------------------------------
 

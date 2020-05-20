@@ -5,6 +5,7 @@ Lecture2Notes: End-To-End Lecture Summarization
    :maxdepth: 2
    :caption: Getting Started:
 
+   getting-started/about
    getting-started/install
    getting-started/tutorial
 
@@ -26,8 +27,10 @@ Lecture2Notes: End-To-End Lecture Summarization
    :maxdepth: 2
    :caption: End-To-End:
 
-   end-to-end/general.rst
-   end-to-end/api.rst
+   end-to-end/general
+   end-to-end/summarization-approaches
+   end-to-end/transcribe
+   end-to-end/api
 
 
 Indices and tables

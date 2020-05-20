@@ -1,5 +1,9 @@
+.. _e2e_api:
+
 E2E API
 =======
+
+.. _e2e_api_transcribe:
 
 Transcribe
 ----------
@@ -24,6 +28,8 @@ Cluster
 
     .. automodule:: cluster
 
+.. _e2e_api_corner_crop_transform:
+
 Corner Crop Transform
 ---------------------
 
@@ -33,6 +39,8 @@ Frames Extractor
 ----------------
 
     .. automodule:: frames_extractor
+
+.. _e2e_api_helpers:
 
 Helpers
 -------
