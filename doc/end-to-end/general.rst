@@ -13,14 +13,7 @@ Script Descriptions
 These descriptions are short and concise. For more information about some of the larger, more complicated files visit their respective pages on the left.
 
 * **cluster:** Provides :class:`cluster.ClusterFilesystem` class, which clusters images from a directory and saves them to disk in folders corresponding to each centroid.
-* **corner_crop_transform:** Provides functions to detect the bounding box of a slide in a frame and automatically crop to that bounding box. The :meth:`corner_crop_transform.all_in_folder` method is used by the main script. The process this file executes is based on `this jupyter notebook <https://github.com/Breta01/handwriting-ocr/blob/master/notebooks/page_detection.ipynb>`_ and `this StackOverflow answer <https://stackoverflow.com/a/44454619>`_. The `opencv package <https://docs.opencv.org/4.3.0/index.html>`_ provides most of the low-level functions. See the :ref:`Corner Crop Transform API Documentation <e2e_api_corner_crop_transform>` for details regarding the functions. Below is a list of helpful guides and tutorials to help understand the script:
-    
-    * `How To Build a Kick-Ass Mobile Document Scanner in Just 5 Minutes <https://www.pyimagesearch.com/2014/09/01/build-kick-ass-mobile-document-scanner-just-5-minutes/>`_
-    * `Credit card OCR with OpenCV and Python <https://www.pyimagesearch.com/2017/07/17/credit-card-ocr-with-opencv-and-python/>`_
-    * `A Box detection algorithm for any image containing boxes. <https://medium.com/coinmonks/a-box-detection-algorithm-for-any-image-containing-boxes-756c15d7ed26>`_
-    * `Sorting Contours using Python and OpenCV <https://www.pyimagesearch.com/2015/04/20/sorting-contours-using-python-and-opencv/>`_
-    * `Horizontal Line detection with OpenCV <https://stackoverflow.com/a/7228823>`_
-
+* **corner_crop_transform:** Provides functions to detect the bounding box of a slide in a frame and automatically crop to that bounding box. The :meth:`corner_crop_transform.all_in_folder` method is used by the main script. See :ref:`corner_crop_tranform` for more information.
 * **frames_extractor:** Provides :meth:`frames_extractor.extract_frames`, which extracts frames from ``input_video_path`` at quality level ``quality`` (best quality is 2) every ``extract_every_x_seconds`` seconds and saves them to ``output_path``.
 * **helpers:** A small file of helper functions to reduce duplicate code. See :ref:`e2e_api_helpers`.
 * **imghash:** Provides functions to detect near duplicate images using image hashing methods from the ``imagehash`` library. :meth:`imghash.sort_by_duplicates` will create lists of similar images and :meth:`imghash.remove_duplicates` will remove those duplicates and keep the last file (when sorted alphanumerically descending)

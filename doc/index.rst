@@ -30,6 +30,7 @@ Lecture2Notes: End-To-End Lecture Summarization
    end-to-end/general
    end-to-end/summarization-approaches
    end-to-end/transcribe
+   end-to-end/corner-crop-transform
    end-to-end/api
 
 
