@@ -12,3 +12,59 @@ Useful guides and tutorials to help understand the script:
     * `Sorting Contours using Python and OpenCV <https://www.pyimagesearch.com/2015/04/20/sorting-contours-using-python-and-opencv/>`_
     * `Horizontal Line detection with OpenCV <https://stackoverflow.com/a/7228823>`_
 
+Debug/Testing Mode
+------------------
+
+The file can be run as a script in order to try the image processing pipeline on several files, view the results, and tweak the parameters as necessary to improve accuracy.
+
+Recommended Command:
+
+.. code-block:: bash
+    
+    python corner_crop_transform.py folder ../presenter_slide/ --debug_mode --debug_gif --debug_path ../debug_imgs
+
+The above command processes all files in the ``../presenter_slide/`` folder. The ``--debug_mode`` argument allows the usage of ``--debug_gif`` and ``--debug_path``. ``--debug_gif`` will save a gif of each step of the pipeline with a 1.4s delay to ``--debug_path``. ``--debug_imgs`` can also be enabled to save each step of the pipeline as its own image (in higher quality than the GIF, the GIF only has 256 colors).
+
+Using ``--debug_mode`` will output a file in the present working directory named ``debug_crop_error_log.txt`` with the paths to all of the images that the pipeline thinks it failed with. 
+
+.. warning:: There may be other images that the script failed to process correctly. The ``debug_crop_error_log.txt`` file only contains the paths to images that did not meet the criteria to be perspective cropped. The reasoning behind why they didn't will likely lead to parameter tuning.
+
+You can also process a single file using the file as a script with the ``file`` mode:
+
+.. code-block:: bash
+    
+    python corner_crop_transform.py file /path/to/image/file/0Q5IimX-AAc-img_067.jpg -d -di -dg
+
+
+Script Help
+-----------
+
+Output of ``python corner_crop_transform.py --help``:
+
+.. code-block:: bash
+
+    usage: corner_crop_transform.py [-h] [-d] [-di] [-dg] [-p DEBUG_PATH]
+                                [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                                {file,folder} path
+
+    Perspective Crop to Rectangles (Slides)
+
+    positional arguments:
+    {file,folder}         `file` mode will crop a single image and `folder` mode
+                            will crop all the images in a given folder
+    path                  path to file or folder (depending on `mode`) to
+                            process
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -d, --debug_mode      enable the usage of `--debug_imgs`, `--debug_gif`, and
+                            `--debug_path`.
+    -di, --debug_imgs     Save debug images (JPG of each step of the pipeline).
+                            Requires `--debug_mode` to be enabled.
+    -dg, --debug_gif      Save debug gif (GIF with 1.4s delay between each debug
+                            image). Requires `--debug_mode` to be enabled.
+    -p DEBUG_PATH, --debug_path DEBUG_PATH
+                            path to folder to store debug images (default:
+                            './debug_imgs')
+    -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                            Set the logging level (default: 'Info').

@@ -6,11 +6,13 @@
 import os
 import sys
 import numpy as np
+import argparse
 from tqdm import tqdm
 import cv2
 import imageio
 from pygifsicle import optimize
 import logging
+from helpers import copy_all, make_dir_if_not_exist
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +94,7 @@ def remove_contours(edges, contour_removal_threshold):
 
 
 def hough_lines_corners(
-    img, edges_img, min_line_length, total_border, debug_output_imgs=None
+    img, edges_img, min_line_length, border_size=11, debug_output_imgs=None
 ):
     """Uses ``cv2.HoughLinesP`` to find horizontal and vertical lines, finds the intersection 
         points, and finally clusters those points using KMeans.
@@ -101,13 +103,15 @@ def hough_lines_corners(
         img (image): the image as loaded by ``cv2.imread``.
         edges_img (image): edges extracted from ``img`` by :meth:`~corner_crop_transform.edges_det`.
         min_line_length (int): the shortest line length to consider as a valid line
+        border_size (int, optional): the size of the borders added by :meth:`~corner_crop_transform.edges_det`. Defaults to 11.
         debug_output_imgs (dict, optional): modifies this dictionary by adding ``(image file name, image data)`` pairs. Defaults to None.
 
     Returns:
         [list]: The corner coordinates as sorted by :meth:`~corner_crop_transform.four_corners_sort`.
     """
-    # Remove `total_border` border from edges_det
-    edges_img = edges_img[total_border:-total_border, total_border:-total_border]
+    # Remove `border_size` border from edges_det
+    edges_img = edges_img[border_size:-border_size, border_size:-border_size]
+    height = img.shape[0]
 
     # Collect and segment the lines
     lines = cv2.HoughLinesP(
@@ -115,10 +119,10 @@ def hough_lines_corners(
         rho=1,
         theta=np.pi / 180,
         threshold=100,
-        maxLineGap=20,
+        maxLineGap=int(height/54),
         minLineLength=min_line_length,
     )
-    h_lines, v_lines = segment_lines(lines, 10)
+    h_lines, v_lines = segment_lines(lines, int(height/54))
 
     # Find the line intersection points
     Px = []
@@ -128,6 +132,14 @@ def hough_lines_corners(
             px, py = find_intersection(h_line, v_line)
             Px.append(px)
             Py.append(py)
+
+    if len(Px) <= 4:  # there are not at least 4 intersection points
+        logger.debug(
+            "Hough Lines Corners Failed! Only "
+            + str(len(Px))
+            + " intersection points found."
+        )
+        return None
 
     # Use clustering to find the centers of the point clusters
     P = np.float32(np.column_stack((Px, Py)))
@@ -319,6 +331,10 @@ def contour_offset(cnt, offset):
 
 
 def straight_lines_in_contour(contour, delta=100):
+    """
+    Returns True if ``contour`` contains lines that are horizontal or vertical.
+    ``delta`` allows the lines to tilt by a certain number of pixels. For instance, if a line is vertical, its y values can change by ``delta`` pixels before it is considered not vertical.
+    """
     rectangle = True
 
     contour = four_corners_sort(contour)
@@ -335,19 +351,22 @@ def straight_lines_in_contour(contour, delta=100):
     return rectangle
 
 
-def find_page_contours(edges, img, min_area_mult=0.5, debug_output_imgs=None):
+def find_page_contours(
+    edges, img, border_size=11, min_area_mult=0.4, debug_output_imgs=None
+):
     """Find corner points of page contour
 
     Args:
         edges (image): edges extracted from ``img`` by :meth:`~corner_crop_transform.edges_det`.
         img (image): the image loaded by ``cv2.imread``.
+        border_size (int, optional): the size of the borders added by :meth:`~corner_crop_transform.edges_det`. Defaults to 11.
         min_area_mult (float, optional): the minimum percentage of the image area that a contour's 
             area must be greater than to be considered as the slide. Defaults to 0.5.
 
     Returns:
-        [tuple]: (contour, none_tested), ``contour`` is the set of coordinates of the corners sorted 
-            by :meth:`~corner_crop_transform.four_corners_sort` and ``none_tested`` is True if a valid
-            contour that represents the slide was not found.
+        [contour or NoneType]: ``contour`` is the set of coordinates of the corners sorted 
+            by :meth:`~corner_crop_transform.four_corners_sort` or returns None when no contour
+            meets the criteria.
     """
     # Getting contours
     contours, hierarchy = cv2.findContours(
@@ -358,12 +377,11 @@ def find_page_contours(edges, img, min_area_mult=0.5, debug_output_imgs=None):
     height = edges.shape[0]
     width = edges.shape[1]
     MIN_COUNTOUR_AREA = height * width * min_area_mult
-    MAX_COUNTOUR_AREA = (width - 10) * (height - 10)
+    # Maximum area is 5 less than the original image dimensions
+    MAX_COUNTOUR_AREA = (width - border_size - 5) * (height - border_size - 5)
 
     min_area = MIN_COUNTOUR_AREA
-    page_contour = np.array(
-        [[0, 0], [0, height - 5], [width - 5, height - 5], [width - 5, 0]]
-    )
+    page_contour = None
     none_tested = True
 
     # loop through the contours and select the largest one that is less than MAX_COUNTOUR_AREA
@@ -378,7 +396,7 @@ def find_page_contours(edges, img, min_area_mult=0.5, debug_output_imgs=None):
             len(approx) == 4
             and cv2.isContourConvex(approx)
             and min_area < cv2.contourArea(approx) < MAX_COUNTOUR_AREA
-            and straight_lines_in_contour(approx[:, 0])
+            and straight_lines_in_contour(approx[:, 0], delta=int(height/10))
         ):
 
             none_tested = False
@@ -387,6 +405,7 @@ def find_page_contours(edges, img, min_area_mult=0.5, debug_output_imgs=None):
 
     if none_tested:
         logger.debug("No contours met the criteria.")
+        return None
 
     # Sort corners and offset them
     page_contour = four_corners_sort(page_contour)
@@ -399,7 +418,7 @@ def find_page_contours(edges, img, min_area_mult=0.5, debug_output_imgs=None):
 
         debug_output_imgs.update({"5-page_contour.jpg": page_contour_img})
 
-    return contour_offset(page_contour, (-5, -5)), none_tested
+    return contour_offset(page_contour, (-border_size, -border_size))
 
 
 def persp_transform(img, s_points):
@@ -444,6 +463,7 @@ def crop(
     debug_output_imgs=False,
     save_debug_imgs=False,
     create_debug_gif=False,
+    debug_path="debug_imgs",
 ):
     """Main method to perspective crop an image to the slide.
 
@@ -459,9 +479,10 @@ def crop(
         debug_output_imgs (bool or dict, optional): if dictionary, modifies the dictionary by adding ``(image file name, image data)`` pairs. if boolean and True, creates a dictionary in the same way as if a dictionary was passed. Defaults to False.
         save_debug_imgs (bool, optional): uses :meth:`~corner_crop_transform.write_debug_imgs` to save the debug_output_imgs to disk. Requires ``debug_output_imgs`` to not be False. Defaults to False.
         create_debug_gif (bool, optional): create a gif of the debug images. Requires ``debug_output_imgs`` to not be False. Defaults to False.
-    
+        debug_path (str, optional): location to save the debug images and debug gif. Defaults to "debug_imgs".
+
     Returns:
-        [str]: path to cropped image
+        [tuple]: path to cropped image and failed (True if no slide bounding box found, false otherwise)
     """
     assert mode in ["automatic", "contours", "hough_lines"]
 
@@ -491,10 +512,10 @@ def crop(
         )
 
     if mode == "contours":
-        page_contour, failed = find_page_contours(
-            edges_morphed, img, debug_output_imgs=debug_output_imgs
+        page_contour = find_page_contours(
+            edges_morphed, img, total_border, debug_output_imgs=debug_output_imgs
         )
-        if failed:
+        if page_contour is None:
             logger.warn(
                 "Contours method failed. Using entire image. It is recommended to try 'automatic' mode."
             )
@@ -510,11 +531,11 @@ def crop(
         )
 
     elif mode == "automatic":
-        page_contour, failed = find_page_contours(
-            edges_morphed, img, debug_output_imgs=debug_output_imgs
+        page_contour = find_page_contours(
+            edges_morphed, img, total_border, debug_output_imgs=debug_output_imgs
         )
-        if failed:
-            logger.info("Contours method failed. Using `hough_lines_corners`.")
+        if page_contour is None:
+            logger.debug("Contours method failed. Using `hough_lines_corners`.")
             corners = hough_lines_corners(
                 img,
                 edges_morphed,
@@ -525,45 +546,55 @@ def crop(
         else:
             corners = page_contour
 
-    img_cropped = persp_transform(img, corners)
+    # Detection of slide bounding box succeeded
+    if corners is not None:
+        failed = False
+        img_cropped = persp_transform(img, corners)
+    # Detection did not succeed so return original image
+    else:
+        failed = True
+        img_cropped = img
 
     if not output_path:
         file_parse = os.path.splitext(str(img_path))
         filename = file_parse[0]
         ext = file_parse[1]
         output_path = filename + OUTPUT_PATH_MODIFIER + ext
-    
+
     if debug_output_imgs != None:
         debug_output_imgs.update({"9-img_cropped.jpg": img_cropped})
 
         if save_debug_imgs:
-            write_debug_imgs(debug_output_imgs)
+            write_debug_imgs(debug_output_imgs, base_path=debug_path)
 
-        # Get original image size
-        scale_to = img.shape[:2]
-        # Swap the axes
-        scale_to = (scale_to[1], scale_to[0])
-        # Create list of images
-        imgs_list = list(debug_output_imgs.values())
-        # Scale each debug image to the dimensions of the original image.
-        for idx, img in enumerate(imgs_list[1:]):
-            img = cv2.resize(img, scale_to)
-            imgs_list[idx + 1] = img
+        if create_debug_gif:
+            # Get original image size
+            scale_to = img.shape[:2]
+            # Swap the axes
+            scale_to = (scale_to[1], scale_to[0])
+            # Create list of images
+            imgs_list = list(debug_output_imgs.values())
+            # Scale each debug image to the dimensions of the original image.
+            for idx, img in enumerate(imgs_list[1:]):
+                img = cv2.resize(img, scale_to)
+                imgs_list[idx + 1] = img
 
-        original_file_name = os.path.basename(str(img_path))
-        desired_output_dir = os.path.dirname(str(output_path))
-        filename = original_file_name + "_debug.gif"
-        save_path = os.path.join(desired_output_dir, filename)
-        imageio.mimsave(save_path, imgs_list, duration=1.4)
-        optimize(save_path)
+            original_file_name = os.path.basename(str(img_path))
+            filename = original_file_name + "_debug.gif"
+            save_path = os.path.join(debug_path, filename)
+            imageio.mimsave(save_path, imgs_list, duration=1.4)
+            optimize(save_path)
 
     cv2.imwrite(output_path, img_cropped)
 
-    return output_path
+    return output_path, failed
 
 
-def all_in_folder(path, remove_original=False):
-    """Perform perspective cropping on every file in folder and return new paths"""
+def all_in_folder(path, remove_original=False, **kwargs):
+    """
+    Perform perspective cropping on every file in folder and return new paths.
+    ``**kwargs`` is passed to :meth:`~corner_crop_transform.crop`.
+    """
     cropped_imgs_paths = []
     images = os.listdir(path)
     images.sort()
@@ -575,8 +606,15 @@ def all_in_folder(path, remove_original=False):
             current_path
         ):
             # Above checks that file exists and does not contain `OUTPUT_PATH_MODIFIER` because that would
-            # indicate that the file has already been cropped. See crop().
-            output_path = crop(current_path)
+            # indicate that the file has already been cropped. See `crop()``.
+            output_path, failed = crop(current_path, **kwargs)
+
+            # if the crop failed due to detection issues debug mode enabled ("debug_output_imgs" was passed in `**kwargs`)
+            if failed and "debug_output_imgs" in locals()["kwargs"]:
+                logger.info("Failed: " + str(output_path))
+                with open("debug_crop_error_log.txt", "a+") as error_log:
+                    error_log.write(output_path + "\n")
+
             cropped_imgs_paths.append(output_path)
             if remove_original:
                 os.remove(current_path)
@@ -585,7 +623,79 @@ def all_in_folder(path, remove_original=False):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python corner_crop_transform.py <path to image>")
+    parser = argparse.ArgumentParser(
+        description="Perspective Crop to Rectangles (Slides)"
+    )
+    parser.add_argument(
+        "mode",
+        type=str,
+        choices=["file", "folder"],
+        help="`file` mode will crop a single image and `folder` mode will crop all the images in a given folder",
+    )
+    parser.add_argument(
+        "path", type=str, help="path to file or folder (depending on `mode`) to process"
+    )
+    parser.add_argument(
+        "-d",
+        "--debug_mode",
+        action="store_true",
+        help="enable the usage of `--debug_imgs`, `--debug_gif`, and `--debug_path`.",
+    )
+    parser.add_argument(
+        "-di",
+        "--debug_imgs",
+        action="store_true",
+        help="Save debug images (JPG of each step of the pipeline). Requires `--debug_mode` to be enabled.",
+    )
+    parser.add_argument(
+        "-dg",
+        "--debug_gif",
+        action="store_true",
+        help="Save debug gif (GIF with 1.4s delay between each debug image). Requires `--debug_mode` to be enabled.",
+    )
+    parser.add_argument(
+        "-p",
+        "--debug_path",
+        type=str,
+        default="./debug_imgs",
+        help="path to folder to store debug images (default: './debug_imgs')",
+    )
+    parser.add_argument(
+        "-l",
+        "--log",
+        dest="logLevel",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level (default: 'Info').",
+    )
 
-    crop(sys.argv[1], debug_output_imgs=True, create_debug_gif=True)
+    args = parser.parse_args()
+
+    if args.debug_gif and not args.debug_mode:
+        parser.error("`--debug_gif` requires `--debug_mode` to be enabled.")
+    if args.debug_imgs and not args.debug_mode:
+        parser.error("`--debug_imgs` requires `--debug_mode` to be enabled.")
+
+    make_dir_if_not_exist(args.debug_path)
+
+    logging.basicConfig(
+        format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
+        level=logging.getLevelName(args.logLevel),
+    )
+
+    if args.mode == "file":
+        crop(
+            args.path,
+            debug_output_imgs=args.debug_mode,
+            save_debug_imgs=args.debug_imgs,
+            create_debug_gif=args.debug_gif,
+            debug_path=args.debug_path,
+        )
+    else:
+        cropped_imgs_paths = all_in_folder(
+            args.path,
+            debug_output_imgs=args.debug_mode,
+            save_debug_imgs=args.debug_imgs,
+            create_debug_gif=args.debug_gif,
+            debug_path=args.debug_path,
+        )

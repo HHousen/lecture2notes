@@ -34,6 +34,7 @@ dependencies:
   - appdirs
   - gdown
   - imagehash
+  - imageio
   - sphinx
   - tensorflow # needed for deepsegment
   # - fairseq # for Semsim model import in DocSum BartSumSummarizer
@@ -52,3 +53,4 @@ dependencies:
     - sentence-transformers
     - transformers
     - deepsegment
+    - pygifsicle
