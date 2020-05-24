@@ -223,4 +223,10 @@ There are three options:
 
 Merges the sorted frames from all the ``videos`` and ``slides`` in the dataset to ``Dataset/classifier-data``.
 
-* Command: ``python 5-compile_data.py``
+.. note:: This script will not erase any data already stored in the ``Dataset/classifier-data`` dataset folder.
+
+* Command: ``python 5-compile_data.py <all/videos/slides>``
+* Examples:
+    * If *videos*: ``python 5-compile_data.py videos``, processes only sorted frames from ``videos``
+    * If *slides*:  ``python 5-compile_data.py slides``, processes images from ``slides``
+    * If *all*: ``python 5-compile_data.py all``, processes from both ``videos`` and ``slides``
