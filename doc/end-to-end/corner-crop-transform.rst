@@ -11,6 +11,7 @@ Useful guides and tutorials to help understand the script:
     * `A Box detection algorithm for any image containing boxes. <https://medium.com/coinmonks/a-box-detection-algorithm-for-any-image-containing-boxes-756c15d7ed26>`_
     * `Sorting Contours using Python and OpenCV <https://www.pyimagesearch.com/2015/04/20/sorting-contours-using-python-and-opencv/>`_
     * `Horizontal Line detection with OpenCV <https://stackoverflow.com/a/7228823>`_
+    * `Text skew correction with OpenCV and Python <https://www.pyimagesearch.com/2017/02/20/text-skew-correction-opencv-python/>`_
 
 Debug/Testing Mode
 ------------------
@@ -43,7 +44,7 @@ Output of ``python corner_crop_transform.py --help``:
 
 .. code-block:: bash
 
-    usage: corner_crop_transform.py [-h] [-d] [-di] [-dg] [-p DEBUG_PATH]
+    usage: corner_crop_transform.py [-h] [-d] [-di] [-dg] [-dgo] [-p DEBUG_PATH]
                                 [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
                                 {file,folder} path
 
@@ -63,8 +64,12 @@ Output of ``python corner_crop_transform.py --help``:
                             Requires `--debug_mode` to be enabled.
     -dg, --debug_gif      Save debug gif (GIF with 1.4s delay between each debug
                             image). Requires `--debug_mode` to be enabled.
+    -dgo, --debug_gif_optimize
+                            Optimize the gif produced by enabling --debug_gif with
+                            `gifsicle`.
     -p DEBUG_PATH, --debug_path DEBUG_PATH
                             path to folder to store debug images (default:
                             './debug_imgs')
     -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Set the logging level (default: 'Info').
+

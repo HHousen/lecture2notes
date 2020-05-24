@@ -119,10 +119,15 @@ def hough_lines_corners(
         rho=1,
         theta=np.pi / 180,
         threshold=100,
-        maxLineGap=int(height/54),
+        maxLineGap=int(height / 54),
         minLineLength=min_line_length,
     )
-    h_lines, v_lines = segment_lines(lines, int(height/54))
+    if lines is None:
+        logger.debug(
+            "Hough Lines Corners Failed! `cv2.HoughLinesP` failed to find any lines."
+        )
+        return None
+    h_lines, v_lines = segment_lines(lines, int(height / 54))
 
     # Find the line intersection points
     Px = []
@@ -352,7 +357,7 @@ def straight_lines_in_contour(contour, delta=100):
 
 
 def find_page_contours(
-    edges, img, border_size=11, min_area_mult=0.4, debug_output_imgs=None
+    edges, img, border_size=11, min_area_mult=0.3, debug_output_imgs=None
 ):
     """Find corner points of page contour
 
@@ -396,7 +401,7 @@ def find_page_contours(
             len(approx) == 4
             and cv2.isContourConvex(approx)
             and min_area < cv2.contourArea(approx) < MAX_COUNTOUR_AREA
-            and straight_lines_in_contour(approx[:, 0], delta=int(height/10))
+            and straight_lines_in_contour(approx[:, 0], delta=int(height / 10))
         ):
 
             none_tested = False
@@ -463,6 +468,7 @@ def crop(
     debug_output_imgs=False,
     save_debug_imgs=False,
     create_debug_gif=False,
+    debug_gif_optimize=True,
     debug_path="debug_imgs",
 ):
     """Main method to perspective crop an image to the slide.
@@ -479,6 +485,7 @@ def crop(
         debug_output_imgs (bool or dict, optional): if dictionary, modifies the dictionary by adding ``(image file name, image data)`` pairs. if boolean and True, creates a dictionary in the same way as if a dictionary was passed. Defaults to False.
         save_debug_imgs (bool, optional): uses :meth:`~corner_crop_transform.write_debug_imgs` to save the debug_output_imgs to disk. Requires ``debug_output_imgs`` to not be False. Defaults to False.
         create_debug_gif (bool, optional): create a gif of the debug images. Requires ``debug_output_imgs`` to not be False. Defaults to False.
+        debug_gif_optimize (bool, optional): optimize the gif produced by enabling the ``create_debug_gif`` option using ``pygifsicle``. Defaults to True.
         debug_path (str, optional): location to save the debug images and debug gif. Defaults to "debug_imgs".
 
     Returns:
@@ -583,7 +590,9 @@ def crop(
             filename = original_file_name + "_debug.gif"
             save_path = os.path.join(debug_path, filename)
             imageio.mimsave(save_path, imgs_list, duration=1.4)
-            optimize(save_path)
+
+            if debug_gif_optimize:
+                optimize(save_path)
 
     cv2.imwrite(output_path, img_cropped)
 
@@ -654,6 +663,12 @@ if __name__ == "__main__":
         help="Save debug gif (GIF with 1.4s delay between each debug image). Requires `--debug_mode` to be enabled.",
     )
     parser.add_argument(
+        "-dgo",
+        "--debug_gif_optimize",
+        action="store_true",
+        help="Optimize the gif produced by enabling --debug_gif with `gifsicle`.",
+    )
+    parser.add_argument(
         "-p",
         "--debug_path",
         type=str,
@@ -689,6 +704,7 @@ if __name__ == "__main__":
             debug_output_imgs=args.debug_mode,
             save_debug_imgs=args.debug_imgs,
             create_debug_gif=args.debug_gif,
+            debug_gif_optimize=args.debug_gif_optimize,
             debug_path=args.debug_path,
         )
     else:
@@ -697,5 +713,6 @@ if __name__ == "__main__":
             debug_output_imgs=args.debug_mode,
             save_debug_imgs=args.debug_imgs,
             create_debug_gif=args.debug_gif,
+            debug_gif_optimize=args.debug_gif_optimize,
             debug_path=args.debug_path,
         )
