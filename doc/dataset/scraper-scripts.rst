@@ -207,9 +207,14 @@ Goes through every extracted frame for all videos in the dataset that don’t ha
 4. Sort From File
 -----------------
 
-Either ``make`` a file mapping of the category to which each frame belongs or ``sort`` each file in ``Dataset/sort_file_map.csv``, moving the respective frame from ``video_id/frames`` to ``video_id/frames_sorted/category``. The purpose of this script is to exactly reconstruct the dataset without downloading the already sorted images.
+Creates a CSV of the category assigned to each frame of each video in the dataset or organizes extracted frames from a previously created CSV. The purpose of this script is to exactly reconstruct the dataset without downloading the already sorted images.
 
-* Command: ``python 4-sort_from_file.py <make/sort>``
+There are three options:
+1. ``make``: make a file mapping of the category to which each frame belongs by reading data from the ``Dataset/videos`` directory.
+2. ``make_compiled`` performs the same task as ``make`` but reads from the ``Dataset/classifier-data`` directory. This is useful if the dataset has been compiled and the ``Dataset/videos`` folder has been cleared.
+3. ``sort``: sort each file in ``Dataset/sort_file_map.csv``, moving the respective frame from ``video_id/frames`` to ``video_id/frames_sorted/category``.
+
+* Command: ``python 4-sort_from_file.py <make/make_compiled/sort>``
 
 .. _ss_compile_data:
 

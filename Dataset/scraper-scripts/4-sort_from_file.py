@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 videos_dir = Path('../videos')
+data_dir = Path('../classifier-data')
 csv_path = Path("../sort_file_map.csv")
 
 if csv_path.is_file():
@@ -27,6 +28,23 @@ if sys.argv[1] == "make":
                 for frame in tqdm(frames, total=len(frames), desc=desc):
                     df.loc[len(df.index)]=[item,frame,category]
     df.to_csv(csv_path)
+
+elif sys.argv[1] == "make_compiled":
+    categories = os.listdir(data_dir)
+    num_categories = len(categories)
+
+    for idx, category in enumerate(categories):
+        category_path = data_dir / category
+        frames = os.listdir(category_path)
+        desc = "Creating File Mapping Category - " + str(category) + " (" + str(idx+1) + "/" + str(num_categories)+") "
+        for frame in tqdm(frames, total=len(frames), desc=desc):
+            # Filename format is [video_id]-img_[frame_index].jpg where [video_id] is 11 characters long
+            # This check removes images from slide PDFs that were mereged into the dataset
+            if frame[11] == "-":
+                video_id = frame[:11]
+                df.loc[len(df.index)]=[video_id,frame,category]
+    df.to_csv(csv_path)
+
 else: # if sys.argv[1] == "sort"
     for index, row in df.iterrows():
         video_id = row['video_id']
