@@ -214,6 +214,8 @@ There are three options:
 2. ``make_compiled`` performs the same task as ``make`` but reads from the ``Dataset/classifier-data`` directory. This is useful if the dataset has been compiled and the ``Dataset/videos`` folder has been cleared.
 3. ``sort``: sort each file in ``Dataset/sort_file_map.csv``, moving the respective frame from ``video_id/frames`` to ``video_id/frames_sorted/category``.
 
+.. note:: This script appends to ``Dataset/sort_file_map.csv``. It will not overwrite data. 
+
 * Command: ``python 4-sort_from_file.py <make/make_compiled/sort>``
 
 .. _ss_compile_data:

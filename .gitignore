@@ -145,3 +145,4 @@ Models/slide-classifier/runs
 Dataset/mass-download*
 doc/_build
 End-To-End/debug_crop_error_log.txt
+debug_imgs
