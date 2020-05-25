@@ -5,6 +5,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def convert_relu_to_mish(model):
+    """Find all of the ``nn.ReLU`` activation functions in ``model`` and replace them with mish."""
     from mish import mish
     for child_name, child in model.named_children():
         if isinstance(child, nn.ReLU):

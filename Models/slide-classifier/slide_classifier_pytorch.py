@@ -20,6 +20,8 @@ import torchvision.models as models
 from torch.utils.tensorboard import SummaryWriter
 
 from efficientnet_pytorch import EfficientNet
+from efficientnet_pytorch.utils import MemoryEfficientSwish
+
 import numpy as np
 
 from sklearn.metrics import (
@@ -37,6 +39,7 @@ from slide_classifier_helpers import convert_relu_to_mish, plot_confusion_matrix
 
 logger = logging.getLogger(__name__)
 
+# Get all model names available from pytorch
 MODEL_NAMES = sorted(
     name
     for name in models.__dict__
@@ -48,6 +51,7 @@ MODEL_NAMES += ["efficientnet-b" + str(i) for i in range(0, 7)]
 
 
 class SlideClassifier(pl.LightningModule):
+    """The main slide classifier model code."""
     def __init__(self, hparams):
         super(SlideClassifier, self).__init__()
 
@@ -62,8 +66,14 @@ class SlideClassifier(pl.LightningModule):
         self.hparams.input_size = self.get_input_size()
 
         self.criterion = nn.CrossEntropyLoss()
+        self.train_dataloader_object = None
 
     def forward(self, *args, **kwargs):
+        """
+        Passes ``*args`` and ``**kwargs`` to ``self.classification_model`` since 
+        :class:`~slide_classifier_pytorch.SlideClassifier` is a wrapper for the 
+        classification model.
+        """
         return self.classification_model(*args, **kwargs)
 
     def set_parameter_requires_grad(self, model):
@@ -85,30 +95,28 @@ class SlideClassifier(pl.LightningModule):
                     else:
                         param.requires_grad = False
 
-    def create_head(self, out_features):
-        layers = [
-            AdaptiveConcatPool2d(1),
-            nn.Flatten(),
-            nn.BatchNorm1d(1024),
-            nn.Dropout(0.25),
-            nn.Linear(1024, 512),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm1d(512),
-            nn.Dropout(0.5),
-            nn.Linear(512, out_features),
-        ]
-        return nn.Sequential(*layers)
-
     def initialize_model(self, num_classes):
+        """Create the classification model. Modifies the standard models by adding extra layers to improve performance if feature_extract is advanced.
+
+        Args:
+            num_classes (int): the number of classes in the data (number of output features)
+
+        Returns:
+            [pytorch model]: the modified pytorch model processed by the configuration options specified
+        """        
         # Initialize these variables which will be set in this if statement. Each of these
         # variables is model specific. EfficientNet is separate because it has not been
         # implemented in the main pytorch repository yet. Instead this script uses the
         # lukemelas/EfficientNet-PyTorch package.
         if self.hparams.arch.startswith("efficientnet"):
             if self.hparams.pretrained:
-                model_ft = EfficientNet.from_pretrained(self.hparams.arch)
+                model_ft = EfficientNet.from_pretrained(
+                    self.hparams.arch, num_classes=num_classes
+                )
             else:
-                model_ft = EfficientNet.from_name(self.hparams.arch)
+                model_ft = EfficientNet.from_name(
+                    self.hparams.arch, override_params={"num_classes": num_classes}
+                )
         else:
             model_ft = models.__dict__[self.hparams.arch](
                 pretrained=self.hparams.pretrained
@@ -124,22 +132,53 @@ class SlideClassifier(pl.LightningModule):
             num_ftrs = model_ft.fc.in_features
 
             # TODO: Implement advanced pretraining technique from fastai for all models
+            # Use advanced pretraining technique from fastai
+            # https://docs.fast.ai/vision.learner.html#cnn_learner
+            # https://github.com/fastai/fastai/blob/master/fastai/vision/learner.py#L69
             if self.hparams.feature_extract == "advanced":
-                # Use advanced pretraining technique from fastai - https://docs.fast.ai/vision.learner.html#cnn_learner
                 # Remove last two layers
                 model_ft = nn.Sequential(*list(model_ft.children())[:-2])
+                head = nn.Sequential(
+                    *[
+                        AdaptiveConcatPool2d(1),
+                        nn.Flatten(),
+                        nn.BatchNorm1d(1024),
+                        nn.Dropout(0.25),
+                        nn.Linear(1024, 512),
+                        nn.ReLU(inplace=True),
+                        nn.BatchNorm1d(512),
+                        nn.Dropout(0.5),
+                        nn.Linear(512, num_classes),
+                    ]
+                )
                 # append head to resnet body
-                model_ft = nn.Sequential(model_ft, self.create_head(num_classes))
+                model_ft = nn.Sequential(model_ft, *head)
             else:
                 # Reshape model so last layer has 512 input features and num_classes output features
                 model_ft.fc = nn.Linear(num_ftrs, num_classes)
 
         elif self.hparams.arch.startswith("efficientnet"):
             self.set_parameter_requires_grad(model_ft)
+            # Get details about premade model before modifying it so that original values can be restored
             num_ftrs = model_ft._fc.in_features  # pylint: disable=protected-access
-            model_ft._fc = nn.Linear(
-                num_ftrs, num_classes
-            )  # pylint: disable=protected-access
+            bn_eps = model_ft._bn1.eps  # pylint: disable=protected-access
+            bn_mom = model_ft._bn1.momentum  # pylint: disable=protected-access
+
+            if self.hparams.feature_extract == "advanced":
+                model_ft._avg_pooling = AdaptiveConcatPool2d(1)
+                model_ft._fc = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(num_ftrs*2, 512),
+                    MemoryEfficientSwish(),
+                    nn.BatchNorm1d(512, eps=bn_eps, momentum=bn_mom),
+                    nn.Dropout(0.5),
+                    nn.Linear(512, num_classes),
+                )
+                
+            else:
+                model_ft._fc = nn.Linear(
+                    num_ftrs, num_classes
+                )  # pylint: disable=protected-access
 
         elif self.hparams.arch.startswith("alexnet"):
             self.set_parameter_requires_grad(model_ft)
@@ -190,6 +229,7 @@ class SlideClassifier(pl.LightningModule):
         return model_ft
 
     def get_input_size(self):
+        """Uses the ``hparams.arch`` to return the image input size to the model."""
         if self.hparams.arch.startswith("efficientnet"):
             model_type = self.hparams.arch.split("-", 1)[-1]  # get everything after "-"
             if model_type.startswith("b"):
@@ -201,11 +241,19 @@ class SlideClassifier(pl.LightningModule):
             input_size = 299
         else:
             input_size = 224
-        
+
         self.hparams.input_size = input_size
         return input_size
 
     def prepare_data(self):
+        """
+        Creates the PyTorch Datasets using ``datasets.ImageFolder`` and applying appropriate tranforms.
+        If ``hparams.use_random_split`` is True then the dataset will be randomly split 80% for training and 20% for testing.
+        If ``hparams.use_random_split`` is True then the dataset folder should contain a folder for each class. If it is False then there should be a folder for each split (named "train" and "val") where each split folder contains a folder for each class.
+        `ImageFolder Documentation <https://pytorch.org/docs/stable/torchvision/datasets.html#imagefolder>`_
+        
+        This function will also run :meth:~`slide_classifier_pytorch.SlideClassifier.initialize_model` with ``len(self.hparams.classes))`` as the ``num_classes`` argument if the classification model as not already been initialized in the ``__init__`` function.
+        """
         normalize = transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         )
@@ -271,6 +319,10 @@ class SlideClassifier(pl.LightningModule):
             self.classification_model = self.initialize_model(len(self.hparams.classes))
 
     def train_dataloader(self):
+        """Create train dataloader if it has not already been created, otherwise return the stored dataloader."""
+        if self.train_dataloader_object:
+            return self.train_dataloader_object
+
         train_sampler = None
         train_loader = torch.utils.data.DataLoader(
             self.train_dataset,
@@ -282,9 +334,11 @@ class SlideClassifier(pl.LightningModule):
             drop_last=True,  # see https://discuss.pytorch.org/t/error-expected-more-than-1-value-per-channel-when-training/26274/5
         )
 
+        self.train_dataloader_object = train_loader
         return train_loader
 
     def val_dataloader(self):
+        """Create validation (val) dataloader"""
         val_loader = torch.utils.data.DataLoader(
             self.val_dataset,
             batch_size=self.hparams.val_batch_size,
@@ -296,9 +350,21 @@ class SlideClassifier(pl.LightningModule):
         return val_loader
 
     def test_dataloader(self):
+        """Return the validation dataloader. The test process uses the same data as validation but calculates a classification report and displays a confusion matrix."""
         return self.val_dataloader()
 
     def configure_optimizers(self):
+        """Create the optimizers and schedulers."""
+        # create the train dataloader so the number of examples can be determined
+        self.train_dataloader_object = self.train_dataloader()
+        # check that max_steps is not None and is greater than 0
+        if self.hparams.max_steps and self.hparams.max_steps > 0:
+            t_total = self.hparams.max_steps
+        else:
+            t_total = len(self.train_dataloader_object) * self.hparams.max_epochs
+            if self.hparams.overfit_pct > 0.0:
+                t_total = int(t_total * self.hparams.overfit_pct)
+
         # Gather the parameters to be optimized/updated
         # If feature_extract is normal then params should only be fully connected layer
         # If feature_extract is advanced then params should be all BatchNorm layers and head (create_head) of network
@@ -320,7 +386,7 @@ class SlideClassifier(pl.LightningModule):
         if self.hparams.optimizer == "sgd":
             optimizer = torch.optim.SGD(
                 params_to_update,
-                self.hparams.lr,
+                self.hparams.learning_rate,
                 momentum=self.hparams.momentum,
                 weight_decay=self.hparams.weight_decay,
             )
@@ -330,7 +396,7 @@ class SlideClassifier(pl.LightningModule):
 
             optimizer = Ranger(
                 params_to_update,
-                self.hparams.lr,
+                self.hparams.learning_rate,
                 k=self.hparams.ranger_k,
                 betas=(self.hparams.momentum, self.hparams.optimizer_alpha),
                 eps=self.hparams.optimizer_eps,
@@ -340,15 +406,41 @@ class SlideClassifier(pl.LightningModule):
         else:
             optimizer = torch.optim.AdamW(
                 params_to_update,
-                self.hparams.lr,
+                self.hparams.learning_rate,
                 betas=(self.hparams.momentum, self.hparams.optimizer_alpha),
                 eps=self.hparams.optimizer_eps,
                 weight_decay=self.hparams.weight_decay,
             )
+        
+        if self.hparams.use_scheduler:
+            if self.hparams.use_scheduler == "onecycle":
+                scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                    optimizer, max_lr=self.hparams.learning_rate, total_steps=t_total
+                )
+            else:
+                logger.error(
+                    "The value "
+                    + str(self.hparams.use_scheduler)
+                    + " for `--use_scheduler` is invalid."
+                )
 
-        return optimizer
+            # the below interval is called "step" but the scheduler is moved forward
+            # every batch.
+            scheduler_dict = {"scheduler": scheduler, "interval": "step"}
+            return [optimizer], [scheduler_dict]
+        else:
+            return optimizer
 
     def calculate_stats(self, output, target):
+        """Used for the training, validation, and testing steps to calculate various statistics.
+
+        Args:
+            output (torch.tensor): the output from the model
+            target (torch.tensor): the ground-truth target classes
+
+        Returns:
+            [tuple]: a tuple of tensors in the form (accuracy, precision, recall, f_score)
+        """
         _, preds = torch.max(output.data, 1)
 
         target_cpu = target.cpu()
@@ -367,6 +459,10 @@ class SlideClassifier(pl.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
+        """
+        Perform a training step.
+        See the `PyTorch Lightning Docs <https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.core.html#pytorch_lightning.core.LightningModule.training_step>`_ for more info.
+        """
         images, target = batch
 
         output = self.forward(images)
@@ -389,6 +485,10 @@ class SlideClassifier(pl.LightningModule):
         return output
 
     def validation_step(self, batch, batch_idx):
+        """
+        Perform a validation step.
+        See the `PyTorch Lightning documentation for validation_step <https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.core.html#pytorch_lightning.core.LightningModule.validation_step>`_ for more info.
+        """
         images, target = batch
 
         output = self.forward(images)
@@ -409,6 +509,7 @@ class SlideClassifier(pl.LightningModule):
         return output
 
     def validation_epoch_end(self, outputs, log_prefix="val"):
+        """Compute average statistics after a validation epoch completes."""
         # Get the average loss and accuracy metrics over all evaluation runs
         avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
         avg_accuracy = torch.stack([x["accuracy"] for x in outputs]).mean()
@@ -437,6 +538,10 @@ class SlideClassifier(pl.LightningModule):
         return result
 
     def test_step(self, batch, batch_idx):
+        """
+        Perform a test step.
+        See the `PyTorch Lightning documentation for test_step <https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.core.html#pytorch_lightning.core.LightningModule.test_step>`_ for more info.
+        """
         images, target = batch
 
         output = self.forward(images)
@@ -463,6 +568,7 @@ class SlideClassifier(pl.LightningModule):
         return result
 
     def test_epoch_end(self, outputs):
+        """Create confusion matrix and calculate a sklearn classification report."""
         predictions = torch.cat([x["prediction"] for x in outputs], 0).cpu().numpy()
         targets = torch.cat([x["target"] for x in outputs], 0).cpu().numpy()
 
@@ -552,6 +658,13 @@ class SlideClassifier(pl.LightningModule):
             help="Optimizer eps parameter (default: 1e-8)",
         )
         parser.add_argument(
+            "--use_scheduler",
+            default=False,
+            help="""One option:
+            1. `onecycle`: Use the one cycle policy with a maximum learning rate of `--learning_rate`.
+            (default: False, don't use any scheduler)""",
+        )
+        parser.add_argument(
             "--pretrained",
             dest="pretrained",
             action="store_true",
@@ -618,13 +731,11 @@ if __name__ == "__main__":
     )
     # 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
     parser.add_argument(
-        "--lr",
         "--learning_rate",
         default=4e-3,
         type=float,
         metavar="LR",
         help="initial learning rate",
-        dest="lr",
     )
     parser.add_argument(
         "--check_val_every_n_epoch",
