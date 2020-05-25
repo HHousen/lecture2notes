@@ -52,6 +52,7 @@ MODEL_NAMES += ["efficientnet-b" + str(i) for i in range(0, 7)]
 
 class SlideClassifier(pl.LightningModule):
     """The main slide classifier model code."""
+
     def __init__(self, hparams):
         super(SlideClassifier, self).__init__()
 
@@ -60,7 +61,7 @@ class SlideClassifier(pl.LightningModule):
         self.classification_model = None
         # If `hparams` has `num_classes` then create the classification model right away.
         # This is necessary for inference. The `num_classes` attribute is saved on model initialization.
-        if hasattr(hparams, "num_classes"):
+        if hasattr(hparams, "num_classes") and hparams.num_classes is not None:
             self.classification_model = self.initialize_model(hparams.num_classes)
 
         self.hparams.input_size = self.get_input_size()
@@ -103,7 +104,7 @@ class SlideClassifier(pl.LightningModule):
 
         Returns:
             [pytorch model]: the modified pytorch model processed by the configuration options specified
-        """        
+        """
         # Initialize these variables which will be set in this if statement. Each of these
         # variables is model specific. EfficientNet is separate because it has not been
         # implemented in the main pytorch repository yet. Instead this script uses the
@@ -168,13 +169,13 @@ class SlideClassifier(pl.LightningModule):
                 model_ft._avg_pooling = AdaptiveConcatPool2d(1)
                 model_ft._fc = nn.Sequential(
                     nn.Flatten(),
-                    nn.Linear(num_ftrs*2, 512),
+                    nn.Linear(num_ftrs * 2, 512),
                     MemoryEfficientSwish(),
                     nn.BatchNorm1d(512, eps=bn_eps, momentum=bn_mom),
                     nn.Dropout(0.5),
                     nn.Linear(512, num_classes),
                 )
-                
+
             else:
                 model_ft._fc = nn.Linear(
                     num_ftrs, num_classes
@@ -355,16 +356,6 @@ class SlideClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         """Create the optimizers and schedulers."""
-        # create the train dataloader so the number of examples can be determined
-        self.train_dataloader_object = self.train_dataloader()
-        # check that max_steps is not None and is greater than 0
-        if self.hparams.max_steps and self.hparams.max_steps > 0:
-            t_total = self.hparams.max_steps
-        else:
-            t_total = len(self.train_dataloader_object) * self.hparams.max_epochs
-            if self.hparams.overfit_pct > 0.0:
-                t_total = int(t_total * self.hparams.overfit_pct)
-
         # Gather the parameters to be optimized/updated
         # If feature_extract is normal then params should only be fully connected layer
         # If feature_extract is advanced then params should be all BatchNorm layers and head (create_head) of network
@@ -411,8 +402,18 @@ class SlideClassifier(pl.LightningModule):
                 eps=self.hparams.optimizer_eps,
                 weight_decay=self.hparams.weight_decay,
             )
-        
+
         if self.hparams.use_scheduler:
+            # create the train dataloader so the number of examples can be determined
+            self.train_dataloader_object = self.train_dataloader()
+            # check that max_steps is not None and is greater than 0
+            if self.hparams.max_steps and self.hparams.max_steps > 0:
+                t_total = self.hparams.max_steps
+            else:
+                t_total = len(self.train_dataloader_object) * self.hparams.max_epochs
+                if self.hparams.overfit_pct > 0.0:
+                    t_total = int(t_total * self.hparams.overfit_pct)
+
             if self.hparams.use_scheduler == "onecycle":
                 scheduler = torch.optim.lr_scheduler.OneCycleLR(
                     optimizer, max_lr=self.hparams.learning_rate, total_steps=t_total
@@ -665,10 +666,15 @@ class SlideClassifier(pl.LightningModule):
             (default: False, don't use any scheduler)""",
         )
         parser.add_argument(
-            "--pretrained",
-            dest="pretrained",
-            action="store_true",
-            help="use pre-trained model",
+            "--pretrained", action="store_true", help="use pre-trained model",
+        )
+        parser.add_argument(
+            "--num_classes",
+            type=int,
+            default=None,
+            help="""The number of classes in the dataset. This value does not need to be specified 
+            since it will be automatically determined once the data is loaded. Thus, this value needs 
+            to be set when the data is not loaded (such as when `--do_lr_find` is True)""",
         )
         parser.add_argument(
             "--random_split",
@@ -809,6 +815,11 @@ if __name__ == "__main__":
         help="Sanity check runs n batches of val before starting the training routine. This catches any bugs in your validation without having to wait for the first validation check.",
     )
     parser.add_argument(
+        "--auto_lr_find",
+        action="store_true",
+        help="Runs a learning rate finder algorithm before any training to find optimal initial learning rate. The found learning rate will override `--learning_rate`.",
+    )
+    parser.add_argument(
         "--use_logger",
         default="wandb",
         type=str,
@@ -820,6 +831,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--do_test", action="store_true", help="Run the testing procedure."
+    )
+    parser.add_argument(
+        "--do_lr_find",
+        action="store_true",
+        help="""Attempt to find the optimal learning rate using the learning rate finder 
+        from PyTorch Lightning. Setting this option will find the optimal learning rate and 
+        then display the graph and suggested learning rate. `--num_classes` must be set to 
+        use the learning rate finder.""",
     )
     parser.add_argument(
         "--load_weights",
@@ -885,6 +904,15 @@ if __name__ == "__main__":
         models_path = "models/"
 
     trainer = Trainer.from_argparse_args(args)
+
+    if args.do_lr_find:
+        lr_finder = trainer.lr_find(model)
+
+        fig = lr_finder.plot(suggest=True)
+        fig.savefig("lr_finder.png")
+
+        new_lr = lr_finder.suggestion()
+        logger.info("Suggested Learning Rate: " + str(new_lr))
 
     if args.do_train:
         trainer.fit(model)
