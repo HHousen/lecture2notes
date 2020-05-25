@@ -21,6 +21,7 @@ Lecture2Notes: End-To-End Lecture Summarization
    :caption: Models:
 
    models/slide-classifier
+   models/slide-classifier-api
    models/summarizers
 
 .. toctree::

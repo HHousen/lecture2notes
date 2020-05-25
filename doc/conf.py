@@ -13,6 +13,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../End-To-End'))
+sys.path.insert(0, os.path.abspath('../Models/slide-classifier'))
 
 # -- Project information -----------------------------------------------------
 
