@@ -54,3 +54,4 @@ dependencies:
     - transformers
     - deepsegment
     - pygifsicle
+    - pytorch_lightning

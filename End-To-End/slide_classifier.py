@@ -24,7 +24,7 @@ def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
     Returns:
         [tuple]: (frames_sorted_dir, certainties, percent_wrong)
     """
-    model, model_info = inference.load_model()
+    model = inference.load_model()
 
     certainties = []
     frames_sorted_dir = frames_dir.parents[0] / "frames_sorted"
@@ -38,7 +38,7 @@ def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
         logger.info("Progress: " + str(idx+1) + "/" + str(num_frames))
         current_frame_path = os.path.join(frames_dir, frame)
         # run classification
-        best_guess, best_guess_idx, probs, _ = inference.get_prediction(model, Image.open(current_frame_path), model_info, extract_features=False) #pylint: disable=no-member
+        best_guess, best_guess_idx, probs, _ = inference.get_prediction(model, Image.open(current_frame_path), extract_features=False) #pylint: disable=no-member
         prob_max_correct = list(probs.values())[best_guess_idx]
         certainties.append(prob_max_correct)
         logger.info("Prediction is " + best_guess)

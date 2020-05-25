@@ -16,7 +16,7 @@ class ClusterFilesystem(Cluster):
     """Clusters images from a directory and saves them to disk in folders corresponding to each centroid."""
     def __init__(self, slides_dir, algorithm_name="kmeans", num_centroids=20, preference=None, damping=0.5, max_iter=200):
         self.slides_dir = slides_dir
-        self.model, self.model_info = inference.load_model()
+        self.model = inference.load_model()
         super().__init__(algorithm_name=algorithm_name, preference=preference, damping=damping, max_iter=max_iter)
 
     def extract_and_add_features(self, copy=True):
@@ -27,7 +27,7 @@ class ClusterFilesystem(Cluster):
         logger.info("Extracting features from " + str(num_slides) + " slides")
         for idx, slide in tqdm(enumerate(slides), total=num_slides, desc="> AI Clustering Engine: Feature extraction"):
             current_slide_path = os.path.join(self.slides_dir, slide)
-            _, _, _, extracted_features = inference.get_prediction(self.model, Image.open(current_slide_path), self.model_info)
+            _, _, _, extracted_features = inference.get_prediction(self.model, Image.open(current_slide_path))
             super().add(extracted_features, slide)
         super().create_algorithm_if_none()
 

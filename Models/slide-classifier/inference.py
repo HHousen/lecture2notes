@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
+from slide_classifier_pytorch import SlideClassifier
 
 from custom_nnmodules import *
 
@@ -43,8 +44,8 @@ def initialize_model(arch, num_classes):
         
     return model
 
-def load_model(model_path="model_best.pth.tar"):
-    """Load saved model"""
+def load_model_deprecated(model_path="model_best.pth.tar"):
+    """Load saved model trained using old script (".pth.tar" file extension is old format)."""
     model_best = torch.load(model_path)
     class_index = model_best['class_index']
     input_size = model_best['input_size']
@@ -67,6 +68,12 @@ def load_model(model_path="model_best.pth.tar"):
 
     return model, model_info
 
+def load_model(model_path):
+    """Load saved model from `model_path`."""
+    model = SlideClassifier.load_from_checkpoint(model_path)
+    model.eval()
+    return model
+
 sm = torch.nn.Softmax(dim=1)
 
 def transform_image(image, input_size):
@@ -78,19 +85,20 @@ def transform_image(image, input_size):
                                             [0.229, 0.224, 0.225])])
     return my_transforms(image).unsqueeze(0)
 
-def get_prediction(model, image, model_info, percent=False, extract_features=True):
-    tensor = transform_image(image, model_info["input_size"])
+def get_prediction(model, image, percent=False, extract_features=True):
+    tensor = transform_image(image, model.hparams.input_size)
 
     if extract_features:
         def copy_data(m, i, o):
             # https://stackoverflow.com/questions/19326004/access-a-function-variable-outside-the-function-without-using-global
             copy_data.extracted_features = torch.clone(o.data).detach().cpu().squeeze()
 
-        # .module needed in both cases below because model wrapped in DataParallel
-        if model_info["arch"].startswith("efficientnet"):
-            hook = model.module._avg_pooling.register_forward_hook(copy_data)
+        # ".classification_model" needed since actual model is stored in that attribute
+        # (model.forward simply calls model.classification_model.forward).
+        if model.hparams.arch.startswith("efficientnet"):
+            hook = model.classification_model._avg_pooling.register_forward_hook(copy_data)
         else:
-            hook = model.module[1][6].register_forward_hook(copy_data)
+            hook = model.classification_model[1][6].register_forward_hook(copy_data)
     else:
         extracted_features = 0
 
@@ -104,9 +112,13 @@ def get_prediction(model, image, model_info, percent=False, extract_features=Tru
     probs = sm(outputs).cpu().detach().numpy().tolist()[0]
     if percent:
         probs = [i*100 for i in probs]
-    probs = dict(zip(model_info["class_index"], probs))
+    probs = dict(zip(model.hparams.classes, probs))
     predicted_idx = int(y_hat.item())
-    class_name = model_info["class_index"][int(predicted_idx)]
+    class_name = model.hparams.classes[int(predicted_idx)]
     return class_name, predicted_idx, probs, extracted_features
 
-#print(get_prediction(model, Image.open("test.png")))
+# from PIL import Image
+# model = SlideClassifier.load_from_checkpoint("model.ckpt")
+# model.eval()
+# print(model)
+# print(get_prediction(model, Image.open("test.jpg"), None, extract_features=True))
