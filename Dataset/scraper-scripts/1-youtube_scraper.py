@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 import argparse
+import json
 import pandas as pd
 import isodate
 
@@ -24,6 +25,10 @@ PARSER.add_argument('-l', '--min_length_check', default=None, type=int, metavar=
                     help='Minimum video length in minutes to be scraped. Only works when `mode` is "channel"')
 PARSER.add_argument('-f', '--file', metavar='PATH', default='../videos-dataset.csv',
                     help='File to add scraped results to.')
+PARSER.add_argument('-o', '--search_order', type=str, default="date",
+                    help="The order to list videos from a channel when `mode` is 'channel'. Acceptable values are in the YouTube API Documentation: https://developers.google.com/youtube/v3/docs/search/list")
+PARSER.add_argument('-p', '--params', type=str, default=None,
+                    help="A string dictionary of parameters to pass to the call to the YouTube API. If mode=video then the `videos.list` api is used. If mode=channel then the `search.list` api is used.")
 ARGS = PARSER.parse_args()
 
 csv_path = Path(ARGS.file)
@@ -33,7 +38,7 @@ if csv_path.is_file():
 else:
     df = pd.DataFrame(columns=["date","provider","video_id","page_link","download_link","title","description","thumbnail_default","thumbnail_medium","thumbnail_high","downloaded"])
 
-def get_youtube_results(youtube, page="", channel=None, video_id=None, parts="snippet"):
+def get_youtube_results(youtube, page="", channel=None, video_id=None, parts="snippet", order="date"):
     """ Retrieves results from YouTube Data API """
     if video_id is not None:
         request = youtube.videos().list(
@@ -41,15 +46,21 @@ def get_youtube_results(youtube, page="", channel=None, video_id=None, parts="sn
             id=video_id
         )
     else:
-        request = youtube.search().list(
-            part=parts,
-            channelId=channel,
-            maxResults=50,
-            order="date",
-            pageToken=page,
-            type="video",
-            videoDefinition="high"
-        )
+        params = {
+            "part": parts,
+            "channelId": channel,
+            "maxResults": 50,
+            "pageToken": page,
+            "type": "video",
+            "videoDefinition": "high",
+            'order': order,
+        }
+
+        if ARGS.params is not None:
+            extra_params = json.loads(ARGS.params)
+            params = {**params, **extra_params}
+        
+        request = youtube.search().list(**params)
     
     response = request.execute()
     return response
@@ -95,9 +106,10 @@ elif ARGS.mode == "channel":
         input("> YouTube Scraper: Press enter to confirm execution or Ctrl+C to cancel.")
     next_page=""
     for i in range(int(ARGS.num_pages)):
-        response = get_youtube_results(youtube, next_page, channel=ARGS.id)
+        response = get_youtube_results(youtube, next_page, channel=ARGS.id, order=ARGS.search_order)
         items = response['items']
-        next_page=response['nextPageToken']
+        if 'nextPageToken' in response:
+            next_page=response['nextPageToken']
 
         for item in items:
             date = item['snippet']['publishedAt']

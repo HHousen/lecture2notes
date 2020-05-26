@@ -45,8 +45,8 @@ Takes a video id or channel id from YouTube, extracts important information usin
     .. code-block:: bash
 
         usage: 1-youtube_scraper.py [-h] [-n N] [-t] [--transcript-use-yt-api] [-l N]
-                                    [-f PATH]
-                                    {video,channel,transcript} STR
+                            [-f PATH] [-o SEARCH_ORDER] [-p PARAMS]
+                            {video,channel,transcript} STR
 
         YouTube Scraper
 
@@ -70,6 +70,16 @@ Takes a video id or channel id from YouTube, extracts important information usin
                                 Minimum video length in minutes to be scraped. Only
                                 works when `mode` is "channel"
         -f PATH, --file PATH  File to add scraped results to.
+        -o SEARCH_ORDER, --search_order SEARCH_ORDER
+                                The order to list videos from a channel when `mode` is
+                                'channel'. Acceptable values are in the YouTube API
+                                Documentation: https://developers.google.com/youtube/v
+                                3/docs/search/list
+        -p PARAMS, --params PARAMS
+                                A string dictionary of parameters to pass to the call
+                                to the YouTube API. If mode=video then the
+                                `videos.list` api is used. If mode=channel then the
+                                `search.list` api is used.
 
 * Examples
     * Add a single lecture video to the dataset:
@@ -88,14 +98,26 @@ Takes a video id or channel id from YouTube, extracts important information usin
         .. code-block:: bash
 
             python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 1
+    * Scrape the 50 most viewed videos from a channel:
+        .. code-block:: bash
+
+            python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 1 --search_order viewCount
+    * Scrape the 50 latest videos from a channel that were published before 2020:
+        .. code-block:: bash
+
+            python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 1 --params '{"publishedBefore": "2020-01-01T00:00:00Z"}'
     * Scrape the 100 latest videos from a channel longer than 20 minutes:
         .. code-block:: bash
 
             python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 2 --min_length_check 20
-    * **Mass Download** (to be used with :ref:`ss_mass_data_collector`):
+    * **Mass Download 1** (to be used with :ref:`ss_mass_data_collector`):
         .. code-block:: bash
 
             python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 2 --min_length_check 20 -f ../mass-download-list.csv
+    * **Mass Download 2** (specify certain dates and times):
+        .. code-block:: bash
+
+            python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 2 --min_length_check 20 -f ../mass-download-list.csv --params '{"publishedBefore": "2015-01-01T00:00:00Z", "publishedAfter": "2014-01-01T00:00:00Z"}'
 
 .. _ss_mass_data_collector:
 
@@ -121,7 +143,10 @@ Examples:
 1. Recommended: Low Disk Space Usage, High Bandwidth, Duplicate Calculations
     The below commands do the following:
 
-    1. Scrape the `MIT OpenCourseWare <https://www.youtube.com/channel/UCEBb1b_L6zDS3xTUrIALZOw>`_ YouTube channel for the latest 100 videos that are longer than 20 minutes and save the data to ``../mass-download-list.csv``.
+    1. Scrape the `MIT OpenCourseWare <https://www.youtube.com/channel/UCEBb1b_L6zDS3xTUrIALZOw>`_ YouTube channel for the latest 100 videos that are longer than 20 minutes and save the data to ``../mass-download-list.csv``
+        
+        * Optionally, only find videos in a date range. To do this you need to specify the ``--params`` argument like so: ``--params '{"publishedBefore": "2014-07-01T00:00:00Z", "publishedAfter": "2014-01-01T00:00:00Z"}'``. The full list of available parameters can be found in the `YouTube API Documentation for search.list <https://developers.google.com/youtube/v3/docs/search/list>`_ if  mode is ``channel`` and `YouTube API Documentation for videos.list <https://developers.google.com/youtube/v3/docs/videos/list>`_ if mode is ``video``.
+
     2. Run the *Mass Data Collector* to download each video at 480p and determine how certain the model is with its predictions on that video.
     3. Take the top 20 most uncertain videos and add them to the ``Dataset/videos-dataset.csv``.
     4. Download the newly added 20 videos at full HD resolution
