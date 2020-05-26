@@ -68,7 +68,7 @@ def load_model_deprecated(model_path="model_best.pth.tar"):
 
     return model, model_info
 
-def load_model(model_path):
+def load_model(model_path="model_best.ckpt"):
     """Load saved model from `model_path`."""
     model = SlideClassifier.load_from_checkpoint(model_path)
     model.eval()

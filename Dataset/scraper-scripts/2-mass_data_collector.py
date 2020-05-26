@@ -23,11 +23,16 @@ parser.add_argument('-nr', '--no_remove', action="store_true",
                     to be redownloaded, but it will use more disk space.""")
 parser.add_argument('-r', '--resolution', type=int, default=None,
                     help="The resolution of the videos to download. Default is maximum resolution.")
+parser.add_argument('-p', '--pause', action="store_true", help="Pause after each video has been processed but before deletion.")
 
 args = parser.parse_args()
 
 DOWNLOAD_CSV_PATH = Path("../mass-download-list.csv")
 DOWNLOAD_DF = pd.read_csv(DOWNLOAD_CSV_PATH, index_col=0)
+
+# Remove duplicates from `DOWNLOAD_DF`
+DOWNLOAD_DF.drop_duplicates(subset="video_id", keep="first", inplace=True, ignore_index=True)
+DOWNLOAD_DF.to_csv(DOWNLOAD_CSV_PATH)
 
 RESULTS_CSV_PATH = Path("../mass-download-results.csv")
 if RESULTS_CSV_PATH.is_file():

@@ -147,3 +147,4 @@ doc/_build
 End-To-End/debug_crop_error_log.txt
 debug_imgs
 Models/slide-classifier/confusion_matrix.png
+*.ckpt

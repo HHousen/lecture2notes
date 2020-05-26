@@ -100,7 +100,7 @@ Takes a video id or channel id from YouTube, extracts important information usin
 .. _ss_mass_data_collector:
 
 2. Mass Data Collector
------------------------
+----------------------
 
 This script provides a method to collect massive amounts of new data for the slide classifier. These new lecture videos are selected based on what the model struggles with (where its certainty is lowest). This means the collected videos train the model the fastest while exposing it to the most unique situations. However, this method will ignore videos that the model is very confident with but is actually incorrect. These videos are the most beneficial but must be manually found.
 
@@ -142,7 +142,32 @@ Examples:
     Specifying the ``'--no_remove`` argument to ``2-mass_data_collector.py`` will make the script keep the processed videos instead of removing them. This means the videos can be copied to the ``Dataset/videos`` folder, manually inspected and fixed, and then :ref:`ss_compile_data` can be used to copy them to the ``Dataset/classifier-data`` folder.
     
     It is recommended to not set the ``--resolution`` if using this method because some of the downloaded videos will eventually be added to the dataset. The dataset is compiled at maximum resolution so that different models can be used that accept different resolutions.
-        
+
+Mass Dataset Collector Script Help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Output of ``python 2-mass_data_collector.py --help``:
+
+    .. code-block:: bash
+
+        usage: 2-mass_data_collector.py [-h] [-k K] [-nr] [-r RESOLUTION] [-p]
+
+        Mass Data Collector
+
+        optional arguments:
+        -h, --help            show this help message and exit
+        -k K, --top_k K       Add the top `k` most uncertain videos to the videos-
+                                dataset.
+        -nr, --no_remove      Don't remove the videos after they have been
+                                processed. This makes it faster to manually look
+                                through the most uncertain videos since they don't
+                                have to be redownloaded, but it will use more disk
+                                space.
+        -r RESOLUTION, --resolution RESOLUTION
+                                The resolution of the videos to download. Default is
+                                maximum resolution.
+        -p, --pause           Pause after each video has been processed but before
+                                deletion.
 
 .. _ss_slides_downloader:
 
