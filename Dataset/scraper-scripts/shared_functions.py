@@ -4,7 +4,7 @@ def download_video(row, video_dir, output_dir_yt, resolution=None):
     video_id = row['video_id']
 
     if resolution:
-        yt_format_string = "bestvideo[height<=" + str(resolution) + "]+bestaudio/best[height<=" + str(resolution) + "]"
+        yt_format_string = "bestvideo[height<=" + str(resolution) + "][ext=mp4]+bestaudio[ext=m4a]/mp4"
     else:
         yt_format_string = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
 

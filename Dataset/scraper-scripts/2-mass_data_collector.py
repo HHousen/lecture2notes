@@ -82,6 +82,9 @@ def process_videos():
             DOWNLOAD_DF.at[index, "downloaded"] = True
             DOWNLOAD_DF.to_csv(DOWNLOAD_CSV_PATH)
 
+            if args.pause:
+                input("Paused. Press enter to continue...")
+
             if not args.no_remove:
                 shutil.rmtree(root_process_folder)
 
