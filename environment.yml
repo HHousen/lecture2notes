@@ -55,3 +55,4 @@ dependencies:
     - deepsegment
     - pygifsicle
     - pytorch_lightning
+    - jiwer
