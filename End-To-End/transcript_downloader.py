@@ -1,8 +1,12 @@
 import io
 import os
+import subprocess
+import logging
 from youtube_api import init_youtube
 from googleapiclient.http import MediaIoBaseDownload
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 class TranscriptDownloader:
     """Download transcripts from YouTube using the YouTube API or ``youtube-dl``."""
@@ -32,10 +36,35 @@ class TranscriptDownloader:
         Gets the transcript for ``video_id`` using ``youtube-dl`` and saves it to ``output_path``.
         The extension from ``output_path`` will be the ``--sub-format`` that is passed to the ``youtube-dl`` command.
         """
+        def run_command(command_array):
+            completed_command = subprocess.run(command_array, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output = completed_command.stdout.decode('utf-8')
+            errors = completed_command.stderr.decode('utf-8')
+            return output, errors
+
         output_path, sub_format = self.check_suffix(output_path)
         output_path_no_extension = os.path.splitext(output_path)[0]
 
-        os.system('youtube-dl --sub-lang en --sub-format ' + sub_format + ' --write-sub --skip-download -o ' + str(output_path_no_extension) + ' ' + video_id)
+        command_array = ['youtube-dl', '--sub-lang', 'en', '--sub-format', sub_format, '--write-sub', '--skip-download', '-o', str(output_path_no_extension), video_id]
+
+        output, errors = run_command(command_array)
+        tries = 1
+
+        while "video is unavailable" in errors and tries < 3:
+            output, errors = run_command(command_array)
+            tries += 1
+
+        if tries == 3:
+            logger.warn("YouTube timed out while getting " + video_id)
+            return None
+
+        if "WARNING: video doesn't have subtitles" in errors:
+            logger.warn(video_id + " does not contain a subtitle file for the specified language and format.")
+            return None
+        elif " " in errors or "ERROR" in errors or "WARNING" in errors:
+            logger.info("The youtube-dl command returned the following error message:")
+            logger.error(errors)
+            return None
 
         # remove the ".en" that youtube-dl adds
         os.rename((output_path_no_extension + '.en.' + sub_format), output_path)
