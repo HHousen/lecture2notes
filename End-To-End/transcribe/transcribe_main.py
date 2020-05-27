@@ -366,7 +366,7 @@ def chunk_by_speech(
     return segments, sample_rate, audio_length
 
 
-def process_segments(segments, ds_model, audio_length="unknown"):
+def process_segments(segments, ds_model, audio_length="unknown", do_segment_sentences=True):
     """Transcribe a list of byte strings containing pcm data
 
     Args:
@@ -406,7 +406,8 @@ def process_segments(segments, ds_model, audio_length="unknown"):
     )
     logger.info("The above time includes time spent determining voice activity.")
 
-    full_transcript = segment_sentences(full_transcript)
+    if do_segment_sentences:
+        full_transcript = segment_sentences(full_transcript)
 
     return full_transcript
 
@@ -483,6 +484,7 @@ def caption_file_to_string(transcript_path, remove_speakers=False):
     Converts a .srt or .vtt file saved at ``transcript_path`` to a python string. 
     Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
     """
+    transcript_path = Path(transcript_path)
     assert transcript_path.is_file()
     if transcript_path.suffix == ".srt":
         subtitles = webvtt.from_srt(transcript_path)

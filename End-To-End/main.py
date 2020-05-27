@@ -51,7 +51,7 @@ def main(ARGS):
         extract_frames(ARGS.video_path, QUALITY, OUTPUT_PATH, EXTRACT_EVERY_X_SECONDS)
 
         end_time = timer() - start_time
-        logger.info("Stage 3 (Perspective Crop) took %s" % end_time)
+        logger.info("Stage 1 (Extract Frames) took %s" % end_time)
 
     # 2. Classify slides
     if ARGS.skip_to <= 2:
@@ -63,7 +63,7 @@ def main(ARGS):
         FRAMES_SORTED_DIR, _, _ = classify_frames(FRAMES_DIR)
 
         end_time = timer() - start_time
-        logger.info("Stage 3 (Classify Slides) took %s" % end_time)
+        logger.info("Stage 2 (Classify Slides) took %s" % end_time)
 
     # 3. Perspective crop images of presenter_slide to contain only the slide (helps OCR)
     if ARGS.skip_to <= 3:
