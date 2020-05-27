@@ -214,11 +214,44 @@ Takes a link to a pdf slideshow and downloads it to ``Dataset/slides/pdfs`` or d
 
 Uses ``youtube-dl`` (for ``youtube`` videos) and ``wget`` (for ``website`` videos) to download either a youtube video by id or every video that has not been download in ``Dataset/videos-dataset.csv``.
 
-* Command: `python 2-video_downloader.py <csv/youtube your_youtube_video_id>`
+This script can also download the transcripts from YouTube using ``youtube-dl`` for each video in ``Dataset/videos-dataset.csv`` with the ``--transcript`` argument..
+
+* Command: `python 2-video_downloader.py <csv/youtube --video_id your_youtube_video_id>`
 * Examples:
     * If *csv*: ``python 2-video_downloader.py csv``
-    * If *your_youtube_video_id*: ``python 2-video_downloader.py youtube 1Qws70XGSq4``
+    * If *your_youtube_video_id*: ``python 2-video_downloader.py youtube --video_id 1Qws70XGSq4``
+    * Download all transcripts: ``python 2-video_downloader.py csv --transcript`` (will not download videos or change ``Dataset/videos-dataset.csv``)
 * Required Software: ``youtube-dl`` (`YT-DL Website <https://ytdl-org.github.io/youtube-dl/index.html>`_/`YT-DL Github <https://github.com/ytdl-org/youtube-dl>`_), ``wget``
+
+Video Downloader Script Help
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Output of ``python 2-video_downloader.py --help``:
+
+.. code-block:: bash
+
+    usage: 2-video_downloader.py [-h] [--video_id VIDEO_ID] [--transcript]
+                                [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                                {csv,youtube}
+
+    Video Downloader
+
+    positional arguments:
+    {csv,youtube}         `csv`: Download all videos that have not been marked
+                            as downloaded from the `videos-dataset.csv`.
+                            `youtube`: download the specified video from YouTube
+                            with id ``--video_id`.
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    --video_id VIDEO_ID   The YouTube video id to download if `method` is
+                            `youtube`.
+    --transcript          Download the transcript INSTEAD of the video for each
+                            entry in `videos-dataset.csv`. This ignores the
+                            `downloaded` column in the CSV and will not download
+                            videos.
+    -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                            Set the logging level (default: 'Info').
 
 .. _ss_frame_extractor:
 

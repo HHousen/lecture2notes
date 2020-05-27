@@ -1,25 +1,70 @@
 import os
 import sys
+import argparse
+import logging
 from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 from shared_functions import download_video
 
-METHOD = sys.argv[1]
+sys.path.insert(1, os.path.join(sys.path[0], '../../End-To-End'))
+from transcript_downloader import TranscriptDownloader #pylint: disable=import-error,wrong-import-position
+
+PARSER = argparse.ArgumentParser(description='Video Downloader')
+
+PARSER.add_argument('method', choices=["csv", "youtube"],
+                    help="""`csv`: Download all videos that have not been marked as downloaded from the `videos-dataset.csv`.
+                    `youtube`: download the specified video from YouTube with id ``--video_id`.""")
+PARSER.add_argument('--video_id', default=None, type=str, help="The YouTube video id to download if `method` is `youtube`.")
+PARSER.add_argument('--transcript', action="store_true", help="Download the transcript INSTEAD of the video for each entry in `videos-dataset.csv`. This ignores the `downloaded` column in the CSV and will not download videos.")
+PARSER.add_argument(
+    "-l",
+    "--log",
+    dest="logLevel",
+    default="INFO",
+    choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+    help="Set the logging level (default: 'Info').",
+)
+ARGS = PARSER.parse_args()
+
+logging.basicConfig(
+    format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
+    level=logging.getLevelName(ARGS.logLevel),
+)
+
+if ARGS.method == "youtube" and ARGS.video_id is None:
+    PARSER.error("If the `youtube` method is used then `--video_id` must be set to the id of the video to download.")
+
 CSV_PATH = Path("../videos-dataset.csv")
 OUTPUT_DIR_YT = "../videos/%\(id\)s/%\(id\)s.%\(ext\)s" #pylint: disable=anomalous-backslash-in-string
 VIDEO_DIR = Path("../videos/")
 
-if METHOD == "csv":
+if ARGS.transcript:
+    transcript_dir = Path("../transcripts")
+    if not os.path.exists(transcript_dir):
+        os.makedirs(transcript_dir)
+    
+    downloader = TranscriptDownloader()
+
+if ARGS.method == "csv":
     # python video_downloader.py csv
     df = pd.read_csv(CSV_PATH, index_col=0)
 
-    not_downloaded_df = df.loc[df['downloaded'] == False] #pylint: disable=singleton-comparison
-    for index, row in tqdm(not_downloaded_df.iterrows(), total=len(not_downloaded_df.index), desc="Downloading Videos"):
-        download_video(row, VIDEO_DIR, OUTPUT_DIR_YT)
-        df.at[index, "downloaded"] = True
+    if ARGS.transcript:
+        youtube_df = df.loc[df['provider'] == "youtube"]
+        for index, row in tqdm(youtube_df.iterrows(), total=len(youtube_df.index), desc="Downloading Transcripts"):
+            video_id = row["video_id"]
+            output_path = transcript_dir / (video_id + ".vtt")
+            if not output_path.is_file():
+                output = downloader.download(video_id, output_path)
+    
+    else:
+        not_downloaded_df = df.loc[df['downloaded'] == False] #pylint: disable=singleton-comparison
+        for index, row in tqdm(not_downloaded_df.iterrows(), total=len(not_downloaded_df.index), desc="Downloading Videos"):
+            download_video(row, VIDEO_DIR, OUTPUT_DIR_YT)
+            df.at[index, "downloaded"] = True
+
     df.to_csv(CSV_PATH)
-elif METHOD == "youtube":
+elif ARGS.method == "youtube":
     # python video_downloader.py youtube 1Qws70XGSq4
-    video_id = sys.argv[2]
-    os.system('youtube-dl ' + video_id + ' -o ' + OUTPUT_DIR_YT)
+    os.system('youtube-dl ' + ARGS.video_id + ' -o ' + OUTPUT_DIR_YT)
