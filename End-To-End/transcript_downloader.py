@@ -86,7 +86,8 @@ class TranscriptDownloader:
     def download(self, video_id, output_path):
         """
         Convenience function to download transcript with one call.
-        Calls :meth:`~transcript_downloader.get_caption_id` and passes result to :meth:`~transcript_downloader.get_transcript`
+        If ``self.ytdl`` is False, calls :meth:`~transcript_downloader.TranscriptDownloader.get_caption_id` and passes result to :meth:`~transcribe.transcript_downloader.TranscriptDownloader.get_transcript`.
+        If ``self.ytdl`` is True, calls :meth:`~transcript_downloader.TranscriptDownloader.get_transcript_ytdl`.
         """
         if self.ytdl:
             output_path = self.get_transcript_ytdl(video_id, output_path)

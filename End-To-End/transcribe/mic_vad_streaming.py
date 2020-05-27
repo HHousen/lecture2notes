@@ -1,3 +1,5 @@
+# Based on: https://github.com/mozilla/DeepSpeech-examples/tree/r0.7/mic_vad_streaming
+
 import time, logging
 from datetime import datetime
 import threading, collections, queue, os, os.path

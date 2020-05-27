@@ -24,7 +24,6 @@ except ImportError:
     from pipes import quote
 
 logger = logging.getLogger(__name__)
-print("yty")
 
 def extract_audio(video_path, output_path):
     """Extracts audio from video at ``video_path`` and saves it to ``output_path``"""
@@ -53,8 +52,10 @@ def transcribe_audio(audio_path, method="sphinx"):
         [str]: the transcript of the audio file
     """
     assert method in ["sphinx", "google"]
+    transcript = None
     logger.debug("Initializing speech_recognition library")
     r = sr.Recognizer()
+    
     with sr.AudioFile(str(audio_path)) as source:
         audio = r.record(source)
 
@@ -72,6 +73,8 @@ def transcribe_audio(audio_path, method="sphinx"):
         logger.error("Could not understand audio")
     except sr.RequestError as e:
         logger.error("Error; {0}".format(e))
+    
+    return transcript
 
 
 def read_wave(path, desired_sample_rate=None):
@@ -503,7 +506,7 @@ def get_youtube_transcript(video_id, output_path, use_youtube_dl=True):
 
 
 def check_transcript(generated_transcript, ground_truth_transcript):
-    """Compares ``generated_transcript`` to ``ground_truth_transcript`` to check for accuracy using spacy similarity measurement."""
+    """Compares ``generated_transcript`` to ``ground_truth_transcript`` to check for accuracy using spacy similarity measurement. Requires the "en_vectors_web_lg" model to use "real" word vectors."""
     nlp = spacy.load("en_core_web_lg")
     logger.info("Loaded Spacy `en_vectors_web_lg`")
     gen_doc = nlp(generated_transcript)
