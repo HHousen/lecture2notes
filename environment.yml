@@ -56,3 +56,4 @@ dependencies:
     - pygifsicle
     - pytorch_lightning
     - jiwer
+    - youtube_dl

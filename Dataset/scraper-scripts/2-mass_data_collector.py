@@ -46,7 +46,7 @@ def process_videos():
             video_id = row['video_id']
             print("> Mass Data Collector: Video ID is " + video_id)
 
-            output_dir_yt = "../mass-download-temp/" + video_id + "/%\(id\)s.%\(ext\)s" #pylint: disable=anomalous-backslash-in-string
+            output_dir_yt = "../mass-download-temp/" + video_id + "/%(id)s.%(ext)s"
             root_process_folder = Path("../mass-download-temp/") / video_id
             
             print("> Mass Data Collector: Video Root Process Folder is " + str(root_process_folder))

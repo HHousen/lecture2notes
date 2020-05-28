@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
-from shared_functions import download_video
+from shared_functions import download_video, download_video_yt
 
 sys.path.insert(1, os.path.join(sys.path[0], '../../End-To-End'))
 from transcript_downloader import TranscriptDownloader #pylint: disable=import-error,wrong-import-position
@@ -36,7 +36,7 @@ if ARGS.method == "youtube" and ARGS.video_id is None:
     PARSER.error("If the `youtube` method is used then `--video_id` must be set to the id of the video to download.")
 
 CSV_PATH = Path("../videos-dataset.csv")
-OUTPUT_DIR_YT = "../videos/%\(id\)s/%\(id\)s.%\(ext\)s" #pylint: disable=anomalous-backslash-in-string
+OUTPUT_DIR_YT = "../videos/%(id)s/%(id)s.%(ext)s"
 VIDEO_DIR = Path("../videos/")
 
 if ARGS.transcript:
@@ -67,4 +67,4 @@ if ARGS.method == "csv":
     df.to_csv(CSV_PATH)
 elif ARGS.method == "youtube":
     # python video_downloader.py youtube 1Qws70XGSq4
-    os.system('youtube-dl ' + ARGS.video_id + ' -o ' + OUTPUT_DIR_YT)
+    download_video_yt(ARGS.video_id, OUTPUT_DIR_YT)

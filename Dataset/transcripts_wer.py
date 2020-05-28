@@ -3,6 +3,8 @@ import sys
 import shutil
 import logging
 import argparse
+import traceback
+import youtube_dl
 from pathlib import Path
 from tqdm import tqdm
 from timeit import default_timer as timer
@@ -63,8 +65,12 @@ transcripts = os.listdir(TRANSCRIPTS_DIR)
 
 if ARGS.mode == "transcribe":
     OUTPUT_DIR_YT = TRANSCRIPTS_DIR / "temp/"
-    OUTPUT_DIR_YT_FORMAT = str(OUTPUT_DIR_YT) + "/%\(id\)s/%\(id\)s.%\(ext\)s"
-    YT_FORMAT_STRING = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
+    OUTPUT_DIR_YT_FORMAT = str(OUTPUT_DIR_YT) + "/%(id)s/%(id)s.%(ext)s"
+    ydl_opts = {
+        "format": "bestaudio[ext=m4a]",
+        "outtmpl": OUTPUT_DIR_YT_FORMAT,
+    }
+    ydl = youtube_dl.YoutubeDL(ydl_opts)
 
     # Remove the transcripts created by the ML model
     transcripts = [x for x in transcripts if ARGS.suffix not in x]
@@ -77,29 +83,38 @@ if ARGS.mode == "transcribe":
         transcript_ml_path = TRANSCRIPTS_DIR / (transcript[:-4] + ARGS.suffix + ".txt")
         process_folder = OUTPUT_DIR_YT / video_id
 
+        # Check to make sure the file has not already been transcribed using the ML model
         if not os.path.isfile(transcript_ml_path):
-            # Download video
+            # Download audio
             start_time = timer()
-            os.system(
-                'youtube-dl -f "'
-                + YT_FORMAT_STRING
-                + '" -o '
-                + OUTPUT_DIR_YT_FORMAT
-                + " -- "
-                + video_id
-            )
-            video_path = process_folder / (video_id + ".mp4")
+            tries = 0
+            while tries < 3:
+                try:
+                    ydl.download([video_id])
+                except youtube_dl.utils.DownloadError as e:
+                    tries += 1
+                    logger.info("Try Number " + str(tries))
+                    logger.error("Full error: " + str(e))
+                    if tries == 3:
+                        traceback.print_exc()
+                        sys.exit(1)
+                # Break out of the loop if successful
+                else:
+                    break
+
+
+            video_audio_path = process_folder / (video_id + ".m4a")
 
             end_time = timer() - start_time
-            logger.info("Stage 1 (Download Video) took %s" % end_time)
+            logger.info("Stage 1 (Download Audio) took %s" % end_time)
 
-            # Extract audio
+            # Convert audio
             start_time = timer()
             audio_path = process_folder / "audio.wav"
-            transcribe.extract_audio(video_path, audio_path)
+            transcribe.extract_audio(video_audio_path, audio_path)
 
             end_time = timer() - start_time
-            logger.info("Stage 2 (Extract Audio) took %s" % end_time)
+            logger.info("Stage 2 (Convert Audio) took %s" % end_time)
 
             # Transcribe
             start_time = timer()

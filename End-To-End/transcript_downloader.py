@@ -50,7 +50,7 @@ class TranscriptDownloader:
         output, errors = run_command(command_array)
         tries = 1
 
-        while "video is unavailable" in errors and tries < 3:
+        while ("video is unavailable" in errors or "Unable to download webpage" in errors) and tries < 3:
             output, errors = run_command(command_array)
             tries += 1
 
