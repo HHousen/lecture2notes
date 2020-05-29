@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import shutil
 import logging
@@ -69,15 +70,25 @@ if ARGS.mode == "transcribe":
     ydl_opts = {
         "format": "bestaudio[ext=m4a]",
         "outtmpl": OUTPUT_DIR_YT_FORMAT,
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "wav",
+                "preferredquality": "192",
+            }
+        ],
     }
     ydl = youtube_dl.YoutubeDL(ydl_opts)
 
     # Remove the transcripts created by the ML model
     transcripts = [x for x in transcripts if ARGS.suffix not in x]
 
+    # Remove entries that are not files
+    transcripts = [x for x in transcripts if os.path.isfile(TRANSCRIPTS_DIR / x)]
+
     # Create DeepSpeech model
     ds_model = transcribe.load_deepspeech_model(ARGS.deepspeech_dir)
-
+    transcripts = ["C_W1adH-NVE.vtt"]
     for transcript in tqdm(transcripts, desc="Transcribing"):
         video_id = transcript.split(".")[0]
         transcript_ml_path = TRANSCRIPTS_DIR / (transcript[:-4] + ARGS.suffix + ".txt")
@@ -102,19 +113,10 @@ if ARGS.mode == "transcribe":
                 else:
                     break
 
-
-            video_audio_path = process_folder / (video_id + ".m4a")
-
-            end_time = timer() - start_time
-            logger.info("Stage 1 (Download Audio) took %s" % end_time)
-
-            # Convert audio
-            start_time = timer()
-            audio_path = process_folder / "audio.wav"
-            transcribe.extract_audio(video_audio_path, audio_path)
+            audio_path = process_folder / (video_id + ".wav")
 
             end_time = timer() - start_time
-            logger.info("Stage 2 (Convert Audio) took %s" % end_time)
+            logger.info("Stage 1 (Download and Convert Audio) took %s" % end_time)
 
             # Transcribe
             start_time = timer()
@@ -130,7 +132,7 @@ if ARGS.mode == "transcribe":
             )
 
             end_time = timer() - start_time
-            logger.info("Stage 3 (Transcribe) took %s" % end_time)
+            logger.info("Stage 2 (Transcribe) took %s" % end_time)
 
             transcribe.write_to_file(transcript, transcript_ml_path)
             logger.info(
@@ -155,7 +157,12 @@ elif ARGS.mode == "calc_wer":
     # Only select transcripts created by the ML model
     transcripts = [x for x in transcripts if ARGS.suffix in x]
 
-    for transcript_ml_path in tqdm(transcripts, desc="Calculating WER"):
+    errors = list()
+    transcripts_tqdm = tqdm(transcripts, desc="Calculating WER")
+    for transcript_ml_path in transcripts_tqdm:
+        video_id = re.search('(.*)'+ARGS.suffix, transcript_ml_path)
+        video_id = video_id.group(1)
+
         transcript_ml_path = TRANSCRIPTS_DIR / transcript_ml_path
 
         transcript_path = str(transcript_ml_path)[: -(4 + len(ARGS.suffix))] + ".vtt"
@@ -173,4 +180,8 @@ elif ARGS.mode == "calc_wer":
             hypothesis_transform=transformation,
         )
 
-        print(error)
+        transcripts_tqdm.write(video_id + " Error: " + str(error))
+        errors.append(error)
+    
+    average_wer = sum(errors) / len(errors)
+    logger.info("Average WER: " + str(average_wer))
