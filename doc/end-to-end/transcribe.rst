@@ -24,7 +24,7 @@ Transcribing Methods
 
 The recommended method is DeepSpeech since it works offline (``google`` does not), has good accuracy (better than ``sphinx``, accuracy of ``google`` unknown), is actively maintained (``sphinx`` and ``google`` are dated), is completely open source (``google`` is mysterious), and is the most reliable (``google`` frequently times out and ``sphinx`` is difficult to work with (including installation and actual processing of files).
 
-Additionally, it is recommended to combine DeepSpeech with ``--chunk`` set to ``speech`` (``speech`` is better than ``silence``) since this will give a progress indicator and probably increase speed. If DeepSpeech is run without chunking then the process will seem to hang, especially on longer audio files.
+Additionally, it is recommended to combine DeepSpeech with ``--chunk`` set to ``speech`` (``speech`` is better than ``silence``) since this will give a progress indicator and probably increase speed. If DeepSpeech is run without chunking then the process will seem to hang, especially on longer audio files. Simple tests indicate that chunking can improve speed by up to 60%, but also can cause a 12% increase in WER (12% worse).
 
 1. **YouTube:** (:meth:`transcribe.transcribe_main.get_youtube_transcript`) This method only works if the lecture to be summarized is a YouTube video that contains manually added captions. 
 

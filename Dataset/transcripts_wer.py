@@ -24,8 +24,8 @@ PARSER = argparse.ArgumentParser(
 PARSER.add_argument(
     "mode",
     type=str,
-    choices=["transcribe", "calc_wer"],
-    help="`transcribe` each video and create a transcript using ML models or use `calc_wer` to compute the WER for the created transcripts",
+    choices=["transcribe", "calc"],
+    help="`transcribe` each video and create a transcript using ML models or use `calc` to compute the WER for the created transcripts",
 )
 PARSER.add_argument(
     "--transcripts_dir",
@@ -44,6 +44,9 @@ PARSER.add_argument(
     type=str,
     default="_deepspeech",
     help="string added after the video id and before the extension in the transcript output from the ML model",
+)
+PARSER.add_argument(
+    "--no_chunk", action="store_true", help="Disable audio chunking by voice activity."
 )
 PARSER.add_argument(
     "-l",
@@ -120,16 +123,21 @@ if ARGS.mode == "transcribe":
 
             # Transcribe
             start_time = timer()
-            desired_sample_rate = ds_model.sampleRate()
-            segments, _, audio_length = transcribe.chunk_by_speech(
-                audio_path, desired_sample_rate=desired_sample_rate
-            )
-            transcript = transcribe.process_segments(
-                segments,
-                ds_model,
-                audio_length=audio_length,
-                do_segment_sentences=False,
-            )
+            if ARGS.no_chunk:
+                transcript = transcribe.transcribe_audio_deepspeech(
+                    audio_path, ds_model
+                )
+            else:
+                desired_sample_rate = ds_model.sampleRate()
+                segments, _, audio_length = transcribe.chunk_by_speech(
+                    audio_path, desired_sample_rate=desired_sample_rate
+                )
+                transcript = transcribe.process_segments(
+                    segments,
+                    ds_model,
+                    audio_length=audio_length,
+                    do_segment_sentences=False,
+                )
 
             end_time = timer() - start_time
             logger.info("Stage 2 (Transcribe) took %s" % end_time)
@@ -142,15 +150,14 @@ if ARGS.mode == "transcribe":
             shutil.rmtree(process_folder)
             logger.info("Removed temp folder")
 
-elif ARGS.mode == "calc_wer":
+elif ARGS.mode == "calc":
     transformation = jiwer.Compose(
         [
             jiwer.ToLowerCase(),
             jiwer.RemoveMultipleSpaces(),
             jiwer.Strip(),
-            jiwer.SentencesToListOfWords(),
-            jiwer.RemoveEmptyStrings(),
             jiwer.SentencesToListOfWords(word_delimiter=" "),
+            jiwer.RemoveEmptyStrings(),
         ]
     )
 
@@ -160,7 +167,7 @@ elif ARGS.mode == "calc_wer":
     errors = list()
     transcripts_tqdm = tqdm(transcripts, desc="Calculating WER")
     for transcript_ml_path in transcripts_tqdm:
-        video_id = re.search('(.*)'+ARGS.suffix, transcript_ml_path)
+        video_id = re.search("(.*)" + ARGS.suffix, transcript_ml_path)
         video_id = video_id.group(1)
 
         transcript_ml_path = TRANSCRIPTS_DIR / transcript_ml_path
@@ -173,15 +180,29 @@ elif ARGS.mode == "calc_wer":
         with open(transcript_ml_path, "r") as file:
             transcript_prediction = file.read()
 
-        error = jiwer.wer(
+        measures = jiwer.compute_measures(
             transcript_ground_truth,
             transcript_prediction,
             truth_transform=transformation,
             hypothesis_transform=transformation,
         )
 
-        transcripts_tqdm.write(video_id + " Error: " + str(error))
-        errors.append(error)
-    
-    average_wer = sum(errors) / len(errors)
+        transcripts_tqdm.write(
+            video_id
+            + " WER: "
+            + str(measures["wer"])
+            + "  MER: "
+            + str(measures["mer"])
+            + "  WIL: "
+            + str(measures["wil"])
+        )
+        errors.append(measures)
+
+    num_errors = len(errors)
+    average_wer = sum([x["wer"] for x in errors]) / num_errors
+    average_mer = sum([x["mer"] for x in errors]) / num_errors
+    average_wil = sum([x["wil"] for x in errors]) / num_errors
+
     logger.info("Average WER: " + str(average_wer))
+    logger.info("Average MER: " + str(average_mer))
+    logger.info("Average WIL: " + str(average_wil))
