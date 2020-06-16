@@ -39,7 +39,8 @@ You can also process a single file using the file as a script with the ``file`` 
 Example Images
 --------------
 
-Example of ``contours`` mode failing and falling back to ``hough_lines``:
+Example of ``contours`` mode failing and falling back to ``hough_lines``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_130_debug.gif
 
@@ -49,7 +50,13 @@ Command used to create above image:
 
     python corner_crop_transform.py file ../Dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_130_debug.gif -d -di -dg -dgo
 
-Example of ``contours`` mode succeeding:
+Timeline of images (click image for larger view):
+
+.. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_130_timeline.png
+    :target: ../_static/corner_crop_transform/IJquEYhiq_U-img_130_timeline.png
+
+Example of ``contours`` mode succeeding
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_068_debug.gif
 
@@ -58,6 +65,11 @@ Command used to create above image:
 .. code-block:: bash
 
     python corner_crop_transform.py file ../Dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_068.jpg -d -di -dg -dgo
+
+Timeline of images (click image for larger view):
+
+.. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_068_timeline.png
+    :target: ../_static/corner_crop_transform/IJquEYhiq_U-img_068_timeline.png
 
 Script Help
 -----------
