@@ -1,7 +1,7 @@
 .. _corner_crop_transform:
 
 Corner Detection & Perspective Cropping
-======================================
+=======================================
 
 The process this file executes is based on `this jupyter notebook <https://github.com/Breta01/handwriting-ocr/blob/master/notebooks/page_detection.ipynb>`_ and `this StackOverflow answer <https://stackoverflow.com/a/44454619>`_. The `opencv package <https://docs.opencv.org/4.3.0/index.html>`_ provides most of the low-level functions. See the :ref:`Corner Crop Transform API Documentation <e2e_api_corner_crop_transform>` for details regarding the functions.
 
@@ -36,6 +36,28 @@ You can also process a single file using the file as a script with the ``file`` 
     
     python corner_crop_transform.py file /path/to/image/file/0Q5IimX-AAc-img_067.jpg -d -di -dg
 
+Example Images
+--------------
+
+Example of ``contours`` mode failing and falling back to ``hough_lines``:
+
+.. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_130_debug.gif
+
+Command used to create above image: 
+
+.. code-block:: bash
+
+    python corner_crop_transform.py file ../Dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_130_debug.gif -d -di -dg -dgo
+
+Example of ``contours`` mode succeeding:
+
+.. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_068_debug.gif
+
+Command used to create above image: 
+
+.. code-block:: bash
+
+    python corner_crop_transform.py file ../Dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_068.jpg -d -di -dg -dgo
 
 Script Help
 -----------

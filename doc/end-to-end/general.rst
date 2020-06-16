@@ -13,7 +13,7 @@ Script Descriptions
 These descriptions are short and concise. For more information about some of the larger, more complicated files visit their respective pages on the left.
 
 * **cluster:** Provides :class:`cluster.ClusterFilesystem` class, which clusters images from a directory and saves them to disk in folders corresponding to each centroid.
-* **corner_crop_transform:** Provides functions to detect the bounding box of a slide in a frame and automatically crop to that bounding box. The :meth:`corner_crop_transform.all_in_folder` method is used by the main script. See :ref:`corner_crop_tranform` for more information.
+* **corner_crop_transform:** Provides functions to detect the bounding box of a slide in a frame and automatically crop to that bounding box. The :meth:`corner_crop_transform.all_in_folder` method is used by the main script. See :ref:`corner_crop_transform` for more information.
 * **frames_extractor:** Provides :meth:`frames_extractor.extract_frames`, which extracts frames from ``input_video_path`` at quality level ``quality`` (best quality is 2) every ``extract_every_x_seconds`` seconds and saves them to ``output_path``.
 * **helpers:** A small file of helper functions to reduce duplicate code. See :ref:`e2e_api_helpers`.
 * **imghash:** Provides functions to detect near duplicate images using image hashing methods from the ``imagehash`` library. :meth:`imghash.sort_by_duplicates` will create lists of similar images and :meth:`imghash.remove_duplicates` will remove those duplicates and keep the last file (when sorted alphanumerically descending)
