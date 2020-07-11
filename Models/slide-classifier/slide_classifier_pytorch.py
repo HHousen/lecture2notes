@@ -265,7 +265,7 @@ class SlideClassifier(pl.LightningModule):
                 self.hparams.data_path,
                 transforms.Compose(
                     [
-                        transforms.Resize((480, 640)),
+                        transforms.Resize(self.hparams.input_size),
                         transforms.CenterCrop(self.hparams.input_size),
                         transforms.RandomVerticalFlip(),
                         transforms.ToTensor(),
@@ -287,7 +287,7 @@ class SlideClassifier(pl.LightningModule):
                 traindir,
                 transforms.Compose(
                     [
-                        transforms.Resize((480, 640)),
+                        transforms.Resize(self.hparams.input_size),
                         transforms.CenterCrop(self.hparams.input_size),
                         transforms.RandomVerticalFlip(),
                         transforms.ToTensor(),
@@ -299,7 +299,7 @@ class SlideClassifier(pl.LightningModule):
                 valdir,
                 transforms.Compose(
                     [
-                        transforms.Resize((480, 640)),
+                        transforms.Resize(self.hparams.input_size),
                         transforms.CenterCrop(self.hparams.input_size),
                         transforms.ToTensor(),
                         normalize,

@@ -246,7 +246,7 @@ def preprocess(image_path, input_size):
     # raw_image = cv2.imread(image_path)
     raw_image = Image.open(image_path)
     raw_transforms = transforms.Compose(
-        [transforms.Resize((480, 640)), transforms.CenterCrop(input_size)]
+        [transforms.Resize(input_size), transforms.CenterCrop(input_size)]
     )
     raw_image = raw_transforms(raw_image)
 

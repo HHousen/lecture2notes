@@ -77,7 +77,7 @@ def load_model(model_path="model_best.ckpt"):
 sm = torch.nn.Softmax(dim=1)
 
 def transform_image(image, input_size):
-    my_transforms = transforms.Compose([transforms.Resize((480,640)),
+    my_transforms = transforms.Compose([transforms.Resize(input_size),
                                         transforms.CenterCrop(input_size),
                                         transforms.ToTensor(),
                                         transforms.Normalize(
