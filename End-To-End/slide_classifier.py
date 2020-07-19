@@ -46,7 +46,7 @@ def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
         best_guess, best_guess_idx, probs, _ = inference.get_prediction(model, Image.open(current_frame_path), extract_features=False) #pylint: disable=no-member
         prob_max_correct = list(probs.values())[best_guess_idx]
         certainties.append(prob_max_correct)
-        logger.info("Prediction is " + best_guess)
+        logger.debug("Prediction is " + best_guess)
         logger.debug("Probabilities are " + str(probs))
         if prob_max_correct < incorrect_threshold:
             num_incorrect = num_incorrect + 1

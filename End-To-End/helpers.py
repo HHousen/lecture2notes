@@ -22,7 +22,7 @@ def copy_all(list_path_files, output_dir, move=False):
     if type(list_path_files) is list:
         make_dir_if_not_exist(output_dir)
         for file_path in list_path_files:
-            output_file = output_dir / Path(file_path).stem
+            output_file = output_dir / Path(file_path).name
             if move:
                 shutil.move(file_path, output_file)
             else:

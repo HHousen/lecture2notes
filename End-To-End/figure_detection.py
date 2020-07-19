@@ -63,15 +63,29 @@ def detect_color_image(image, thumb_size=40, MSE_cutoff=22, adjust_color_bias=Tr
         return "unknown"
 
 
+def convert_coords_to_corners(box):
+    x, y, w, h = box
+    x_values = (x + w, x)
+    y_values = (y + h, y)
+    rectangle = (max(x_values), max(y_values), min(x_values), min(y_values))
+    return rectangle
+
+
+def area_of_corner_box(box):
+    return (box[0] - box[2]) * (box[1] - box[3])
+
+
 def detect_figures(
     image_path,
     output_path=None,
     east="frozen_east_text_detection.pb",
-    text_area_overlap_threshold=0.20,
-    figure_max_area_percentage=0.70,
+    text_area_overlap_threshold=0.15,
+    figure_max_area_percentage=0.60,
     text_max_area_percentage=0.30,
+    large_box_detection=True,
     do_color_check=True,
     do_text_check=True,
+    do_remove_subfigures=True,
 ):
     """Detect figures located in a slide.
 
@@ -95,6 +109,9 @@ def detect_figures(
             If the text block uses more area than ``original_image_area*text_max_area_percentage`` 
             then that text block will be ignored. ``do_text_check`` must be true for this option 
             to take effect. Defaults to 0.30.
+        large_box_detection (bool, optional): Detect edges and classify large rectangles as 
+            figures. This will only detect one figure and ignores `do_color_check` and 
+            `do_text_check`. This is useful for finding tables for example. Defaults to True.
         do_color_check (bool, optional): Check that potential figures contain color. This 
             helps to remove large quantities of black and white text form the potential 
             figure list. Defaults to True.
@@ -102,6 +119,10 @@ def detect_figures(
             potential figures contains text. This is useful to remove blocks of text that 
             are mistakenly classified as figures. Checking for text increases processing 
             time so be careful if processing a large number of files. Defaults to True.
+        do_remove_subfigures (bool, optional): Check that there are no overlapping figures. 
+            If an overlapping figure is detected, the smaller figure will be deleted. This 
+            is useful to have enabled when using `large_box_detection` since 
+            `large_box_detection` will commonly mistakenly detect subfigures. Defaults to True.
 
     Returns:
         tuple: (figures, output_paths) A list of figures extracted from the input slide image 
@@ -125,7 +146,7 @@ def detect_figures(
         text_bounding_boxes = [
             box
             for box in text_bounding_boxes
-            if (box[0] - box[2]) * (box[1] - box[3])  # area of box
+            if area_of_corner_box(box)  # area of box
             < text_max_area_percentage * image_area
         ]
 
@@ -134,31 +155,96 @@ def detect_figures(
     blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 
     canny = cv2.Canny(blurred, 120, 255, 1)
-    canny_dilated = cv2.dilate(canny, np.ones((25, 25), dtype=np.uint8))
 
-    cnts = cv2.findContours(canny_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    # "large" pertains to components that are used to find figures not surrounded by a border
+    # "small" is used to find rectangles on the slide, which are likely figures
+    canny_dilated_large = cv2.dilate(canny, np.ones((22, 22), dtype=np.uint8))
+    canny_dilated_small = cv2.dilate(canny, np.ones((3, 3), dtype=np.uint8))
 
-    bounding_boxes = np.array([cv2.boundingRect(contour) for contour in cnts])
+    # cv2.imwrite("canny_dilated_large.png", canny_dilated_large)
+    # cv2.imwrite("canny_dilated_small.png", canny_dilated_small)
+
+    contours_large = cv2.findContours(
+        canny_dilated_large, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    contours_large = (
+        contours_large[0] if len(contours_large) == 2 else contours_large[1]
+    )
+
+    for contour in contours_large:
+        large_contour_img = image.copy()
+        large_contour_img = cv2.drawContours(
+            large_contour_img, [contour], -1, (0, 255, 0), 3
+        )
+        # cv2.imwrite("large_contour_img.png", large_contour_img)
+
+    bounding_boxes_large = np.array(
+        [cv2.boundingRect(contour) for contour in contours_large]
+    )
+
+    if large_box_detection:
+        contours_small = cv2.findContours(
+            canny_dilated_small, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        contours_small = (
+            contours_small[0] if len(contours_small) == 2 else contours_small[1]
+        )
 
     max_area = int(figure_max_area_percentage * image_area)
+    min_area = (image_height // 3) * (image_width // 6)
+    min_area_small = min_area
 
     padding = image_height // 70
 
     figures = []
+    all_figure_boxes = []
     output_paths = []
-    for box in bounding_boxes:
-        x, y, w, h = box
-        area = w * h
-        if (image_height // 3 * image_width // 6) < area < max_area:
-            # Draw bounding box rectangle, crop using numpy slicing
-            x_values = (x + w, x)
-            y_values = (y + h, y)
-            roi_rectangle = (max(x_values), max(y_values), min(x_values), min(y_values))
-            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
-            potential_figure = original[
+
+    if large_box_detection:
+        none_tested = True
+        for contour in contours_small:
+            perimeter = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.1 * perimeter, True)
+
+            # Figure has 4 corners and it is convex
+            if (
+                len(approx) == 4
+                and cv2.isContourConvex(approx)
+                and min_area_small < cv2.contourArea(approx) < max_area
+            ):
+                none_tested = False
+                min_area_small = cv2.contourArea(approx)
+                figure_contour = approx[:, 0]
+
+        if not none_tested:
+            bounding_box = cv2.boundingRect(figure_contour)
+            x, y, w, h = bounding_box
+            figure = original[
                 y - padding : y + h + padding, x - padding : x + w + padding
             ]
+            figures.append(figure)
+            all_figure_boxes.append(convert_coords_to_corners(bounding_box))
+
+    for box in bounding_boxes_large:
+        x, y, w, h = box
+        area = w * h
+        aspect_ratio = w / h
+        if min_area < area < max_area and 0.2 < aspect_ratio < 5:
+            # Draw bounding box rectangle, crop using numpy slicing
+            roi_rectangle = convert_coords_to_corners(box)
+            # cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
+            # cv2.imwrite("rect.png", image)
+            if y+h >= image_height or x+w >= image_width:
+                potential_figure = original[y : y + h, x : x + w]
+            else:
+                potential_figure = original[
+                    y - padding : y + h + padding, x - padding : x + w + padding
+                ]
+            # cv2.imwrite("potential_figure.png", potential_figure)
+
+            # Go to next figure if the `potential_figure` is empty
+            if potential_figure.size == 0:
+                continue
 
             # Start all checks as passed (aka True). These lines ensure that if
             # the checks are intentionally disabled then the potential figure is
@@ -184,12 +270,36 @@ def detect_figures(
             checks_passed = roi_is_color and text_overlap_under_threshold
 
             if checks_passed:
-                full_output_path = start_output_path + "{}.{}".format(len(figures), ext)
-                output_paths.append(full_output_path)
-                cv2.imwrite(full_output_path, potential_figure)
                 figures.append(potential_figure)
+                all_figure_boxes.append(roi_rectangle)
 
-    logger.info("Number of Figures Detected: {}", len(figures))
+    if do_remove_subfigures:
+        remove_idxs = []
+        for idx, figure in enumerate(all_figure_boxes):
+            for compare_idx, figure_to_compare in enumerate(
+                all_figure_boxes[idx + 1 :]
+            ):
+                overlapping_area = area_of_overlapping_rectangles(
+                    figure, figure_to_compare
+                )
+                if overlapping_area > 0:
+                    figure_area = area_of_corner_box(figure)
+                    figure_to_compare_area = area_of_corner_box(figure_to_compare)
+                    if figure_area > figure_to_compare_area:
+                        remove_idxs.append(compare_idx)
+                    else:
+                        remove_idxs.append(idx)
+
+        figures = [
+            figure for idx, figure in enumerate(figures) if idx not in remove_idxs
+        ]
+
+    for idx, figure in enumerate(figures):
+        full_output_path = start_output_path + str(idx) + ext
+        output_paths.append(full_output_path)
+        cv2.imwrite(full_output_path, figure)
+
+    logger.debug("Number of Figures Detected: %i", len(figures))
     return figures, output_paths
 
 
@@ -230,4 +340,4 @@ def all_in_folder(
 
 
 # all_in_folder("delete/")
-# detect_figures("delete/o7h_sYMk_oc-img_143.jpg")
+detect_figures("delete/img_01054_noborder.jpg")

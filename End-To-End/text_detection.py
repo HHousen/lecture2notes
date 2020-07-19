@@ -140,9 +140,9 @@ def get_text_bounding_boxes(image, net, min_confidence=0.5, resized_width=320, r
         scaled_boxes.append((endX, endY, startX, startY))
 
         # draw the bounding box on the image
-        cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+        # cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
 
-    cv2.imwrite("text_bounding_boxes.png", orig)
+    # cv2.imwrite("text_bounding_boxes.png", orig)
 
     return scaled_boxes
 

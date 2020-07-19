@@ -23,7 +23,7 @@ from summarization_approaches import (
 logger = logging.getLogger(__name__)
 
 # Hack to import modules from different parent directory
-sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
+sys.path.insert(1, os.path.join(os.getcwd(), "../Models/slide-classifier"))
 from custom_nnmodules import *  # pylint: disable=import-error,wildcard-import,wrong-import-position
 
 
@@ -51,7 +51,7 @@ def main(ARGS):
         extract_frames(ARGS.video_path, QUALITY, OUTPUT_PATH, EXTRACT_EVERY_X_SECONDS)
 
         end_time = timer() - start_time
-        logger.info("Stage 1 (Extract Frames) took %s" % end_time)
+        logger.info("Stage 1 (Extract Frames) took %s", end_time)
 
     # 2. Classify slides
     if ARGS.skip_to <= 2:
@@ -63,7 +63,7 @@ def main(ARGS):
         FRAMES_SORTED_DIR, _, _ = classify_frames(FRAMES_DIR)
 
         end_time = timer() - start_time
-        logger.info("Stage 2 (Classify Slides) took %s" % end_time)
+        logger.info("Stage 2 (Classify Slides) took %s", end_time)
 
     # 3. Perspective crop images of presenter_slide to contain only the slide (helps OCR)
     if ARGS.skip_to <= 3:
@@ -71,6 +71,9 @@ def main(ARGS):
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
         PRESENTER_SLIDE_DIR = FRAMES_SORTED_DIR / "presenter_slide"
         IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
+        
+        start_time = timer()
+
         if os.path.exists(PRESENTER_SLIDE_DIR):
             import corner_crop_transform
 
@@ -80,7 +83,7 @@ def main(ARGS):
             copy_all(cropped_imgs_paths, IMGS_TO_CLUSTER_DIR)
 
         end_time = timer() - start_time
-        logger.info("Stage 3 (Perspective Crop) took %s" % end_time)
+        logger.info("Stage 3 (Perspective Crop) took %s", end_time)
 
     # 4. Cluster slides
     if ARGS.skip_to <= 4:
@@ -122,7 +125,7 @@ def main(ARGS):
             CLUSTER_DIR, BEST_SAMPLES_DIR = SEGMENT_CLUSTER.transfer_to_filesystem()
 
         end_time = timer() - start_time
-        logger.info("Stage 4 (Cluster Slides) took %s" % end_time)
+        logger.info("Stage 4 (Cluster Slides) took %s", end_time)
 
     # 5. OCR Slides
     if ARGS.skip_to <= 5:
@@ -140,10 +143,48 @@ def main(ARGS):
         ocr.write_to_file(OCR_RESULTS, OCR_OUTPUT_FILE)
 
         end_time = timer() - start_time
-        logger.info("Stage 5 (OCR Slides) took %s" % end_time)
+        logger.info("Stage 5 (OCR Slides) took %s", end_time)
 
-    # 6. Transcribe Audio
+    # 6. Black border detection and removal
     if ARGS.skip_to <= 6:
+        start_time = timer()
+        if ARGS.skip_to >= 6:  # if step 5 (OCR) was skipped
+            FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+            CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
+            BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
+        
+        REMOVED_BORDERS_DIR = CLUSTER_DIR / "best_samples_no_border"
+        os.makedirs(REMOVED_BORDERS_DIR, exist_ok=True)
+
+        import border_removal
+
+        REMOVED_BORDERS_PATHS = border_removal.all_in_folder(BEST_SAMPLES_DIR)
+        copy_all(REMOVED_BORDERS_PATHS, REMOVED_BORDERS_DIR)
+
+        end_time = timer() - start_time
+        logger.info("Stage 6 (Border Removal) took %s", end_time)
+
+    # 7. Extract figures
+    if ARGS.skip_to <= 7:
+        start_time = timer()
+        if ARGS.skip_to >= 7:  # if step 6 (border removal) was skipped
+            FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+            CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
+            REMOVED_BORDERS_DIR = CLUSTER_DIR / "best_samples_no_border"
+        
+        FIGURES_DIR = CLUSTER_DIR / "best_samples_figures"
+        os.makedirs(FIGURES_DIR, exist_ok=True)
+
+        import figure_detection
+
+        FIGURE_PATHS = figure_detection.all_in_folder(REMOVED_BORDERS_DIR)
+        copy_all(FIGURE_PATHS, FIGURES_DIR, move=True)
+
+        end_time = timer() - start_time
+        logger.info("Stage 7 (Extract Figures) took %s", end_time)
+
+    # 8. Transcribe Audio
+    if ARGS.skip_to <= 8:
         from transcribe import transcribe_main as transcribe
 
         start_time = timer()
@@ -216,13 +257,13 @@ def main(ARGS):
         transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
 
         end_time = timer() - start_time
-        logger.info("Stage 6 (Transcribe Audio) took %s" % end_time)
+        logger.info("Stage 8 (Transcribe Audio) took %s", end_time)
 
-    # 7. Summarization
-    if ARGS.skip_to <= 7:
+    # 8. Summarization
+    if ARGS.skip_to <= 9:
         start_time = timer()
 
-        if ARGS.skip_to >= 6:  # if step 6 transcription or step 5 ocr was skipped
+        if ARGS.skip_to >= 6:  # if step 8 transcription or step 5 ocr was skipped
             OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "ocr.txt"
             OCR_FILE = open(OCR_OUTPUT_FILE, "r")
             OCR_RESULTS_FLAT = OCR_FILE.read()
@@ -245,7 +286,7 @@ def main(ARGS):
         )  # remove line breaks
 
         # Combination Algorithm
-        logger.info("Stage 7 (Summarization): Combination Algorithm")
+        logger.info("Stage 9 (Summarization): Combination Algorithm")
         if ARGS.combination_algo == "only_asr":
             SUMMARIZED_COMBINED = TRANSCRIPT
         elif ARGS.combination_algo == "only_slides":
@@ -261,7 +302,7 @@ def main(ARGS):
             SUMMARIZED_COMBINED = OCR_RESULTS_FLAT + TRANSCRIPT
 
         # Modifications
-        logger.info("Stage 7 (Summarization): Modifications")
+        logger.info("Stage 9 (Summarization): Modifications")
         if ARGS.summarization_mods != "none" and ARGS.summarization_mods is not None:
             if "full_sents" in ARGS.summarization_mods:
                 SUMMARIZED_MOD = get_complete_sentences(
@@ -272,7 +313,7 @@ def main(ARGS):
             logger.debug("Skipping summarization_mods")
 
         # Extractive Summarization
-        logger.info("Stage 7 (Summarization): Extractive")
+        logger.info("Stage 9 (Summarization): Extractive")
         ext_start_time = timer()
         if (
             ARGS.summarization_ext != "none" and ARGS.summarization_ext is not None
@@ -290,10 +331,10 @@ def main(ARGS):
         else:
             logger.debug("Skipping summarization_ext")
         ext_end_time = timer() - ext_start_time
-        logger.info("Stage 7 (Summarization): Extractive took %s" % ext_end_time)
+        logger.info("Stage 9 (Summarization): Extractive took %s", ext_end_time)
 
         # Abstractive Summarization
-        logger.info("Stage 7 (Summarization): Abstractive")
+        logger.info("Stage 9 (Summarization): Abstractive")
         abs_start_time = timer()
         if (
             ARGS.summarization_abs != "none" and ARGS.summarization_abs is not None
@@ -305,12 +346,12 @@ def main(ARGS):
             LECTURE_SUMMARIZED = SUMMARIZED_EXT
             logger.debug("Skipping summarization_abs")
         abs_end_time = timer() - abs_start_time
-        logger.info("Stage 7 (Summarization): Abstractive took %s" % abs_end_time)
+        logger.info("Stage 9 (Summarization): Abstractive took %s", abs_end_time)
 
         transcribe.write_to_file(LECTURE_SUMMARIZED, LECTURE_SUMMARIZED_OUTPUT_FILE)
 
         end_time = timer() - start_time
-        logger.info("Stage 7 (Summarization) took %s" % end_time)
+        logger.info("Stage 9 (Summarization) took %s", end_time)
 
     if ARGS.remove:
         rmtree(ROOT_PROCESS_FOLDER)

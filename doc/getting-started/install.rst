@@ -15,7 +15,7 @@ Certain functions in the End-To-End ``transcribe.py`` file require additional do
 
 The default transcription method in the End-To-End process is to use ``DeepSpeech``. You need to download the ``DeepSpeech`` model (the ``.pbmm`` acoustic model and the scorer) from the `releases page <https://github.com/mozilla/DeepSpeech/releases>`_ to use this method or you can specify a different method with the ``--transcription_method`` flag such as ``--transcription_method sphinx``.
 
-
+The End-To-End ``figure_detection.py`` contains a function called :meth:`~figure_detection.detect_figures`. This function requires the `EAST (Efficient and Accurate Scene Text Detector) <https://arxiv.org/abs/1704.03155>`_ model by default due to the ``do_text_check`` argument defaulting to ``True``. See the docstring for more information. You can download the model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ (this link was extracted from the `official code <https://github.com/opencv/opencv_extra/blob/65796edadce27ed013e3deeedb3c081ff527e4ec/testdata/dnn/download_models.py#L349>`__) or `Google Drive <https://drive.google.com/uc?id=1rRIByQlo80wRZweFfR6Mk3HgRF1e4gEt>`__ (my mirror). Then just extract the file by running ``tar -xzvf frozen_east_text_detection.tar.gz``.
 
 Quick-Install (Copy & Paste)
 ----------------------------
@@ -46,6 +46,7 @@ Step-by-Step Instructions
 5. **End-To-End Process Requirements (Optional)** 
     1. **Spacy:** Download the small spacy model by running ``python -m spacy download en_core_web_sm`` in the project root. This is required to use certain summarization and similarity features (as discussed above). A spacy model is also required when using spacy as a feature extractor in ``End-To-End/summarization_approaches.py``. [#f2]_
     2. **DeepSpeech**: Download the ``DeepSpeech`` model (the ``.pbmm`` acoustic model and the scorer) from the `releases page <https://github.com/mozilla/DeepSpeech/releases>`_ To reduce complexity save them to ``deepspeech-models`` in the project root .[#f3]_
+    3. **EAST**: Download the ``EAST`` model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ or by running ``gdown https://drive.google.com/uc?id=1rRIByQlo80wRZweFfR6Mk3HgRF1e4gEt``. Extract it to the ``End-To-End`` directory by running ``tar -xzvf frozen_east_text_detection.tar.gz -C End-To-End/``
 6. **Dataset Collection Requirements (Optional)** YouTube API
     1. Run ``cp .env.example .env`` to create a copy of the example ``.env`` file.
     2. Add your YouTube API key to your ``.env`` file.
