@@ -35,6 +35,16 @@ Corner Crop Transform
 
     .. automodule:: corner_crop_transform
 
+Text Detection
+--------------
+
+    .. automodule:: text_detection
+
+Figure Detection
+----------------
+
+    .. automodule:: figure_detection
+
 Frames Extractor
 ----------------
 

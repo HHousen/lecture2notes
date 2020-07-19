@@ -151,3 +151,4 @@ Models/slide-classifier/confusion_matrix.png
 wandb
 grad_cam_results/
 frozen_east_text_detection.pb
+delete/

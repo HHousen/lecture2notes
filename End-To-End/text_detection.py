@@ -1,17 +1,33 @@
 # This code is a version of https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/
-# that has been converted to functions.
+# that has been converted to functions and has some additions.
 
+import logging
 from imutils.object_detection import non_max_suppression
 import numpy as np
 import time
 import cv2
 
-def get_text_bounding_boxes(image, east_path, min_confidence=0.5, resized_width=320, resized_height=320):
+logger = logging.getLogger(__name__)
+
+def load_east(east_path="frozen_east_text_detection.pb"):
+    """Load the pre-trained EAST model.
+
+    Args:
+        east_path (str, optional): Path to the EAST model file. Defaults to 
+            "frozen_east_text_detection.pb".
+    """
+    if type(east_path) is cv2.dnn_Net:
+        return east_path
+    logger.debug("Loading EAST text detector...")
+    net = cv2.dnn.readNet(east_path)
+    return net
+
+def get_text_bounding_boxes(image, net, min_confidence=0.5, resized_width=320, resized_height=320):
     """Determine the locations of text in an image.
 
     Args:
         image (np.array): The image to be processed.
-        east_path (str): Path to the EAST model file.
+        net (cv2.dnn_Net): The EAST model loaded with :meth:`~text_detection.load_east`.
         min_confidence (float, optional): Minimum probability required to inspect a region. Defaults to 0.5.
         resized_width (int, optional): Resized image width (should be multiple of 32). Defaults to 320.
         resized_height (int, optional): Resized image height (should be multiple of 32). Defaults to 320.
@@ -19,6 +35,9 @@ def get_text_bounding_boxes(image, east_path, min_confidence=0.5, resized_width=
     Returns:
         list: The coordinates of bounding boxes containing text.
     """
+
+    if type(net) is str:
+        net = load_east(net)
 
     # load the input image and grab the image dimensions
     orig = image.copy()
@@ -39,10 +58,6 @@ def get_text_bounding_boxes(image, east_path, min_confidence=0.5, resized_width=
     # second can be used to derive the bounding box coordinates of text
     layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
 
-    # load the pre-trained EAST text detector
-    print("[INFO] loading EAST text detector...")
-    net = cv2.dnn.readNet(east_path)
-
     # construct a blob from the image and then perform a forward pass of
     # the model to obtain the two output layer sets
     blob = cv2.dnn.blobFromImage(
@@ -54,7 +69,7 @@ def get_text_bounding_boxes(image, east_path, min_confidence=0.5, resized_width=
     end = time.time()
 
     # show timing information on text prediction
-    print("[INFO] text detection took {:.6f} seconds".format(end - start))
+    logger.debug("Text detection took %.6f seconds", end - start)
 
     # grab the number of rows and columns from the scores volume, then
     # initialize our set of bounding box rectangles and corresponding
@@ -125,7 +140,9 @@ def get_text_bounding_boxes(image, east_path, min_confidence=0.5, resized_width=
         scaled_boxes.append((endX, endY, startX, startY))
 
         # draw the bounding box on the image
-        # cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+        cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+
+    cv2.imwrite("text_bounding_boxes.png", orig)
 
     return scaled_boxes
 
