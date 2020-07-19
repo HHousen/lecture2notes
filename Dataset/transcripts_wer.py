@@ -91,7 +91,6 @@ if ARGS.mode == "transcribe":
 
     # Create DeepSpeech model
     ds_model = transcribe.load_deepspeech_model(ARGS.deepspeech_dir)
-    transcripts = ["C_W1adH-NVE.vtt"]
     for transcript in tqdm(transcripts, desc="Transcribing"):
         video_id = transcript.split(".")[0]
         transcript_ml_path = TRANSCRIPTS_DIR / (transcript[:-4] + ARGS.suffix + ".txt")

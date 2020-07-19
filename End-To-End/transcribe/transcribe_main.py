@@ -11,7 +11,6 @@ from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from tqdm import tqdm
 from timeit import default_timer as timer
-from helpers import make_dir_if_not_exist
 from transcript_downloader import TranscriptDownloader
 import webvtt
 import transcribe.webrtcvad_utils as webrtcvad_utils
@@ -444,7 +443,7 @@ def chunk_by_silence(
     )
     logger.info("Created " + str(len(chunks)) + " chunks")
 
-    make_dir_if_not_exist(output_path)
+    os.makedirs(output_path, exist_ok=True)
 
     for i, chunk in tqdm(enumerate(chunks), total=len(chunks), desc="Writing Chunks"):
         # Create a silence chunk that's 0.5 seconds (or 500 ms) long for padding.
