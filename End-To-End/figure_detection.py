@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import cv2
 from PIL import Image, ImageStat
+from skimage.measure.entropy import shannon_entropy
 from text_detection import get_text_bounding_boxes, load_east
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ def detect_figures(
     large_box_detection=True,
     do_color_check=True,
     do_text_check=True,
+    entropy_check=3.5,
     do_remove_subfigures=True,
 ):
     """Detect figures located in a slide.
@@ -119,6 +121,11 @@ def detect_figures(
             potential figures contains text. This is useful to remove blocks of text that 
             are mistakenly classified as figures. Checking for text increases processing 
             time so be careful if processing a large number of files. Defaults to True.
+        entropy_check (float, optional): Check that the entropy of all potential figures is above
+            this value. Figures with a ``shannon_entropy`` lower than this value will be removed. 
+            Set to ``False`` to disable this check. The ``shannon_entropy`` implementation is from 
+            ``skimage.measure.entropy``. IMPORTANT: This check applies to both the regular tests 
+            *and* ``large_box_detection``, which most check do not apply to. Defaults to 3.5.
         do_remove_subfigures (bool, optional): Check that there are no overlapping figures. 
             If an overlapping figure is detected, the smaller figure will be deleted. This 
             is useful to have enabled when using `large_box_detection` since 
@@ -234,7 +241,7 @@ def detect_figures(
             roi_rectangle = convert_coords_to_corners(box)
             # cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
             # cv2.imwrite("rect.png", image)
-            if y+h >= image_height or x+w >= image_width:
+            if y + h >= image_height or x + w >= image_width:
                 potential_figure = original[y : y + h, x : x + w]
             else:
                 potential_figure = original[
@@ -295,6 +302,15 @@ def detect_figures(
         ]
 
     for idx, figure in enumerate(figures):
+        if entropy_check:
+            # If `entropy_check` is a boolean, then set it to the default
+            if type(entropy_check) == bool and entropy_check:
+                entropy_check = 3.5
+            gray = cv2.cvtColor(potential_figure, cv2.COLOR_BGR2GRAY)
+            high_entropy = shannon_entropy(gray) > entropy_check
+            if not high_entropy:
+                continue
+
         full_output_path = start_output_path + str(idx) + ext
         output_paths.append(full_output_path)
         cv2.imwrite(full_output_path, figure)
@@ -340,4 +356,5 @@ def all_in_folder(
 
 
 # all_in_folder("delete/")
-detect_figures("delete/img_01054_noborder.jpg")
+# detect_figures("delete/img_01054_noborder.jpg")
+# detect_figures("delete/img_00601_noborder.jpg")

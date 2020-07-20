@@ -17,6 +17,7 @@ dependencies:
   - termcolor
   - tqdm
   - scikit-learn
+  - scikit-image
   - speechrecognition
   - pocketsphinx-python
   - pydub
@@ -57,3 +58,4 @@ dependencies:
     - pytorch_lightning
     - jiwer
     - youtube_dl
+    - imutils
