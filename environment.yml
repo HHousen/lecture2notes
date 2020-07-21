@@ -59,3 +59,4 @@ dependencies:
     - jiwer
     - youtube_dl
     - imutils
+    - opencv-contrib-python

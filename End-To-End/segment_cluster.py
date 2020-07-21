@@ -58,7 +58,7 @@ class SegmentCluster:
             i
             for i in range(0, len(similarities))
             if similarities[i] > sim_compare_value
-        ]  # the 3 needs testing
+        ]
 
         self.change_indexes = change_indexes
         return change_indexes
@@ -77,7 +77,7 @@ class SegmentCluster:
         current_cluster_path = cluster_dir / str(current_folder)
         for idx, slide in enumerate(self.slides_list):
             current_slide_path = os.path.join(self.slides_dir, slide)
-            if idx in self.change_indexes:  # the -1 needs testing
+            if idx in self.change_indexes:
                 current_folder += 1
                 if create_best_samples_folder:
                     if copy:

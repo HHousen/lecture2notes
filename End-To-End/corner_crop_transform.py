@@ -393,8 +393,9 @@ def find_page_contours(
     for cnt in contours:
         perimeter = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.1 * perimeter, True)
-
-        # approx = cv2.convexHull(approx)
+        
+        _, _, w, h = cv2.boundingRect(approx)
+        aspect_ratio = w / h
 
         # Page has 4 corners and it is convex
         if (
@@ -402,6 +403,7 @@ def find_page_contours(
             and cv2.isContourConvex(approx)
             and min_area < cv2.contourArea(approx) < MAX_COUNTOUR_AREA
             and straight_lines_in_contour(approx[:, 0], delta=int(height / 10))
+            and 0.9 < aspect_ratio < 3
         ):
 
             none_tested = False
