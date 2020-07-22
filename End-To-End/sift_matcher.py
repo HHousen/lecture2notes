@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import itertools
 import logging
@@ -428,7 +429,11 @@ def match_features(
     images = slide_images_dict + presenter_slide_images_dict
     # Sort according to the image filename, which will organize into
     # chronological order due to the frame number in the filename.
-    images = sorted(images, key=lambda o: o[0][-7:-4])
+    # The regex selects the number between an underscore and an underscore 
+    # or a period. This will match filenames like "IJquEYhiq_U-img_050_noborder.jpg"
+    # and "IJquEYhiq_U-img_140.jpg".
+    regex_sort = lambda o: re.search("(?<=\_)[0-9]+(?=\_|.)", o[0]).group(0)
+    images = sorted(images, key=regex_sort)
 
     non_unique_presenter_slides = []
     current_batch_non_unique_presenter_slides = []
@@ -442,13 +447,13 @@ def match_features(
     ):
         previous_category = images[idx][1]
         if category != previous_category:
-            logger.info("Switching from '%s' to '%s'", previous_category, category)
+            logger.debug("Switching from '%s' to '%s'", previous_category, category)
             # If a 'presenter_slide' was detected as having more content than
             # the `query_image` (aka the previous 'slide'), then add the `query_image`
             # to the `non_unique_presenter_slides` and remove `frame_with_most_content`
             # from `current_batch_non_unique_presenter_slides`.
             if frame_with_most_content is not None:
-                logger.info(
+                logger.debug(
                     "Removing %s from and adding %s to the current batch of non unique presenter slides",
                     frame_with_most_content,
                     query_image_path,
@@ -478,7 +483,7 @@ def match_features(
                 len(non_unique_presenter_slides) > 1
                 and previous_filename == non_unique_presenter_slides[-1]
             ):
-                logger.info(
+                logger.debug(
                     "Skipping iteration since last slide in segment of 'presenter_slide' matched with the previously detected slide."
                 )
                 continue
@@ -504,7 +509,7 @@ def match_features(
 
             sift_matches = sift_outputs[0]
             if len(sift_matches) > min_match_count:  # Images contain the same slide
-                logger.info(
+                logger.debug(
                     "%s contains the 'slide' at %s", train_image_path, query_image_path
                 )
                 match_successful = True
@@ -514,7 +519,7 @@ def match_features(
                     query_image, persp_transform(train_image, dst_coords)
                 )
                 if content_is_added and amount_of_added_content > max_content:
-                    logger.info(
+                    logger.debug(
                         "%i pixels of content added to %s by %s",
                         amount_of_added_content,
                         query_image_path,
@@ -542,7 +547,7 @@ def match_features(
 
         if category == "presenter_slide" and match_successful:
             train_image_path = filename
-            logger.info(
+            logger.debug(
                 "In a section of 'presenter_slide' and match was successful when entering this section. Testing %s...",
                 filename,
             )
@@ -554,7 +559,7 @@ def match_features(
                     query_image, persp_transform(train_image, dst_coords)
                 )
                 if content_is_added and amount_of_added_content > max_content:
-                    logger.info(
+                    logger.debug(
                         "%i pixels of content added to %s by %s",
                         amount_of_added_content,
                         query_image_path,
@@ -562,7 +567,7 @@ def match_features(
                     )
                     max_content = amount_of_added_content
                     frame_with_most_content = train_image_path
-                logger.info(
+                logger.debug(
                     "%s marked for removal because it contains enough matches with the last 'slide' at %s",
                     filename,
                     query_image_path,
@@ -579,6 +584,7 @@ def match_features(
             filename = file_parse[0]
             ext = file_parse[1]
             output_path = filename + OUTPUT_PATH_MODIFIER + ext
+            transformed_image_paths.append(output_path)
 
             transformed_image = persp_transform(cv2.readim(image), dst_coords)
             cv2.imwrite(output_path, transformed_image)
@@ -586,16 +592,16 @@ def match_features(
     return non_unique_presenter_slides, transformed_image_paths
 
 
+# logging.basicConfig(
+#     format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
+#     level=logging.getLevelName("INFO"),
+# )
 # does_camera_move_all_in_folder("test_data/presenter_slide")
-logging.basicConfig(
-    format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
-    level=logging.getLevelName("INFO"),
-)
-input(
-    match_features(
-        "test_data/slide", "test_data/presenter_slide", do_motion_detection=False
-    )
-)
+# input(
+#     match_features(
+#         "test_data/slide", "test_data/presenter_slide", do_motion_detection=False
+#     )
+# )
 
 # first = cv2.imread("test_data/IJquEYhiq_U-img_038.jpg")
 # second = cv2.imread("test_data/IJquEYhiq_U-img_043.jpg")

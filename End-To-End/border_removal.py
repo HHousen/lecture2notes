@@ -120,6 +120,9 @@ def remove_border(image_path, output_path=None):
     height = image.shape[0]
     width = image.shape[1]
     min_area = height * width * 0.7
+    # Maximum area is 15 less than the original image dimensions
+    max_area = (width - 15) * (height - 15)
+    final_contour = None
     for cnt in contours:
         perimeter = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.1 * perimeter, True)
@@ -127,11 +130,16 @@ def remove_border(image_path, output_path=None):
         if (
             len(approx) == 4  # four corners
             and cv2.isContourConvex(approx)  # convex and not concave
-            and min_area < cv2.contourArea(approx)  # get the largest contour
+            and min_area < cv2.contourArea(approx) < max_area # get the largest contour
         ):
             min_area = cv2.contourArea(approx)
             final_contour = approx[:, 0]
 
+    # If no `final_contour` is found then assume no border or that detection failed
+    # and return the path of the original image
+    if final_contour is None:
+        return image_path
+    
     x, y, w, h = cv2.boundingRect(final_contour)
 
     crop = image[

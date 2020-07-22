@@ -65,35 +65,106 @@ def main(ARGS):
         end_time = timer() - start_time
         logger.info("Stage 2 (Classify Slides) took %s", end_time)
 
-    # 3. Perspective crop images of presenter_slide to contain only the slide (helps OCR)
+    # 3. Black border detection and removal
     if ARGS.skip_to <= 3:
-        if ARGS.skip_to >= 3:  # if step 2 (classify slides) was skipped
+        start_time = timer()
+        if ARGS.skip_to >= 3:  # if step 2 (Classify Slides) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+
+        SLIDES_DIR = FRAMES_SORTED_DIR / "slide"
+        SLIDES_NOBORDER_DIR = FRAMES_SORTED_DIR / "slides_noborder"
+
+        if os.path.exists(SLIDES_DIR):
+            os.makedirs(SLIDES_NOBORDER_DIR, exist_ok=True)
+
+            if ARGS.remove_duplicates:
+                import imghash
+
+                images_hashed = imghash.sort_by_duplicates(SLIDES_DIR)
+                imghash.remove_duplicates(SLIDES_DIR, images_hashed)
+
+            import border_removal
+
+            REMOVED_BORDERS_PATHS = border_removal.all_in_folder(SLIDES_DIR)
+            copy_all(REMOVED_BORDERS_PATHS, SLIDES_NOBORDER_DIR)
+
+        end_time = timer() - start_time
+        logger.info("Stage 3 (Border Removal) took %s", end_time)
+
+    # 4. Perspective crop images of presenter_slide to contain only the slide (helps OCR)
+    if ARGS.skip_to <= 4:
+        if ARGS.skip_to >= 4:  # if step 3 (border removal) was skipped
+            FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
+            SLIDES_NOBORDER_DIR = FRAMES_SORTED_DIR / "slides_noborder"
         PRESENTER_SLIDE_DIR = FRAMES_SORTED_DIR / "presenter_slide"
         IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
-        
+
         start_time = timer()
 
         if os.path.exists(PRESENTER_SLIDE_DIR):
-            import corner_crop_transform
 
-            cropped_imgs_paths = corner_crop_transform.all_in_folder(
-                PRESENTER_SLIDE_DIR, remove_original=False
-            )
-            copy_all(cropped_imgs_paths, IMGS_TO_CLUSTER_DIR)
+            if ARGS.remove_duplicates:
+                import imghash
+                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Remove 'presenter_slide' duplicates")
+                imghash_start_time = timer()
+
+                images_hashed = imghash.sort_by_duplicates(PRESENTER_SLIDE_DIR)
+                imghash.remove_duplicates(PRESENTER_SLIDE_DIR, images_hashed)
+
+                imghash_end_time = timer() - imghash_start_time
+                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Remove 'presenter_slide' duplicates took %s", imghash_end_time)
+
+            import sift_matcher
+            logger.info("Stage 4 (Duplicate Removal & Perspective Crop): SIFT Matching")
+            siftmatch_start_time = timer()
+
+            (
+                non_unique_presenter_slides,
+                transformed_image_paths,
+            ) = sift_matcher.match_features(SLIDES_NOBORDER_DIR, PRESENTER_SLIDE_DIR)
+            siftmatch_end_time = timer() - siftmatch_start_time
+            logger.info("Stage 4 (Duplicate Removal & Perspective Crop): SIFT Matching took %s", siftmatch_end_time)
+
+            # Remove all 'presenter_slide' images that are duplicates of 'slide' images
+            # and all 'slide' images that are better represented by a 'presenter_slide' image
+            for x in non_unique_presenter_slides:
+                try:
+                    os.remove(x)
+                except OSError:
+                    pass
+
+            # If there are transformed images then the camera motion was steady and we
+            # do not have to run `corner_crop_transform`. If camera motion was detected
+            # then the `transformed_image_paths` list will be empty and `PRESENTER_SLIDE_DIR`
+            # will contain potentially unique 'presenter_slide' images that do not appear
+            # in any images of the 'slide' class.
+            if transformed_image_paths:
+                copy_all(transformed_image_paths, IMGS_TO_CLUSTER_DIR)
+            else:
+                import corner_crop_transform
+                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Corner Crop Transform")
+                cornercrop_start_time = timer()
+
+                cropped_imgs_paths = corner_crop_transform.all_in_folder(
+                    PRESENTER_SLIDE_DIR, remove_original=False
+                )
+                copy_all(cropped_imgs_paths, IMGS_TO_CLUSTER_DIR)
+
+                cornercrop_end_time = timer() - cornercrop_start_time
+                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Corner Crop Transform took %s", cornercrop_end_time)
 
         end_time = timer() - start_time
-        logger.info("Stage 3 (Perspective Crop) took %s", end_time)
+        logger.info("Stage 4 (Perspective Crop) took %s", end_time)
 
-    # 4. Cluster slides
-    if ARGS.skip_to <= 4:
+    # 5. Cluster slides
+    if ARGS.skip_to <= 5:
         start_time = timer()
-        if ARGS.skip_to >= 4:  # if step 3 (perspective crop) was skipped
+        if ARGS.skip_to >= 5:  # if step 4 (perspective crop) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             IMGS_TO_CLUSTER_DIR = FRAMES_SORTED_DIR / "imgs_to_cluster"
-        SLIDES_DIR = FRAMES_SORTED_DIR / "slide"
+            SLIDES_NOBORDER_DIR = FRAMES_SORTED_DIR / "slides_noborder"
 
-        copy_all(SLIDES_DIR, IMGS_TO_CLUSTER_DIR)
+        copy_all(SLIDES_NOBORDER_DIR, IMGS_TO_CLUSTER_DIR)
 
         if ARGS.remove_duplicates:
             import imghash
@@ -125,12 +196,12 @@ def main(ARGS):
             CLUSTER_DIR, BEST_SAMPLES_DIR = SEGMENT_CLUSTER.transfer_to_filesystem()
 
         end_time = timer() - start_time
-        logger.info("Stage 4 (Cluster Slides) took %s", end_time)
+        logger.info("Stage 5 (Cluster Slides) took %s", end_time)
 
-    # 5. OCR Slides
-    if ARGS.skip_to <= 5:
+    # 6. OCR Slides
+    if ARGS.skip_to <= 6:
         start_time = timer()
-        if ARGS.skip_to >= 5:  # if step 4 (perspective crop) was skipped
+        if ARGS.skip_to >= 6:  # if step 5 (cluster slides) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
@@ -143,26 +214,7 @@ def main(ARGS):
         ocr.write_to_file(OCR_RESULTS, OCR_OUTPUT_FILE)
 
         end_time = timer() - start_time
-        logger.info("Stage 5 (OCR Slides) took %s", end_time)
-
-    # 6. Black border detection and removal
-    if ARGS.skip_to <= 6:
-        start_time = timer()
-        if ARGS.skip_to >= 6:  # if step 5 (OCR) was skipped
-            FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
-            CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
-            BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
-        
-        REMOVED_BORDERS_DIR = CLUSTER_DIR / "best_samples_no_border"
-        os.makedirs(REMOVED_BORDERS_DIR, exist_ok=True)
-
-        import border_removal
-
-        REMOVED_BORDERS_PATHS = border_removal.all_in_folder(BEST_SAMPLES_DIR)
-        copy_all(REMOVED_BORDERS_PATHS, REMOVED_BORDERS_DIR)
-
-        end_time = timer() - start_time
-        logger.info("Stage 6 (Border Removal) took %s", end_time)
+        logger.info("Stage 6 (OCR Slides) took %s", end_time)
 
     # 7. Extract figures
     if ARGS.skip_to <= 7:
@@ -171,7 +223,7 @@ def main(ARGS):
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             REMOVED_BORDERS_DIR = CLUSTER_DIR / "best_samples_no_border"
-        
+
         FIGURES_DIR = CLUSTER_DIR / "best_samples_figures"
         os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -236,7 +288,10 @@ def main(ARGS):
                     )
 
                 else:  # if not chunking
-                    if ARGS.transcription_method == "deepspeech" or YT_TRANSCRIPTION_FAILED:
+                    if (
+                        ARGS.transcription_method == "deepspeech"
+                        or YT_TRANSCRIPTION_FAILED
+                    ):
                         TRANSCRIPT = transcribe.transcribe_audio_deepspeech(
                             AUDIO_PATH, ARGS.deepspeech_model_dir
                         )
@@ -259,7 +314,7 @@ def main(ARGS):
         end_time = timer() - start_time
         logger.info("Stage 8 (Transcribe Audio) took %s", end_time)
 
-    # 8. Summarization
+    # 9. Summarization
     if ARGS.skip_to <= 9:
         start_time = timer()
 
@@ -401,7 +456,7 @@ if __name__ == "__main__":
         "-rd",
         "--remove_duplicates",
         action="store_true",
-        help="remove duplicate slides before clusterting (helpful when `--cluster_method` is `segment`",
+        help="remove duplicate slides before perspective cropping and before clustering (helpful when `--cluster_method` is `segment`",
     )
     PARSER.add_argument(
         "-cm",
