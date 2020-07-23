@@ -28,10 +28,17 @@ def sift_flann_match(query_image, train_image, algorithm="orb"):
         query_image (np.array): Image to find. Loading using ``cv2.imread()``.
         train_image (np.array): Image to search. Loading using ``cv2.imread()``.
         algorithm (str, optional): The feature detection/description algorithm. Can be one
-        of `ORB <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html>`_, 
-        `SIFT <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_sift_intro/py_sift_intro.html>`_, 
-        or `FAST <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_fast/py_fast.html>`_. 
-        Defaults to "orb".
+            of `ORB <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html>`_, 
+            (`ORB Class Reference <https://docs.opencv.org/3.4/db/d95/classcv_1_1ORB.html>`_)
+            `SIFT <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_sift_intro/py_sift_intro.html>`_, 
+            (`SIFT Class Reference <https://docs.opencv.org/3.4.9/d5/d3c/classcv_1_1xfeatures2d_1_1SIFT.html>`_)
+            or `FAST <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_fast/py_fast.html>`_. 
+            (`FAST Class Reference <https://docs.opencv.org/3.4/df/d74/classcv_1_1FastFeatureDetector.html>`_)
+            Defaults to "orb".
+        num_features (int, optional): The maximum number of features to retain when using `ORB` 
+            and `SIFT`. Does not take effect when using the `FAST` detection  algorithm. Setting 
+            to 0 for `SIFT` is a good starting point. The default for `ORB` is 500, but it was 
+            increased to 1000 to improve accuracy. Defaults to 1000.
 
     Returns:
         tuple: (good, kp1, kp2, img1, img2) The good matches as per Lowe's ratio test, the 
@@ -44,16 +51,16 @@ def sift_flann_match(query_image, train_image, algorithm="orb"):
     img2 = cv2.cvtColor(train_image, cv2.COLOR_BGR2GRAY)
     # Initiate detector and find the keypoints and descriptors
     if algorithm == "orb":
-        orb = cv2.ORB_create()
+        orb = cv2.ORB_create(nfeatures=num_features)
         kp1, des1 = orb.detectAndCompute(img1, None)
         kp2, des2 = orb.detectAndCompute(img2, None)
     elif algorithm == "sift":
-        sift = cv2.xfeatures2d.SIFT_create()
+        sift = cv2.xfeatures2d.SIFT_create(nfeatures=num_features)
         kp1, des1 = sift.detectAndCompute(img1, None)
         kp2, des2 = sift.detectAndCompute(img2, None)
     elif algorithm == "fast":
         fast = cv2.FastFeatureDetector_create(threshold=25)
-        sift = cv2.xfeatures2d.SIFT_create()
+        sift = cv2.xfeatures2d.SIFT_create(nfeatures=num_features)
         kp1 = fast.detect(img1, None)
         _, des1 = sift.compute(img1, kp1)
         kp2 = fast.detect(img2, None)
@@ -74,6 +81,7 @@ def sift_flann_match(query_image, train_image, algorithm="orb"):
     search_params = dict(checks=75)
 
     flann = cv2.FlannBasedMatcher(index_params, search_params)
+    # bf = cv2.BFMatcher(cv2.NORM_HAMMING)
     matches = flann.knnMatch(des1, des2, k=2)
 
     # Store all the good matches as per Lowe's ratio test.
@@ -373,9 +381,12 @@ def is_content_added(
     return content_is_added, amount_of_added_content
 
 
-# min_match_count = 120 for SIFT
 def match_features(
-    slide_path, presenter_slide_path, min_match_count=46, do_motion_detection=True
+    slide_path,
+    presenter_slide_path,
+    min_match_count=33,
+    min_area_percent=0.37,
+    do_motion_detection=True,
 ):
     """Match features between images in `slide_path` and `presenter_slide_path`. 
     The images in `slide_path` are the queries to the matching algorithm and the
@@ -388,7 +399,11 @@ def match_features(
             or any directory containing train images.
         min_match_count (int, optional): The minimum number of matches returned by
             :meth:`~sift_matcher.sift_flann_match` required for the image pair to
-            be considered as containing the same slide. Defaults to 46.
+            be considered as containing the same slide. Defaults to 33.
+        min_area_percent (float, optional): Percentage of the area of the train image (images
+            belonging to the 'presenter_slide' category) that a matched slide must take up to 
+            be counted as a legitimate duplicate slide. This removes incorrect matches that 
+            can result in crops to small portions of the train image. Defaults to 0.37.
         do_motion_detection (bool, optional): Whether motion detection using 
             :meth:`~sift_matcher.does_camera_move_all_in_folder` should be performed. 
             If set to False then it is assumed that there is movement since assuming no 
@@ -429,7 +444,7 @@ def match_features(
     images = slide_images_dict + presenter_slide_images_dict
     # Sort according to the image filename, which will organize into
     # chronological order due to the frame number in the filename.
-    # The regex selects the number between an underscore and an underscore 
+    # The regex selects the number between an underscore and an underscore
     # or a period. This will match filenames like "IJquEYhiq_U-img_050_noborder.jpg"
     # and "IJquEYhiq_U-img_140.jpg".
     regex_sort = lambda o: re.search("(?<=\_)[0-9]+(?=\_|.)", o[0]).group(0)
@@ -437,7 +452,7 @@ def match_features(
 
     non_unique_presenter_slides = []
     current_batch_non_unique_presenter_slides = []
-    all_dst_coords = []
+    all_dst_corners = []
     match_successful = False
     frame_with_most_content = None
     previous_category = images[0][1]
@@ -447,13 +462,13 @@ def match_features(
     ):
         previous_category = images[idx][1]
         if category != previous_category:
-            logger.debug("Switching from '%s' to '%s'", previous_category, category)
+            logger.info("Switching from '%s' to '%s'", previous_category, category)
             # If a 'presenter_slide' was detected as having more content than
             # the `query_image` (aka the previous 'slide'), then add the `query_image`
             # to the `non_unique_presenter_slides` and remove `frame_with_most_content`
             # from `current_batch_non_unique_presenter_slides`.
             if frame_with_most_content is not None:
-                logger.debug(
+                logger.info(
                     "Removing %s from and adding %s to the current batch of non unique presenter slides",
                     frame_with_most_content,
                     query_image_path,
@@ -473,6 +488,7 @@ def match_features(
             match_successful = False
             max_content = 0
             frame_with_most_content = None
+            current_batch_non_unique_presenter_slides.clear()
 
             previous_filename = images[idx][0]  # 0 selects filename
             # If the most recently processed 'presenter_slide' was added to
@@ -483,7 +499,7 @@ def match_features(
                 len(non_unique_presenter_slides) > 1
                 and previous_filename == non_unique_presenter_slides[-1]
             ):
-                logger.debug(
+                logger.info(
                     "Skipping iteration since last slide in segment of 'presenter_slide' matched with the previously detected slide."
                 )
                 continue
@@ -505,21 +521,44 @@ def match_features(
             query_image = cv2.imread(query_image_path)
             train_image = cv2.imread(train_image_path)
 
+            train_image_area = train_image.shape[0] * train_image.shape[1]
+
             sift_outputs = sift_flann_match(query_image, train_image)
 
             sift_matches = sift_outputs[0]
+            kp1 = sift_outputs[1]
+            kp2 = sift_outputs[2]
+            print("Matches " + str(len(sift_matches)))
+            ransac_transform(*sift_outputs, draw_matches=True)
             if len(sift_matches) > min_match_count:  # Images contain the same slide
-                logger.debug(
-                    "%s contains the 'slide' at %s", train_image_path, query_image_path
+                logger.info(
+                    "%s contains the 'slide' at %s according to the number of matches",
+                    train_image_path,
+                    query_image_path,
                 )
                 match_successful = True
+
                 dst_coords = ransac_transform(*sift_outputs)
+                dst_coords_area = cv2.contourArea(dst_coords)
+
+                # If the area of the detected slide in the 'presenter_slide' image is less than
+                # `min_area_percent`% of the area of the entire 'presenter_slide' image then the
+                # detection is a false-positive (it is not a slide) and we should move to the
+                # next iteration.
+                max_area = min_area_percent * train_image_area
+                if dst_coords_area < max_area:
+                    logger.info(
+                        "Previously detected match is incorrect because the detected slide is too small. It had an area of %i, while the minimum is %i",
+                        dst_coords_area,
+                        max_area,
+                    )
+                    continue
 
                 content_is_added, amount_of_added_content = is_content_added(
                     query_image, persp_transform(train_image, dst_coords)
                 )
                 if content_is_added and amount_of_added_content > max_content:
-                    logger.debug(
+                    logger.info(
                         "%i pixels of content added to %s by %s",
                         amount_of_added_content,
                         query_image_path,
@@ -529,17 +568,18 @@ def match_features(
                     frame_with_most_content = train_image_path
 
                 if not movement_detected:
-                    dst_corners = convert_coords_to_corners(dst_coords)
-                    dst_corners_area = area_of_corner_box(dst_corners)
-                    for prev_dst_corners in all_dst_coords:
+                    dst_corners = convert_coords_to_corners(
+                        cv2.boundingRect(dst_coords)
+                    )
+                    for prev_dst_corners in all_dst_corners:
                         if (
                             area_of_overlapping_rectangles(
                                 dst_corners, prev_dst_corners
                             )
-                            < 0.80 * dst_corners_area
+                            < 0.80 * dst_coords_area
                         ):
                             movement_detected = True
-                    all_dst_coords.append(dst_coords)
+                    all_dst_corners.append(dst_corners)
 
                 current_batch_non_unique_presenter_slides.append(train_image_path)
 
@@ -547,7 +587,7 @@ def match_features(
 
         if category == "presenter_slide" and match_successful:
             train_image_path = filename
-            logger.debug(
+            logger.info(
                 "In a section of 'presenter_slide' and match was successful when entering this section. Testing %s...",
                 filename,
             )
@@ -559,7 +599,7 @@ def match_features(
                     query_image, persp_transform(train_image, dst_coords)
                 )
                 if content_is_added and amount_of_added_content > max_content:
-                    logger.debug(
+                    logger.info(
                         "%i pixels of content added to %s by %s",
                         amount_of_added_content,
                         query_image_path,
@@ -567,12 +607,17 @@ def match_features(
                     )
                     max_content = amount_of_added_content
                     frame_with_most_content = train_image_path
-                logger.debug(
+                logger.info(
                     "%s marked for removal because it contains enough matches with the last 'slide' at %s",
                     filename,
                     query_image_path,
                 )
                 current_batch_non_unique_presenter_slides.append(train_image_path)
+            else:
+                # If the 'presenter_slide' is not a duplicate of the last 'slide' then
+                # it is unlikely that any future 'presenter_slide' images will match
+                # since presentations don't frequently go back to previous slides.
+                match_successful = False
 
     transformed_image_paths = []
     if not movement_detected and dst_coords:
@@ -592,16 +637,18 @@ def match_features(
     return non_unique_presenter_slides, transformed_image_paths
 
 
-# logging.basicConfig(
-#     format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
-#     level=logging.getLevelName("INFO"),
-# )
+logging.basicConfig(
+    format="%(asctime)s|%(name)s|%(levelname)s> %(message)s",
+    level=logging.getLevelName("INFO"),
+)
 # does_camera_move_all_in_folder("test_data/presenter_slide")
-# input(
-#     match_features(
-#         "test_data/slide", "test_data/presenter_slide", do_motion_detection=False
-#     )
-# )
+input(
+    match_features(
+        "test_data/slide_new",
+        "test_data/presenter_slide_new",
+        do_motion_detection=False,
+    )
+)
 
 # first = cv2.imread("test_data/IJquEYhiq_U-img_038.jpg")
 # second = cv2.imread("test_data/IJquEYhiq_U-img_043.jpg")
