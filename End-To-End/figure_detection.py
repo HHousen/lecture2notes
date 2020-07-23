@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import cv2
 from PIL import Image, ImageStat
+from imutils import auto_canny
 from skimage.measure.entropy import shannon_entropy
 from text_detection import get_text_bounding_boxes, load_east
 
@@ -159,9 +160,14 @@ def detect_figures(
 
     original = image.copy()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    gray_thresh = cv2.threshold(
+        gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
+    )[1]
+    blurred = cv2.GaussianBlur(gray_thresh, (3, 3), 0)
 
-    canny = cv2.Canny(blurred, 120, 255, 1)
+    # Need to use canny in addition to threshold in case the threshold is inverted.
+    # Difference between edges and contours: https://stackoverflow.com/a/17104541
+    canny = auto_canny(blurred)
 
     # "large" pertains to components that are used to find figures not surrounded by a border
     # "small" is used to find rectangles on the slide, which are likely figures
@@ -354,7 +360,7 @@ def all_in_folder(
     logger.debug("> Figure Detection: Returning figure paths")
     return figure_paths
 
-
+# import matplotlib.pyplot as plt
 # all_in_folder("delete/")
 # detect_figures("delete/img_01054_noborder.jpg")
 # detect_figures("delete/img_00601_noborder.jpg")

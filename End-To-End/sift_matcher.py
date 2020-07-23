@@ -297,32 +297,21 @@ def is_content_added(
     first = cv2.cvtColor(first, cv2.COLOR_BGR2GRAY)
     second = cv2.cvtColor(second, cv2.COLOR_BGR2GRAY)
 
-    dst_coords = np.array(
-        [
-            [[80.396248, 66.36963]],
-            [[80.84033, 940.3144]],
-            [[1620.6646, 922.0189]],
-            [[1638.6852, 80.77042]],
-        ]
-    )
-    second = persp_transform(second, dst_coords)
-
     first_area = first.shape[0] * first.shape[1]
     second_area = second.shape[0] * second.shape[1]
 
     first_thresh = cv2.threshold(
         first, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
     )[1]
+    # Need to use canny in addition to threshold in case the threshold is inverted.
+    # Difference between edges and contours: https://stackoverflow.com/a/17104541
     first_canny = auto_canny(first_thresh)
     first_canny_dilated = cv2.dilate(
         first_canny, np.ones((dilation_amount, dilation_amount), dtype=np.uint8)
     )
     first_contours = cv2.findContours(
         first_canny_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
-    first_contours = (
-        first_contours[0] if len(first_contours) == 2 else first_contours[1]
-    )
+    )[0]
     first_contour_area = sum(
         [
             cv2.contourArea(x)
@@ -350,10 +339,7 @@ def is_content_added(
     )
     second_contours = cv2.findContours(
         second_canny_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
-    second_contours = (
-        second_contours[0] if len(second_contours) == 2 else second_contours[1]
-    )
+    )[0]
     second_contour_area = sum(
         [
             cv2.contourArea(x)
@@ -642,13 +628,13 @@ logging.basicConfig(
     level=logging.getLevelName("INFO"),
 )
 # does_camera_move_all_in_folder("test_data/presenter_slide")
-input(
-    match_features(
-        "test_data/slide_new",
-        "test_data/presenter_slide_new",
-        do_motion_detection=False,
-    )
-)
+# input(
+#     match_features(
+#         "test_data/slide_new",
+#         "test_data/presenter_slide_new",
+#         do_motion_detection=False,
+#     )
+# )
 
 # first = cv2.imread("test_data/IJquEYhiq_U-img_038.jpg")
 # second = cv2.imread("test_data/IJquEYhiq_U-img_043.jpg")
