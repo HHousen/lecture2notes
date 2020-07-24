@@ -105,16 +105,23 @@ def main(ARGS):
 
             if ARGS.remove_duplicates:
                 import imghash
-                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Remove 'presenter_slide' duplicates")
+
+                logger.info(
+                    "Stage 4 (Duplicate Removal & Perspective Crop): Remove 'presenter_slide' duplicates"
+                )
                 imghash_start_time = timer()
 
                 images_hashed = imghash.sort_by_duplicates(PRESENTER_SLIDE_DIR)
                 imghash.remove_duplicates(PRESENTER_SLIDE_DIR, images_hashed)
 
                 imghash_end_time = timer() - imghash_start_time
-                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Remove 'presenter_slide' duplicates took %s", imghash_end_time)
+                logger.info(
+                    "Stage 4 (Duplicate Removal & Perspective Crop): Remove 'presenter_slide' duplicates took %s",
+                    imghash_end_time,
+                )
 
             import sift_matcher
+
             logger.info("Stage 4 (Duplicate Removal & Perspective Crop): SIFT Matching")
             siftmatch_start_time = timer()
 
@@ -123,7 +130,10 @@ def main(ARGS):
                 transformed_image_paths,
             ) = sift_matcher.match_features(SLIDES_NOBORDER_DIR, PRESENTER_SLIDE_DIR)
             siftmatch_end_time = timer() - siftmatch_start_time
-            logger.info("Stage 4 (Duplicate Removal & Perspective Crop): SIFT Matching took %s", siftmatch_end_time)
+            logger.info(
+                "Stage 4 (Duplicate Removal & Perspective Crop): SIFT Matching took %s",
+                siftmatch_end_time,
+            )
 
             # Remove all 'presenter_slide' images that are duplicates of 'slide' images
             # and all 'slide' images that are better represented by a 'presenter_slide' image
@@ -142,7 +152,10 @@ def main(ARGS):
                 copy_all(transformed_image_paths, IMGS_TO_CLUSTER_DIR)
             else:
                 import corner_crop_transform
-                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Corner Crop Transform")
+
+                logger.info(
+                    "Stage 4 (Duplicate Removal & Perspective Crop): Corner Crop Transform"
+                )
                 cornercrop_start_time = timer()
 
                 cropped_imgs_paths = corner_crop_transform.all_in_folder(
@@ -151,7 +164,10 @@ def main(ARGS):
                 copy_all(cropped_imgs_paths, IMGS_TO_CLUSTER_DIR)
 
                 cornercrop_end_time = timer() - cornercrop_start_time
-                logger.info("Stage 4 (Duplicate Removal & Perspective Crop): Corner Crop Transform took %s", cornercrop_end_time)
+                logger.info(
+                    "Stage 4 (Duplicate Removal & Perspective Crop): Corner Crop Transform took %s",
+                    cornercrop_end_time,
+                )
 
         end_time = timer() - start_time
         logger.info("Stage 4 (Perspective Crop) took %s", end_time)
@@ -198,7 +214,7 @@ def main(ARGS):
         end_time = timer() - start_time
         logger.info("Stage 5 (Cluster Slides) took %s", end_time)
 
-    # 6. OCR Slides
+    # 6. Slide Structure Analysis (SSA) and OCR Slides
     if ARGS.skip_to <= 6:
         start_time = timer()
         if ARGS.skip_to >= 6:  # if step 5 (cluster slides) was skipped
@@ -206,15 +222,17 @@ def main(ARGS):
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
         import ocr
+        import slide_structure_analysis
 
-        OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "ocr.txt"
-        OCR_RESULTS = ocr.all_in_folder(BEST_SAMPLES_DIR)
+        RAW_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
+        JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
+        RAW_TEXT, JSON_DATA = slide_structure_analysis.all_in_folder(BEST_SAMPLES_DIR)
         if "ocr" in ARGS.spell_check:
-            OCR_RESULTS = spell_checker.check_all(OCR_RESULTS)
-        ocr.write_to_file(OCR_RESULTS, OCR_OUTPUT_FILE)
+            RAW_TEXT = spell_checker.check_all(RAW_TEXT)
+        ocr.write_to_file(RAW_TEXT, JSON_DATA, RAW_OUTPUT_FILE, JSON_OUTPUT_FILE)
 
         end_time = timer() - start_time
-        logger.info("Stage 6 (OCR Slides) took %s", end_time)
+        logger.info("Stage 6 (SSA and OCR Slides) took %s", end_time)
 
     # 7. Extract figures
     if ARGS.skip_to <= 7:
