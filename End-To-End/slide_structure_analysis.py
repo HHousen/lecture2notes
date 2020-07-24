@@ -1,5 +1,7 @@
 import os
+import re
 import cv2
+import json
 import logging
 import pytesseract
 from PIL import Image
@@ -80,8 +82,12 @@ def identify_title(
         tesseract_df["block_num"].max() == tesseract_df["block_num"].min()
         and tesseract_df["par_num"].max() == tesseract_df["par_num"].min()
     ):
-        enabled_checks = [x for x in enabled_checks if x != "large_stroke_width" and x != "large_height"]
-    
+        enabled_checks = [
+            x
+            for x in enabled_checks
+            if x != "large_stroke_width" and x != "large_height"
+        ]
+
     # Start by selecting the first block and first paragraph in that block
     first_block = tesseract_df[
         (tesseract_df["block_num"] == 1) & (tesseract_df["par_num"] == 1)
@@ -129,6 +135,7 @@ def analyze_structure(
     gamma=0.1,
     beta=0.2,
     orient="index",
+    extra_json=None,
 ):
     """[summary]
 
@@ -150,6 +157,8 @@ def analyze_structure(
             acceptable values can be found on the 
             `pandas.DataFrame.to_json documentation <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_json.html>`_. 
             Defaults to "index".
+        extra_json (dict, optional): Additional keys and values to add to the json output if
+            ``to_json`` is enabled. Defaults to None.
 
     Returns:
         pd.DataFrame or str or tuple or ``None``: The default is to return a pd.DataFrame. However, 
@@ -271,9 +280,21 @@ def analyze_structure(
     to_return = []
     if to_json:
         if type(to_json) is bool:
-            to_return.append(lines.to_json())
+            if extra_json:
+                lines_dict = lines.to_dict()
+                lines_dict.update(extra_json)
+                json_data = json.dumps(lines_dict)
+            else:
+                json_data = lines.to_json()
+            to_return.append(json_data)
         else:
-            lines.to_json(to_json, orient=orient)
+            if extra_json:
+                json_data = json.loads(lines.to_json(to_json, orient=orient))
+                json_data.update(extra_json)
+                with open(to_json, "w+") as json_file:
+                    json.dump(json_data, json_file)
+            else:
+                json_data = lines.to_json(to_json, orient=orient)
             to_return.append(to_json)
     else:
         to_return.append(lines)
@@ -310,7 +331,11 @@ def all_in_folder(path, **kwargs):
         current_path = os.path.join(path, item)
         if os.path.isfile(current_path):
             image = cv2.imread(current_path)
-            analyze_structure_outputs = analyze_structure(image, to_json=True, **kwargs)
+            frame_number = re.search("(?<=\_)[0-9]+(?=\_|.)", current_path).group(0)
+            frame_number = int(frame_number)
+            analyze_structure_outputs = analyze_structure(
+                image, to_json=True, extra_json={"frame_number": frame_number}, **kwargs
+            )
             if analyze_structure_outputs is not None:
                 json_text, raw_text = analyze_structure_outputs
                 raw_texts.append(raw_text)
@@ -351,5 +376,5 @@ def write_to_file(raw_texts, json_texts, raw_save_file, json_save_file):
 
 # analyze_structure(cv2.imread("test_data/MIT2_627F13_lec04-11.png"), "test.json")
 
-# outputs = all_in_folder("test_data")
-# write_to_file(outputs[0], outputs[1], "remove1.txt", "remove2.json")
+outputs = all_in_folder("test_data")
+write_to_file(outputs[0], outputs[1], "remove1.txt", "remove2.json")
