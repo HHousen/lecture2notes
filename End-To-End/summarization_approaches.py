@@ -1,11 +1,12 @@
 import logging
 import sys
+import json
 import os
 import spacy
 import math
 from time import time
 from tqdm import tqdm
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 from operator import attrgetter, itemgetter
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -35,7 +36,7 @@ from sumy.utils import get_stop_words
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
-sys.path.insert(1, os.path.join(sys.path[0], '../Models/summarizer'))
+sys.path.insert(1, os.path.join(os.getcwd(), '../Models/summarizer'))
 
 logger = logging.getLogger(__name__)
 
@@ -437,7 +438,7 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
     if cluster_summarizer == "abstractive":
         summarizer_content = initialize_abstractive_model("bart")
     if title_generation:
-        summarizer_title = initialize_abstractive_model("bart", pretrained="bart.large.xsum", hg_transformers=False)
+        summarizer_title = initialize_abstractive_model("facebook/bart-large-xsum")
 
     for idx, cluster in tqdm(enumerate(sentence_clusters), desc="Summarizing Clusters", total=len(sentence_clusters)):
         if cluster_summarizer == "extractive":
@@ -474,7 +475,7 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
         if title_generation:
             # generate a title by running the 
             title = generic_abstractive(cluster_unsummarized_sentences, summarizer_title,
-                                        min_length=1, max_length_b=10)
+                                        min_length=1, max_length=10)
             titles.append(title)
 
     if cluster_summarizer == "extractive":
@@ -495,21 +496,26 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
 
     return final_sentences
     
-def initialize_abstractive_model(sum_model, *args, **kwargs):
+def initialize_abstractive_model(sum_model, use_hf_pipeline=True, *args, **kwargs):
     logger.debug("Loading " + sum_model + " model")
-    if sum_model == "bart":
-        import bart_sum
-        SUMMARIZER = bart_sum.BartSumSummarizer(*args, **kwargs)
-    elif sum_model == "presumm":
-        import presumm.presumm as presumm
-        SUMMARIZER = presumm.PreSummSummarizer(*args, **kwargs)
+    if use_hf_pipeline:
+        if sum_model == "bart":
+            sum_model = "sshleifer/distilbart-cnn-12-6"
+        SUMMARIZER = pipeline("summarization", model=sum_model, tokenizer="facebook/bart-large-cnn")
     else:
-        logger.error("Valid model was not specified in `sum_model`. Returning -1.")
-        return -1
+        if sum_model == "bart":
+            import bart_sum
+            SUMMARIZER = bart_sum.BartSumSummarizer(*args, **kwargs)
+        elif sum_model == "presumm":
+            import presumm.presumm as presumm
+            SUMMARIZER = presumm.PreSummSummarizer(*args, **kwargs)
+        else:
+            logger.error("Valid model was not specified in `sum_model`. Returning -1.")
+            return -1
     logger.debug(sum_model + " model loaded successfully")
     return SUMMARIZER
 
-def generic_abstractive(to_summarize, summarizer=None, min_length=None, max_length_b=None, *args, **kwargs):
+def generic_abstractive(to_summarize, summarizer=None, min_length=None, max_length=None, *args, **kwargs):
     if isinstance(summarizer, str):
         summarizer = initialize_abstractive_model(summarizer, *args, **kwargs)
     if not summarizer:
@@ -518,12 +524,15 @@ def generic_abstractive(to_summarize, summarizer=None, min_length=None, max_leng
     if not min_length:
         TO_SUMMARIZE_LENGTH = len(to_summarize.split())
         min_length = int(TO_SUMMARIZE_LENGTH/6)
-        if min_length > 500:
+        if min_length > 512:
             # If the length is too long the model will start to repeat
-            min_length = 500
-    if not max_length_b:
-        max_length_b = min_length+200
-    LECTURE_SUMMARIZED = summarizer.summarize_string(to_summarize, min_len=min_length, max_len_b=max_length_b)
+            min_length = 512
+    if not max_length:
+        max_length = min_length+200
+    LECTURE_SUMMARIZED = summarizer(to_summarize, min_length=min_length, max_length=max_length)
+    
+    if type(LECTURE_SUMMARIZED) is list:  # hf pipeline was used
+        return LECTURE_SUMMARIZED[0]["summary_text"]
 
     return LECTURE_SUMMARIZED
 
@@ -563,3 +572,120 @@ def generic_extractive_sumy(text, coverage_percentage=0.70, algorithm="text_rank
     sentence_list = [str(sentence) for sentence in summarizer(parser.document, NUM_SENTENCES_IN_SUMMARY)]
 
     return " ".join(sentence_list)
+
+def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, ending_char=" ", to_json=False, summarization_method="abstractive", *args, **kwargs):
+    """Summarize slides by combining the Slide Structure Analysis (SSA) and transcript json 
+    to create a per slide summary of the transcript. The content from the beginning of one 
+    slide to the start of the next to the nearest ``ending_char`` is considered the transcript 
+    that belongs to that slide. The summarized transcript content is organzed in a dictionary 
+    where the slide titles are keys. This dictionary can be returned as json or written to a 
+    json file.
+
+    Args:
+        ssa_path (str): Path to the SSA JSON file.
+        transcript_json_path (str): Path to the transcript JSON file.
+        frame_every_x (int, optional): How often frames were extracted from the video that the SSA
+            was conducted on. This is used to convert frame numbers to time (seconds). Defaults to 1.
+        ending_char (str, optional): The character that the transcript belonging to each slide will
+            be extended to. For instance, if the next slide appears in the middle of a word, the 
+            transcript content will continue to be added to the previous slide until the 
+            ``ending_char`` is reached. It is recommended to use  periods or a special end of 
+            sentence token if present. These can be generated with 
+            :meth:`transcribe.transcribe_main.segment_sentences` Defaults to ``" "`` (nearest 
+            complete word).
+        to_json (bool or str, optional): If the output dictionary should be returned as a JSON string. 
+            This can also be set to a path as a string and the JSON data will be dumped to the file 
+            at that path. Defaults to False.
+        summarization_method (str, optional): The method to use to summarize each slide's 
+            transcript content. Options include "abstractive", "extractive", or "none". Defaults 
+            to "abstractive".
+        ``*args`` and ``**kwargs`` are passed to the summarization function, which is either
+            :meth:`~summarization_approaches.generic_abstractive` or 
+            :meth:`~summarization_approaches.generic_extractive_sumy` depending on 
+            ``summarization_method``.
+
+    Returns:
+        dict or str: A dictionary containing the slide titles as keys and the summarized transcript 
+        content for each slide as values. A string will be returned when ``to_json`` is set. If 
+        ``to_json`` is ``True`` (boolean) the JSON data formatted as a string will be returned. 
+        If ``to_json`` is a path (string), then the JSON data will be dumped to the file specified
+        and the path to the file will be returned.
+    """
+    assert summarization_method in ["abstractive", "extractive", "none"], "Invalid summarization method"
+    
+    with open(ssa_path, "r") as ssa_file, open(transcript_json_path, "r") as transcript_json_file:
+        ssa = json.load(ssa_file)
+        transcript_json = json.load(transcript_json_file)
+    
+    transcript_json_idx = 0
+    current_time = 0
+
+    first_slide_timestamp_seconds = ssa[0]["frame_number"] * frame_every_x
+    transcript_before_slides = ""
+    while True:
+        current_letter_obj = transcript_json[transcript_json_idx]
+        if current_time >= first_slide_timestamp_seconds and current_letter_obj["text"] == ending_char:
+            break
+        current_time = current_letter_obj["start_time"]
+        transcript_before_slides += current_letter_obj["text"]
+        transcript_json_idx += 1
+
+    final_dict = OrderedDict({"Preface": transcript_before_slides})
+
+    go_to_end = False
+    for idx, slide in tqdm(enumerate(ssa), total=len(ssa), desc="Grouping Slides and Transcript"):
+        title_lines = [i for i, x in slide["category"].items() if x == 2]
+
+        title = " ".join([slide["text"][line] for line in title_lines]).strip()
+        if not title:
+            title = "Slide {}".format(idx + 1)
+        
+        try:
+            ssa[idx + 1]
+            next_slide_timestamp_seconds = ssa[idx + 1]["frame_number"] * frame_every_x
+        except IndexError:  # Last item
+            go_to_end = True
+
+        coresponding_transcript_text = ""
+        while True:
+            # If `transcript_json` out of items break the loop
+            if transcript_json_idx == len(transcript_json):
+                break
+            
+            current_letter_obj = transcript_json[transcript_json_idx]
+
+            # If `go_to_end` enabled then never break using this statement.
+            # If the current time is past the next slide time advance to the next slide.
+            # However, jump forward a few letter if necessary in order to end the current
+            # transcript-slide segment with `endding_char`.
+            if (not go_to_end) and (current_time >= next_slide_timestamp_seconds and current_letter_obj["text"] == ending_char):
+                break    
+    
+            current_time = current_letter_obj["start_time"]
+            coresponding_transcript_text += current_letter_obj["text"]
+            transcript_json_idx += 1
+        
+        final_dict[title] = coresponding_transcript_text
+    
+    if summarization_method not in ["none", None]:
+        if summarization_method == "abstractive":
+            summarizer = initialize_abstractive_model("bart")
+
+        for title, content in tqdm(final_dict.items(), desc="Summarizing Slides"):
+            if summarization_method == "abstractive":
+                final_dict[title] = generic_abstractive(content, summarizer, *args, **kwargs)
+            else:
+                final_dict[title] = generic_extractive_sumy(content, *args, **kwargs)
+        
+    input(final_dict)
+    if to_json:
+        if type(to_json) is bool:
+            return json.dumps(final_dict)
+        else:
+            with open(to_json, "w+") as json_file:
+                json.dump(final_dict, json_file)
+                return to_json
+    return final_dict
+
+
+# structured_joined_sum("remove2.json", "process/audio.json")

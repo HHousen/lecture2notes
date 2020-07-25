@@ -376,5 +376,5 @@ def write_to_file(raw_texts, json_texts, raw_save_file, json_save_file):
 
 # analyze_structure(cv2.imread("test_data/MIT2_627F13_lec04-11.png"), "test.json")
 
-outputs = all_in_folder("test_data")
-write_to_file(outputs[0], outputs[1], "remove1.txt", "remove2.json")
+# outputs = all_in_folder("test_data")
+# write_to_file(outputs[0], outputs[1], "remove1.txt", "remove2.json")
