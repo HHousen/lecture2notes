@@ -262,6 +262,8 @@ def main(ARGS):
         EXTRACT_FROM_VIDEO = ARGS.video_path
         AUDIO_PATH = ROOT_PROCESS_FOLDER / "audio.wav"
         TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
+        TRANSCRIPT_JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.json"
+        TRANSCRIPT_JSON = None
 
         YT_TRANSCRIPTION_FAILED = False
 
@@ -287,7 +289,7 @@ def main(ARGS):
                 if ARGS.chunk == "silence":
                     CHUNK_DIR = ROOT_PROCESS_FOLDER / "chunks"
                     transcribe.chunk_by_silence(AUDIO_PATH, CHUNK_DIR)
-                    TRANSCRIPT = transcribe.process_chunks(
+                    TRANSCRIPT, TRANSCRIPT_JSON = transcribe.process_chunks(
                         CHUNK_DIR,
                         model_dir=ARGS.deepspeech_model_dir,
                         method=ARGS.transcription_method,
@@ -301,7 +303,7 @@ def main(ARGS):
                     segments, _, audio_length = transcribe.chunk_by_speech(
                         AUDIO_PATH, desired_sample_rate=desired_sample_rate
                     )
-                    TRANSCRIPT = transcribe.process_segments(
+                    TRANSCRIPT, TRANSCRIPT_JSON = transcribe.process_segments(
                         segments, ds_model, audio_length=audio_length
                     )
 
@@ -310,10 +312,10 @@ def main(ARGS):
                         ARGS.transcription_method == "deepspeech"
                         or YT_TRANSCRIPTION_FAILED
                     ):
-                        TRANSCRIPT = transcribe.transcribe_audio_deepspeech(
+                        TRANSCRIPT, TRANSCRIPT_JSON = transcribe.transcribe_audio_deepspeech(
                             AUDIO_PATH, ARGS.deepspeech_model_dir
                         )
-                        TRANSCRIPT = transcribe.segment_sentences(TRANSCRIPT)
+                        TRANSCRIPT, TRANSCRIPT_JSON = transcribe.segment_sentences(TRANSCRIPT, TRANSCRIPT_JSON)
                     else:
                         TRANSCRIPT = transcribe.transcribe_audio(
                             AUDIO_PATH, method=ARGS.transcription_method
@@ -327,7 +329,13 @@ def main(ARGS):
 
         if "transcript" in ARGS.spell_check:
             TRANSCRIPT = spell_checker.check(TRANSCRIPT)
-        transcribe.write_to_file(TRANSCRIPT, TRANSCRIPT_OUTPUT_FILE)
+        
+        transcribe.write_to_file(
+            TRANSCRIPT,
+            TRANSCRIPT_OUTPUT_FILE,
+            TRANSCRIPT_JSON,
+            TRANSCRIPT_JSON_OUTPUT_FILE,
+        )
 
         end_time = timer() - start_time
         logger.info("Stage 8 (Transcribe Audio) took %s", end_time)
@@ -337,10 +345,9 @@ def main(ARGS):
         start_time = timer()
 
         if ARGS.skip_to >= 6:  # if step 8 transcription or step 5 ocr was skipped
-            OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "ocr.txt"
-            OCR_FILE = open(OCR_OUTPUT_FILE, "r")
-            OCR_RESULTS_FLAT = OCR_FILE.read()
-            OCR_FILE.close()
+            OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
+            with open(OCR_OUTPUT_FILE, "r") as OCR_FILE:
+                OCR_RESULTS_FLAT = OCR_FILE.read()
 
             from transcribe import transcribe
 

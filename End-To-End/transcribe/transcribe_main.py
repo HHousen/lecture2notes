@@ -1,5 +1,6 @@
 import os
 import glob
+import json
 import shlex
 import wave
 import contextlib
@@ -23,6 +24,7 @@ except ImportError:
     from pipes import quote
 
 logger = logging.getLogger(__name__)
+
 
 def extract_audio(video_path, output_path):
     """Extracts audio from video at ``video_path`` and saves it to ``output_path``"""
@@ -54,7 +56,7 @@ def transcribe_audio(audio_path, method="sphinx"):
     transcript = None
     logger.debug("Initializing speech_recognition library")
     r = sr.Recognizer()
-    
+
     with sr.AudioFile(str(audio_path)) as source:
         audio = r.record(source)
 
@@ -72,7 +74,7 @@ def transcribe_audio(audio_path, method="sphinx"):
         logger.error("Could not understand audio")
     except sr.RequestError as e:
         logger.error("Error; {0}".format(e))
-    
+
     return transcript
 
 
@@ -135,17 +137,17 @@ def write_wave(path, audio, sample_rate):
         wf.writeframes(audio)
 
 
-def segment_sentences(text):
+def segment_sentences(text, text_json=None):
     """Detect sentence boundaries without punctuation or capitalization.
 
     Arguments:
-        text {str}: The string to segment by sentence
+        text (str): The string to segment by sentence
 
     Returns:
         [str]: The punctuated string
     """
     from deepsegment import DeepSegment
-    
+
     logger.info("Segmenting transcript using linguistic features...")
     inference_start = timer()
 
@@ -160,9 +162,21 @@ def segment_sentences(text):
     )
 
     # add periods after each predicted sentence boundary
-    final_text = ". ".join(segmented_text)
+    final_text = ". ".join(segmented_text).strip()
 
-    return final_text.strip()
+    if text_json is not None:
+        boundaries = [len(sentence) for sentence in segmented_text]
+        boundaries = [x for x in boundaries]
+        text_dict = json.loads(text_json)
+        for idx, boundary in enumerate(boundaries):
+            if idx != 0:
+                boundary += boundaries[idx - 1] + 2
+                boundaries[idx] = boundary
+            text_dict.insert(boundary, {"text": "."})
+
+        return final_text, json.dumps(text_dict)
+
+    return final_text
 
 
 def metadata_to_string(metadata):
@@ -170,17 +184,24 @@ def metadata_to_string(metadata):
     return "".join(token.text for token in metadata.tokens)
 
 
-def metadata_json_output(metadata):
-    """ Helper function to handle metadata json from deepspeech """
-    json_result = dict()
-    json_result["transcripts"] = [
-        {
-            "confidence": transcript.confidence,
-            "words": words_from_candidate_transcript(transcript),
-        }
-        for transcript in metadata.transcripts
-    ]
-    return json.dumps(json_result, indent=2)
+def metadata_to_json(candidate_transcript):
+    json_result = {
+        "confidence": candidate_transcript.confidence,
+        "tokens": [
+            {
+                "start_time": token.start_time,
+                "text": token.text,
+                "timestep": token.timestep,
+            }
+            for token in candidate_transcript.tokens
+        ],
+    }
+    return json_result
+
+
+def metadata_to_list(candidate_transcript):
+    json = metadata_to_json(candidate_transcript)
+    return json["tokens"]
 
 
 def convert_samplerate(audio_path, desired_sample_rate):
@@ -265,7 +286,7 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
 
 
 def transcribe_audio_deepspeech(
-    audio_path_or_data, model, raw_audio_data=False, method=None
+    audio_path_or_data, model, raw_audio_data=False, json_num_transcripts=None
 ):
     """Transcribe an audio file or pcm data with the deepspeech model
 
@@ -277,11 +298,12 @@ def transcribe_audio_deepspeech(
             containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`)
         raw_audio_data (bool, optional): must be True if ``audio_path_or_data`` is 
             raw pcm data. Defaults to False.
-        method (str, optional): which method of the deepspeech model to use for speech-to-text.
-            the default is ``model.stt()``. Defaults to None.
+        json_num_transcripts (str, optional): Specify this value to generate multiple transcipts 
+            in json format.
 
     Returns:
-        [str]: the transcribed audio file in string format
+        [tuple]: (transcript_text, transcript_json) the transcribed audio file in string format 
+        and the transcript in json
     """
     if isinstance(model, str):
         model = load_deepspeech_model(model)
@@ -299,24 +321,46 @@ def transcribe_audio_deepspeech(
 
     logger.debug("Transcribing audio file...")
     inference_start = timer()
-    if method == "extended":
-        transcript = metadata_to_string(model.sttWithMetadata(audio, 1).transcripts[0])
-    elif method == "json":
-        transcript = metadata_json_output(model.sttWithMetadata(audio, 3))
+    if json_num_transcripts and json_num_transcripts > 1:
+        model_output_metadata = model.sttWithMetadata(audio, json_num_transcripts)
+        transcript_json = json.dumps(
+            {
+                "transcripts": [
+                    metadata_to_list(candidate_transcript)
+                    for candidate_transcript in model_output_metadata
+                ]
+            }
+        )
+        model_output_metadata = model_output_metadata.transcripts[0]
     else:
-        transcript = model.stt(audio)
+        model_output_metadata = model.sttWithMetadata(audio, 1).transcripts[0]
+        transcript_json = json.dumps(metadata_to_list(model_output_metadata))
+
+    transcript_text = metadata_to_string(model_output_metadata)
+
     inference_end = timer() - inference_start
     logger.debug("Inference (transcription) took %0.3fs." % inference_end)
 
-    return transcript
+    return transcript_text, transcript_json
 
 
-def write_to_file(results, save_file):
-    """ Write ``results`` to ``save_file`` in append mode. """
-    file_results = open(save_file, "a+")
-    logger.info("Writing results to file " + str(save_file))
-    file_results.write(results)
-    file_results.close()
+def write_to_file(
+    transcript,
+    transcript_save_file,
+    transcript_json=None,
+    transcript_json_save_path=None,
+):
+    """ Write ``results`` to ``save_file``."""
+    with open(transcript_save_file, "w+") as file_results:
+        logger.info("Writing text transcript to file " + str(transcript_save_file))
+        file_results.write(transcript)
+
+    if transcript_json and transcript_json_save_path:
+        with open(transcript_json_save_path, "w+") as file_results:
+            logger.info(
+                "Writing JSON transcript to file " + str(transcript_json_save_path)
+            )
+            file_results.write(transcript_json)
 
 
 def chunk_by_speech(
@@ -365,7 +409,9 @@ def chunk_by_speech(
     return segments, sample_rate, audio_length
 
 
-def process_segments(segments, ds_model, audio_length="unknown", do_segment_sentences=True):
+def process_segments(
+    segments, ds_model, audio_length="unknown", do_segment_sentences=True
+):
     """Transcribe a list of byte strings containing pcm data
 
     Args:
@@ -382,7 +428,9 @@ def process_segments(segments, ds_model, audio_length="unknown", do_segment_sent
         ds_model = load_deepspeech_model(ds_model)
 
     full_transcript = ""
+    full_transcript_json = []
     start_time = timer()
+    json_detected = False
 
     # `segments` is a generator so total length is not known
     # also, this means that the audio file is split on voice activity as needed
@@ -390,10 +438,17 @@ def process_segments(segments, ds_model, audio_length="unknown", do_segment_sent
     for i, segment in tqdm(enumerate(segments), desc="Processing Segments"):
         # Run deepspeech on each chunk which completed VAD
         audio = np.frombuffer(segment, dtype=np.int16)
-        transcript = transcribe_audio_deepspeech(segment, ds_model, raw_audio_data=True)
+        transcript, transcript_json = transcribe_audio_deepspeech(
+            segment, ds_model, raw_audio_data=True
+        )
         logging.debug("Chunk Transcript: %s" % transcript)
 
+        full_transcript_json.extend(json.loads(transcript_json))
+
         full_transcript += transcript + " "
+
+    # Convert `full_transcript_json` to json string
+    full_transcript_json = json.dumps(full_transcript_json)
 
     total_time = timer() - start_time
     logger.info(
@@ -406,9 +461,11 @@ def process_segments(segments, ds_model, audio_length="unknown", do_segment_sent
     logger.info("The above time includes time spent determining voice activity.")
 
     if do_segment_sentences:
-        full_transcript = segment_sentences(full_transcript)
+        full_transcript, full_transcript_json = segment_sentences(
+            full_transcript, full_transcript_json
+        )
 
-    return full_transcript
+    return full_transcript, full_transcript_json
 
 
 def chunk_by_silence(
@@ -463,6 +520,7 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
     chunks = os.listdir(chunk_dir)
     chunks.sort()
     full_transcript = ""
+    full_transcript_json = []
 
     for chunk in tqdm(chunks, desc="Processing Chunks"):
         if chunk.endswith(".wav"):
@@ -470,12 +528,20 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
             if method == "deepspeech":
                 assert model_dir is not None
                 ds_model = load_deepspeech_model(model_dir)
-                transcript = transcribe_audio_deepspeech(chunk_path, ds_model)
+                transcript, transcript_json = transcribe_audio_deepspeech(
+                    chunk_path, ds_model
+                )
+                full_transcript_json.extend(json.loads(transcript_json))
             else:
                 transcript = transcribe_audio(chunk_path, method)
             full_transcript += transcript + " "
 
-    return full_transcript
+    # Convert `full_transcript_json` to json string if it contains any items
+    if full_transcript_json:
+        full_transcript_json = json.dumps(full_transcript_json)
+        return full_transcript, full_transcript_json
+
+    return full_transcript, None
 
 
 def caption_file_to_string(transcript_path, remove_speakers=False):
