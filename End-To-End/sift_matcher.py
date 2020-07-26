@@ -11,6 +11,7 @@ from tqdm import tqdm
 from imutils import auto_canny
 from corner_crop_transform import persp_transform
 from figure_detection import convert_coords_to_corners, area_of_overlapping_rectangles
+from helpers import frame_number_from_filename
 
 logger = logging.getLogger(__name__)
 
@@ -433,7 +434,7 @@ def match_features(
     # The regex selects the number between an underscore and an underscore
     # or a period. This will match filenames like "IJquEYhiq_U-img_050_noborder.jpg"
     # and "IJquEYhiq_U-img_140.jpg".
-    regex_sort = lambda o: re.search("(?<=\_)[0-9]+(?=\_|.)", o[0]).group(0)
+    regex_sort = lambda o: frame_number_from_filename(o[0])
     images = sorted(images, key=regex_sort)
 
     non_unique_presenter_slides = []

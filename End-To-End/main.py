@@ -2,6 +2,7 @@
 
 import sys
 import os
+import json
 import argparse
 import logging
 import spacy
@@ -221,7 +222,6 @@ def main(ARGS):
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
-        import ocr
         import slide_structure_analysis
 
         RAW_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
@@ -229,7 +229,7 @@ def main(ARGS):
         RAW_TEXT, JSON_DATA = slide_structure_analysis.all_in_folder(BEST_SAMPLES_DIR)
         if "ocr" in ARGS.spell_check:
             RAW_TEXT = spell_checker.check_all(RAW_TEXT)
-        ocr.write_to_file(RAW_TEXT, JSON_DATA, RAW_OUTPUT_FILE, JSON_OUTPUT_FILE)
+        slide_structure_analysis.write_to_file(RAW_TEXT, JSON_DATA, RAW_OUTPUT_FILE, JSON_OUTPUT_FILE)
 
         end_time = timer() - start_time
         logger.info("Stage 6 (SSA and OCR Slides) took %s", end_time)
@@ -237,18 +237,26 @@ def main(ARGS):
     # 7. Extract figures
     if ARGS.skip_to <= 7:
         start_time = timer()
-        if ARGS.skip_to >= 7:  # if step 6 (border removal) was skipped
+        if ARGS.skip_to >= 7:  # if step 6 (ssa and ocr) was skipped
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
-            REMOVED_BORDERS_DIR = CLUSTER_DIR / "best_samples_no_border"
+            BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
+            JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
 
         FIGURES_DIR = CLUSTER_DIR / "best_samples_figures"
         os.makedirs(FIGURES_DIR, exist_ok=True)
 
         import figure_detection
 
-        FIGURE_PATHS = figure_detection.all_in_folder(REMOVED_BORDERS_DIR)
+        FIGURE_PATHS = figure_detection.all_in_folder(BEST_SAMPLES_DIR)
         copy_all(FIGURE_PATHS, FIGURES_DIR, move=True)
+
+        if os.path.isfile(JSON_OUTPUT_FILE):
+            with open(JSON_OUTPUT_FILE, "r") as ssa_json_file:
+                ssa = json.load(ssa_json_file)
+                ssa = figure_detection.add_figures_to_ssa(ssa, FIGURES_DIR)
+            with open(JSON_OUTPUT_FILE, "w") as ssa_json_file:
+                json.dump(ssa, ssa_json_file)
 
         end_time = timer() - start_time
         logger.info("Stage 7 (Extract Figures) took %s", end_time)

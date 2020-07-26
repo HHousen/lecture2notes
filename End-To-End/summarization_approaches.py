@@ -626,15 +626,51 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
         current_letter_obj = transcript_json[transcript_json_idx]
         if current_time >= first_slide_timestamp_seconds and current_letter_obj["text"] == ending_char:
             break
-        current_time = current_letter_obj["start_time"]
+        try:
+            current_time = current_letter_obj["start_time"]
+        except KeyError: # no `start_time` so use the previous value
+            pass
         transcript_before_slides += current_letter_obj["text"]
         transcript_json_idx += 1
 
-    final_dict = OrderedDict({"Preface": transcript_before_slides})
+    final_dict = OrderedDict({"Preface": {"transcript": transcript_before_slides}})
 
     go_to_end = False
     for idx, slide in tqdm(enumerate(ssa), total=len(ssa), desc="Grouping Slides and Transcript"):
         title_lines = [i for i, x in slide["category"].items() if x == 2]
+
+        all_slide_content = []
+        current_par_num = 0
+        prev_line_num = 0
+        for line_idx, line in slide["text"].items():
+            stored_line_num = slide["line_num"][line_idx]
+            # If the line number did not increase by 1 then assume a new paragraph
+            if stored_line_num != prev_line_num + 1:
+                current_par_num += 1
+            
+            # If the line is not footer text and is not a title
+            if slide["category"][line_idx] not in (-1, 2):
+                # If the line is bold then add "**" on either side
+                if slide["category"][line_idx] == 1:
+                    line = "**" + line + "**"
+                try:
+                    # If the previously added line was bold (it ended in "**")
+                    if all_slide_content[current_par_num][-2:] == "**":
+                        # Remove the first "**" from the line to be added
+                        line = line[2:]
+                        # Remove the last "**" from the previously added line
+                        all_slide_content[current_par_num] = all_slide_content[current_par_num][:-2]
+                    # Add the line to the current paragraph with a space to avoid combined words
+                    all_slide_content[current_par_num] += (" " + line)
+                except IndexError:  # Paragraph not yet created, so create it
+                    # Add the first line of a paragraph to `all_slide_content`
+                    all_slide_content.append(line)
+                
+                # Update the previous line number to the current line number
+                prev_line_num = stored_line_num
+        
+        # Only include paragraphs greater than 3 characters
+        all_slide_content = [x for x in all_slide_content if len(x) > 3]
 
         title = " ".join([slide["text"][line] for line in title_lines]).strip()
         if not title:
@@ -660,24 +696,31 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
             # transcript-slide segment with `endding_char`.
             if (not go_to_end) and (current_time >= next_slide_timestamp_seconds and current_letter_obj["text"] == ending_char):
                 break    
-    
-            current_time = current_letter_obj["start_time"]
+
+            try:
+                current_time = current_letter_obj["start_time"]
+            except KeyError: # no `start_time` so use the previous value
+                pass
+
             coresponding_transcript_text += current_letter_obj["text"]
             transcript_json_idx += 1
         
-        final_dict[title] = coresponding_transcript_text
-    
-    if summarization_method not in ["none", None]:
+        final_dict[title] = {"transcript": coresponding_transcript_text.strip()}
+        final_dict[title]["slide_content"] = all_slide_content
+        if "figure_paths" in slide.keys():
+            final_dict[title]["figure_paths"] = slide["figure_paths"]
+
+    if summarization_method not in ("none", None):
         if summarization_method == "abstractive":
             summarizer = initialize_abstractive_model("bart")
 
         for title, content in tqdm(final_dict.items(), desc="Summarizing Slides"):
+            content = content["transcript"]
             if summarization_method == "abstractive":
-                final_dict[title] = generic_abstractive(content, summarizer, *args, **kwargs)
+                final_dict[title]["transcript"] = generic_abstractive(content, summarizer, *args, **kwargs)
             else:
-                final_dict[title] = generic_extractive_sumy(content, *args, **kwargs)
-        
-    input(final_dict)
+                final_dict[title]["transcript"] = generic_extractive_sumy(content, *args, **kwargs)
+
     if to_json:
         if type(to_json) is bool:
             return json.dumps(final_dict)
@@ -685,6 +728,7 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
             with open(to_json, "w+") as json_file:
                 json.dump(final_dict, json_file)
                 return to_json
+    
     return final_dict
 
 

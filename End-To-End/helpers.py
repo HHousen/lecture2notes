@@ -1,4 +1,5 @@
 import os
+import re
 import hashlib
 import shutil
 import logging
@@ -33,3 +34,22 @@ def copy_all(list_path_files, output_dir, move=False):
             remove_tree(str(list_path_files))
 
     return output_dir
+
+def frame_number_from_filename(filename):
+    return int(re.search("(?<=\_)[0-9]+(?=\_|.)", filename).group(0))
+
+def frame_number_filename_mapping(path):
+    figures = os.listdir(path)
+    figure_mapping = {}
+
+    for figure_filename in figures:
+        figure_path = os.path.join(path, figure_filename)
+        frame_number = frame_number_from_filename(figure_filename)
+        try:
+            figure_mapping[frame_number].append(figure_path)
+        except KeyError:
+            figure_mapping[frame_number] = [figure_path]
+
+    return figure_mapping
+
+# frame_number_filename_mapping("process/frames_sorted/slide_clusters/best_samples_figures")

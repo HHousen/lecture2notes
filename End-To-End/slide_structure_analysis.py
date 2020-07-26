@@ -16,6 +16,8 @@ from tqdm import tqdm
 from skimage.feature import peak_local_max
 from skimage import img_as_float
 
+from helpers import frame_number_from_filename
+
 prev_line_num = 0
 logger = logging.getLogger(__name__)
 
@@ -180,7 +182,7 @@ def analyze_structure(
 
     def add_line_info(row):
         """
-        Adds the global line number (``line_num`` independent of page/block/paragraph 
+        Adds the global line number (``line_num``) independent of page/block/paragraph 
         to each row.
         Inspired by https://stackoverflow.com/a/53118102.
         """
@@ -331,7 +333,7 @@ def all_in_folder(path, **kwargs):
         current_path = os.path.join(path, item)
         if os.path.isfile(current_path):
             image = cv2.imread(current_path)
-            frame_number = re.search("(?<=\_)[0-9]+(?=\_|.)", current_path).group(0)
+            frame_number = frame_number_from_filename(current_path)
             frame_number = int(frame_number)
             analyze_structure_outputs = analyze_structure(
                 image, to_json=True, extra_json={"frame_number": frame_number}, **kwargs

@@ -7,6 +7,8 @@ from PIL import Image, ImageStat
 from imutils import auto_canny
 from skimage.measure.entropy import shannon_entropy
 from text_detection import get_text_bounding_boxes, load_east
+from helpers import frame_number_filename_mapping
+
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +361,20 @@ def all_in_folder(
                 os.remove(current_path)
     logger.debug("> Figure Detection: Returning figure paths")
     return figure_paths
+
+def add_figures_to_ssa(ssa, figures_path):
+    # If the SSA contains frame numbers
+    if "frame_number" in ssa[0].keys():
+        mapping = frame_number_filename_mapping(figures_path)
+
+        for idx, slide in enumerate(ssa):
+            current_slide_idx = slide["frame_number"]
+            try:
+                ssa[idx]["figure_paths"] = mapping[current_slide_idx]
+            except KeyError: # Ignore frames that have no figures
+                pass
+    
+    return ssa
 
 # import matplotlib.pyplot as plt
 # all_in_folder("delete/")
