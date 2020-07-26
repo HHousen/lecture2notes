@@ -19,6 +19,7 @@ from summarization_approaches import (
     generic_abstractive,
     cluster,
     generic_extractive_sumy,
+    structured_joined_sum,
 )
 
 logger = logging.getLogger(__name__)
@@ -224,12 +225,12 @@ def main(ARGS):
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
         import slide_structure_analysis
 
-        RAW_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
-        JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
-        RAW_TEXT, JSON_DATA = slide_structure_analysis.all_in_folder(BEST_SAMPLES_DIR)
+        OCR_RAW_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
+        OCR_JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
+        OCR_RAW_TEXT, OCR_JSON_DATA = slide_structure_analysis.all_in_folder(BEST_SAMPLES_DIR)
         if "ocr" in ARGS.spell_check:
-            RAW_TEXT = spell_checker.check_all(RAW_TEXT)
-        slide_structure_analysis.write_to_file(RAW_TEXT, JSON_DATA, RAW_OUTPUT_FILE, JSON_OUTPUT_FILE)
+            OCR_RAW_TEXT = spell_checker.check_all(OCR_RAW_TEXT)
+        slide_structure_analysis.write_to_file(OCR_RAW_TEXT, OCR_JSON_DATA, OCR_RAW_OUTPUT_FILE, OCR_JSON_OUTPUT_FILE)
 
         end_time = timer() - start_time
         logger.info("Stage 6 (SSA and OCR Slides) took %s", end_time)
@@ -241,7 +242,7 @@ def main(ARGS):
             FRAMES_SORTED_DIR = ROOT_PROCESS_FOLDER / "frames_sorted"
             CLUSTER_DIR = FRAMES_SORTED_DIR / "slide_clusters"
             BEST_SAMPLES_DIR = CLUSTER_DIR / "best_samples"
-            JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
+            OCR_JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
 
         FIGURES_DIR = CLUSTER_DIR / "best_samples_figures"
         os.makedirs(FIGURES_DIR, exist_ok=True)
@@ -251,11 +252,11 @@ def main(ARGS):
         FIGURE_PATHS = figure_detection.all_in_folder(BEST_SAMPLES_DIR)
         copy_all(FIGURE_PATHS, FIGURES_DIR, move=True)
 
-        if os.path.isfile(JSON_OUTPUT_FILE):
-            with open(JSON_OUTPUT_FILE, "r") as ssa_json_file:
+        if os.path.isfile(OCR_JSON_OUTPUT_FILE):
+            with open(OCR_JSON_OUTPUT_FILE, "r") as ssa_json_file:
                 ssa = json.load(ssa_json_file)
                 ssa = figure_detection.add_figures_to_ssa(ssa, FIGURES_DIR)
-            with open(JSON_OUTPUT_FILE, "w") as ssa_json_file:
+            with open(OCR_JSON_OUTPUT_FILE, "w") as ssa_json_file:
                 json.dump(ssa, ssa_json_file)
 
         end_time = timer() - start_time
@@ -352,26 +353,42 @@ def main(ARGS):
     if ARGS.skip_to <= 9:
         start_time = timer()
 
-        if ARGS.skip_to >= 6:  # if step 8 transcription or step 5 ocr was skipped
-            OCR_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
-            with open(OCR_OUTPUT_FILE, "r") as OCR_FILE:
+        if ARGS.skip_to >= 7:  # if step 8 transcription or step 6 ocr was skipped
+            OCR_RAW_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
+            with open(OCR_RAW_OUTPUT_FILE, "r") as OCR_FILE:
                 OCR_RESULTS_FLAT = OCR_FILE.read()
+            OCR_JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
 
-            from transcribe import transcribe
+            from transcribe import transcribe_main as transcribe
 
             TRANSCRIPT_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.txt"
-            TRANSCRIPT_FILE = open(TRANSCRIPT_OUTPUT_FILE, "r")
-            TRANSCRIPT = TRANSCRIPT_FILE.read()
-            TRANSCRIPT_FILE.close()
+            with open(TRANSCRIPT_OUTPUT_FILE, "r") as TRANSCRIPT_FILE:
+                TRANSCRIPT = TRANSCRIPT_FILE.read()
+            TRANSCRIPT_JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "audio.json"
+
+            EXTRACT_EVERY_X_SECONDS = 1
         else:
             OCR_RESULTS_FLAT = " ".join(
-                OCR_RESULTS
+                OCR_RAW_TEXT
             )  # converts list of strings into one string where each item is separated by a space
         LECTURE_SUMMARIZED_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "summarized.txt"
+        LECTURE_SUMMARIZED_STRUCTURED_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "summarized.json"
 
         OCR_RESULTS_FLAT = OCR_RESULTS_FLAT.replace("\n", " ").replace(
             "\r", ""
         )  # remove line breaks
+
+        if ARGS.summarization_structured != "none" and ARGS.summarization_structured is not None:
+            logger.info("Stage 9 (Summarization): Structured Summarization")
+            ss_start_time = timer()
+            
+            if ARGS.summarization_structured == "structured_joined":
+                structured_joined_sum(OCR_JSON_OUTPUT_FILE, TRANSCRIPT_JSON_OUTPUT_FILE, frame_every_x=EXTRACT_EVERY_X_SECONDS, ending_char=".", to_json=LECTURE_SUMMARIZED_STRUCTURED_OUTPUT_FILE)
+            
+            ss_end_time = timer() - ss_start_time
+            logger.info("Stage 9 (Summarization): Structured took %s", ss_end_time)
+        else:
+            logger.info("Skipping structured summarization.")
 
         # Combination Algorithm
         logger.info("Stage 9 (Summarization): Combination Algorithm")
@@ -536,6 +553,14 @@ if __name__ == "__main__":
         choices=["none", "bart", "presumm"],
         help="which abstractive summarization approach/model to use. more information in documentation.",
     )
+    PARSER.add_argument(
+        "-ss",
+        "--summarization_structured",
+        default="structured_joined",
+        choices=["structured_joined", "none"],
+        help="""An additional summarization algorithm that creates a structured summary with 
+                figures, slide content (with bolded area), and summarized transcript content 
+                from the SSA (Slide Structure Analysis) and transcript JSON data.""")
     PARSER.add_argument(
         "-tm",
         "--transcription_method",
