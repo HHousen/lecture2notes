@@ -3,14 +3,14 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-videos_dir = Path('../videos')
-data_dir = Path('../classifier-data')
+videos_dir = Path("../videos")
+data_dir = Path("../classifier-data")
 csv_path = Path("../sort_file_map.csv")
 
 if csv_path.is_file():
     df = pd.read_csv(csv_path, index_col=0)
 else:
-    df = pd.DataFrame(columns=["video_id","filename","category"])
+    df = pd.DataFrame(columns=["video_id", "filename", "category"])
 
 if sys.argv[1] == "make":
     # create the file mapping
@@ -26,7 +26,7 @@ if sys.argv[1] == "make":
                 frames = os.listdir(category_path)
                 desc = "Creating File Mapping - " + str(category)
                 for frame in tqdm(frames, total=len(frames), desc=desc):
-                    df.loc[len(df.index)]=[item,frame,category]
+                    df.loc[len(df.index)] = [item, frame, category]
     df.to_csv(csv_path)
 
 elif sys.argv[1] == "make_compiled":
@@ -36,20 +36,28 @@ elif sys.argv[1] == "make_compiled":
     for idx, category in enumerate(categories):
         category_path = data_dir / category
         frames = os.listdir(category_path)
-        desc = "Creating File Mapping Category - " + str(category) + " (" + str(idx+1) + "/" + str(num_categories)+") "
+        desc = (
+            "Creating File Mapping Category - "
+            + str(category)
+            + " ("
+            + str(idx + 1)
+            + "/"
+            + str(num_categories)
+            + ") "
+        )
         for frame in tqdm(frames, total=len(frames), desc=desc):
             # Filename format is [video_id]-img_[frame_index].jpg where [video_id] is 11 characters long
             # This check removes images from slide PDFs that were mereged into the dataset
             if frame[11] == "-":
                 video_id = frame[:11]
-                df.loc[len(df.index)]=[video_id,frame,category]
+                df.loc[len(df.index)] = [video_id, frame, category]
     df.to_csv(csv_path)
 
-else: # if sys.argv[1] == "sort"
+else:  # if sys.argv[1] == "sort"
     for index, row in df.iterrows():
-        video_id = row['video_id']
-        filename = row['filename']
-        category = row['category']
+        video_id = row["video_id"]
+        filename = row["filename"]
+        category = row["category"]
 
         current_video_path = videos_dir / video_id
         current_file_path = current_video_path / "frames" / filename

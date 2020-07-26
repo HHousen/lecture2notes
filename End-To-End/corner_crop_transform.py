@@ -393,7 +393,7 @@ def find_page_contours(
     for cnt in contours:
         perimeter = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.1 * perimeter, True)
-        
+
         _, _, w, h = cv2.boundingRect(approx)
         aspect_ratio = w / h
 

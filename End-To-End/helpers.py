@@ -8,15 +8,18 @@ from distutils.dir_util import copy_tree, remove_tree
 
 logger = logging.getLogger(__name__)
 
+
 def make_dir_if_not_exist(path):
     """Makes directory `path` if it does not exist"""
     if not os.path.exists(path):
         logger.info("Creating directory " + str(path))
         os.makedirs(path)
 
+
 def gen_unique_id(input_data, k):
     """Returns the first k characters of the sha1 of input_data"""
     return hashlib.sha1(input_data.encode("UTF-8")).hexdigest()[:k]
+
 
 def copy_all(list_path_files, output_dir, move=False):
     """ Copy (or move) every path in `list_path_files` if list or all files in a path if path to output_dir """
@@ -28,15 +31,17 @@ def copy_all(list_path_files, output_dir, move=False):
                 shutil.move(file_path, output_file)
             else:
                 shutil.copy(file_path, output_file)
-    else: # not a list
+    else:  # not a list
         copy_tree(str(list_path_files), str(output_dir))
         if move:
             remove_tree(str(list_path_files))
 
     return output_dir
 
+
 def frame_number_from_filename(filename):
     return int(re.search("(?<=\_)[0-9]+(?=\_|.)", filename).group(0))
+
 
 def frame_number_filename_mapping(path):
     figures = os.listdir(path)
@@ -51,5 +56,6 @@ def frame_number_filename_mapping(path):
             figure_mapping[frame_number] = [figure_path]
 
     return figure_mapping
+
 
 # frame_number_filename_mapping("process/frames_sorted/slide_clusters/best_samples_figures")

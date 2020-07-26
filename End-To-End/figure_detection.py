@@ -162,9 +162,7 @@ def detect_figures(
 
     original = image.copy()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray_thresh = cv2.threshold(
-        gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
-    )[1]
+    gray_thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
     blurred = cv2.GaussianBlur(gray_thresh, (3, 3), 0)
 
     # Need to use canny in addition to threshold in case the threshold is inverted.
@@ -362,6 +360,7 @@ def all_in_folder(
     logger.debug("> Figure Detection: Returning figure paths")
     return figure_paths
 
+
 def add_figures_to_ssa(ssa, figures_path):
     # If the SSA contains frame numbers
     if "frame_number" in ssa[0].keys():
@@ -371,10 +370,11 @@ def add_figures_to_ssa(ssa, figures_path):
             current_slide_idx = slide["frame_number"]
             try:
                 ssa[idx]["figure_paths"] = mapping[current_slide_idx]
-            except KeyError: # Ignore frames that have no figures
+            except KeyError:  # Ignore frames that have no figures
                 pass
-    
+
     return ssa
+
 
 # import matplotlib.pyplot as plt
 # all_in_folder("delete/")

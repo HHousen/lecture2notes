@@ -36,20 +36,21 @@ from sumy.utils import get_stop_words
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
-sys.path.insert(1, os.path.join(os.getcwd(), '../Models/summarizer'))
+sys.path.insert(1, os.path.join(os.getcwd(), "../Models/summarizer"))
 
 logger = logging.getLogger(__name__)
+
 
 def get_complete_sentences(text, return_string=False):
     nlp = spacy.load("en_core_web_sm")
     complete_sentences = list()
 
-    text = text.replace('\n', ' ').replace('\r', '')
-    
+    text = text.replace("\n", " ").replace("\r", "")
+
     NLP_DOC = nlp(text)
     NUM_TOKENS = len(NLP_DOC)
     NLP_SENTENCES = list(NLP_DOC.sents)
-    
+
     # Detect Complete Sentences:
     # A complete sentence contains at least one subject, one predicate, one object, and closes
     # with punctuation. Subject and object are almost always nouns, and the predicate is always
@@ -72,6 +73,7 @@ def get_complete_sentences(text, return_string=False):
     else:
         return NUM_TOKENS, complete_sentences
 
+
 def full_sents(ocr_text, transcript_text, remove_newlines=True, cut_off=0.70):
     OCR_NUM_TOKENS, complete_sentences = get_complete_sentences(ocr_test)
 
@@ -82,30 +84,43 @@ def full_sents(ocr_text, transcript_text, remove_newlines=True, cut_off=0.70):
     # cst_to_dt = complete sentence tokens to document tokens
     cst_to_dt_ratio = OCR_NLP_SENTENCES_TOT_NUM_TOKENS / OCR_NUM_TOKENS
 
-    logger.debug("Tokens in complete sentences: " + str(OCR_NLP_SENTENCES_TOT_NUM_TOKENS) + " | Document tokens: " + str(OCR_NUM_TOKENS) + " | Ratio: " + str(cst_to_dt_ratio))
+    logger.debug(
+        "Tokens in complete sentences: "
+        + str(OCR_NLP_SENTENCES_TOT_NUM_TOKENS)
+        + " | Document tokens: "
+        + str(OCR_NUM_TOKENS)
+        + " | Ratio: "
+        + str(cst_to_dt_ratio)
+    )
 
-    if cst_to_dt_ratio > cut_off: # `cut_off`% of doc is complete sentences
+    if cst_to_dt_ratio > cut_off:  # `cut_off`% of doc is complete sentences
         complete_sentences_string = " ".join(complete_sentences)
-        return complete_sentences_string + transcript_text # use complete sentences and transcript
-    else: # ratio does not meet `cut_off`
-        return transcript_text # only use transcript
+        return (
+            complete_sentences_string + transcript_text
+        )  # use complete sentences and transcript
+    else:  # ratio does not meet `cut_off`
+        return transcript_text  # only use transcript
+
 
 def compute_ranks(sigma, v_matrix):
     MIN_DIMENSIONS = 3
-    REDUCTION_RATIO = 1/1
+    REDUCTION_RATIO = 1 / 1
 
     assert len(sigma) == v_matrix.shape[0], "Matrices should be multiplicable"
 
-    dimensions = max(MIN_DIMENSIONS, int(len(sigma)*REDUCTION_RATIO))
-    powered_sigma = tuple(s**2 if i < dimensions else 0.0 for i, s in enumerate(sigma))
+    dimensions = max(MIN_DIMENSIONS, int(len(sigma) * REDUCTION_RATIO))
+    powered_sigma = tuple(
+        s ** 2 if i < dimensions else 0.0 for i, s in enumerate(sigma)
+    )
 
     ranks = []
     # iterate over columns of matrix (rows of transposed matrix)
     for column_vector in v_matrix.T:
-        rank = sum(s*v**2 for s, v in zip(powered_sigma, column_vector))
+        rank = sum(s * v ** 2 for s, v in zip(powered_sigma, column_vector))
         ranks.append(math.sqrt(rank))
 
     return ranks
+
 
 def get_best_sentences(sentences, count, rating, *args, **kwargs):
     SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order", "rating",))
@@ -114,7 +129,9 @@ def get_best_sentences(sentences, count, rating, *args, **kwargs):
         assert not args and not kwargs
         rate = lambda o: rating[o]
 
-    infos = (SentenceInfo(s, o, rate(o, *args, **kwargs)) for o, s in enumerate(sentences))
+    infos = (
+        SentenceInfo(s, o, rate(o, *args, **kwargs)) for o, s in enumerate(sentences)
+    )
 
     # sort sentences by rating in descending order
     infos = sorted(infos, key=attrgetter("rating"), reverse=True)
@@ -124,6 +141,7 @@ def get_best_sentences(sentences, count, rating, *args, **kwargs):
     infos = sorted(infos, key=attrgetter("order"))
 
     return tuple(i.sentence for i in infos)
+
 
 def get_sentences(text, model="en_core_web_sm"):
     logger.debug("Tokenizing text...")
@@ -135,11 +153,19 @@ def get_sentences(text, model="en_core_web_sm"):
     NLP_SENTENCES_LEN = len(NLP_SENTENCES)
     NLP_SENTENCES_LEN_RANGE = range(NLP_SENTENCES_LEN)
 
-    return NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_SPAN, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE
+    return (
+        NLP_DOC,
+        NLP_SENTENCES,
+        NLP_SENTENCES_SPAN,
+        NLP_SENTENCES_LEN,
+        NLP_SENTENCES_LEN_RANGE,
+    )
+
 
 def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
     from summa import keywords
-    ocr_text = ocr_text.replace('\n', ' ').replace('\r', '')
+
+    ocr_text = ocr_text.replace("\n", " ").replace("\r", "")
 
     ocr_keywords = keywords.keywords(ocr_text)
     ocr_keywords = ocr_keywords.splitlines()
@@ -152,14 +178,23 @@ def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
     _, NLP_SENTENCES, _, NLP_SENTENCES_LEN, _ = get_sentences(transcript_text)
 
     NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
-    logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
+    logger.debug(
+        str(NLP_SENTENCES_LEN)
+        + " (Number of Sentences in Doc) * "
+        + str(coverage_percentage)
+        + " (Coverage Percentage) = "
+        + str(NUM_SENTENCES_IN_SUMMARY)
+        + " (Number of Sentences in Summary)"
+    )
 
     doc_term_matrix = vectorizer.fit_transform(NLP_SENTENCES)
     logger.debug("Vectorizer successfully fit")
     # vectorizer.get_feature_names() is ocr_keywords
     doc_term_matrix = doc_term_matrix.toarray()
 
-    doc_term_matrix = doc_term_matrix.transpose(1, 0) # flip axes so the sentences (documents) are the columns and the terms are the rows
+    doc_term_matrix = doc_term_matrix.transpose(
+        1, 0
+    )  # flip axes so the sentences (documents) are the columns and the terms are the rows
 
     u, sigma, v = np.linalg.svd(doc_term_matrix, full_matrices=False)
     logger.debug("SVD successfully calculated")
@@ -167,13 +202,22 @@ def keyword_based_ext(ocr_text, transcript_text, coverage_percentage=0.70):
     ranks = iter(compute_ranks(sigma, v))
     logger.debug("Ranks calculated")
 
-    sentences = get_best_sentences(NLP_SENTENCES, NUM_SENTENCES_IN_SUMMARY, lambda s: next(ranks))
+    sentences = get_best_sentences(
+        NLP_SENTENCES, NUM_SENTENCES_IN_SUMMARY, lambda s: next(ranks)
+    )
     logger.debug("Top " + str(NUM_SENTENCES_IN_SUMMARY) + " sentences found")
 
-    return " ".join(sentences) # return as string with space between each sentence
+    return " ".join(sentences)  # return as string with space between each sentence
 
-def extract_features_bow(data, return_lsa_svd=False, use_hashing=False, use_idf=True, n_features=10000,
-                         lsa_num_components=False):
+
+def extract_features_bow(
+    data,
+    return_lsa_svd=False,
+    use_hashing=False,
+    use_idf=True,
+    n_features=10000,
+    lsa_num_components=False,
+):
     """Extract features using a bag of words statistical word-frequency approach. 
     
     Arguments:
@@ -210,26 +254,36 @@ def extract_features_bow(data, return_lsa_svd=False, use_hashing=False, use_idf=
     
     Returns:
         [list or tuple]: list of features extracted and optionally the u, sigma, and v of the svd calculation on the document-term matrix. only returns if ``return_lsa_svd`` set to True.
-    """    
+    """
     logger.debug("Extracting features using a sparse vectorizer")
     t0 = time()
     if use_hashing:
         if use_idf:
             # Perform an IDF normalization on the output of HashingVectorizer
-            hasher = HashingVectorizer(n_features=n_features,
-                                       stop_words='english', alternate_sign=False,
-                                       norm=None)
+            hasher = HashingVectorizer(
+                n_features=n_features,
+                stop_words="english",
+                alternate_sign=False,
+                norm=None,
+            )
             vectorizer = make_pipeline(hasher, TfidfTransformer())
         else:
-            vectorizer = HashingVectorizer(n_features=n_features,
-                                           stop_words='english',
-                                           alternate_sign=False, norm='l2')
+            vectorizer = HashingVectorizer(
+                n_features=n_features,
+                stop_words="english",
+                alternate_sign=False,
+                norm="l2",
+            )
     else:
-        vectorizer = TfidfVectorizer(max_df=0.5, max_features=n_features,
-                                     min_df=2, stop_words='english',
-                                     use_idf=use_idf)
+        vectorizer = TfidfVectorizer(
+            max_df=0.5,
+            max_features=n_features,
+            min_df=2,
+            stop_words="english",
+            use_idf=use_idf,
+        )
     features = vectorizer.fit_transform(data)
-    
+
     logger.debug("done in %fs" % (time() - t0))
     logger.debug("n_samples: %d, n_features: %d" % features.shape)
 
@@ -254,27 +308,44 @@ def extract_features_bow(data, return_lsa_svd=False, use_hashing=False, use_idf=
         logger.debug("done in %fs" % (time() - t0))
 
         explained_variance = svd.explained_variance_ratio_.sum()
-        logger.debug("Explained variance of the SVD step: {}%".format(int(explained_variance * 100)))
-    
+        logger.debug(
+            "Explained variance of the SVD step: {}%".format(
+                int(explained_variance * 100)
+            )
+        )
+
     if return_lsa_svd:
         return features, lsa_svd
     else:
         return features
 
-def extract_features_neural_hf(sentences, model="roberta-base", tokenizer="roberta-base", n_hidden=768, squeeze=True, **kwargs):
+
+def extract_features_neural_hf(
+    sentences,
+    model="roberta-base",
+    tokenizer="roberta-base",
+    n_hidden=768,
+    squeeze=True,
+    **kwargs
+):
     """ Extract features using a transformer model from the huggingface/transformers library """
-    nlp = pipeline('feature-extraction', model=model, tokenizer=tokenizer, **kwargs)
+    nlp = pipeline("feature-extraction", model=model, tokenizer=tokenizer, **kwargs)
     features = list()
     vec = np.zeros((len(sentences), n_hidden))
-    logger.debug("Extracting features using the " + str(model) + " huggingface neural model")
-    for idx, text in tqdm(enumerate(sentences), desc="Extracting Features", total=len(sentences)):
+    logger.debug(
+        "Extracting features using the " + str(model) + " huggingface neural model"
+    )
+    for idx, text in tqdm(
+        enumerate(sentences), desc="Extracting Features", total=len(sentences)
+    ):
         hidden_state = nlp(text)
         # "mean" averaging approach discussed for beginners at: https://github.com/BramVanroy/bert-for-inference/blob/master/introduction-to-bert.ipynb
         sentence_embedding = np.mean(hidden_state, axis=1)
-        if squeeze: # removes the batch dimension
+        if squeeze:  # removes the batch dimension
             sentence_embedding = sentence_embedding.squeeze()
         vec[idx] = sentence_embedding
     return vec
+
 
 def extract_features_neural_sbert(sentences, model="roberta-base-nli-mean-tokens"):
     """ Extract features using Sentence-BERT (SBERT) or SRoBERTa from the sentence-transformers library """
@@ -283,21 +354,38 @@ def extract_features_neural_sbert(sentences, model="roberta-base-nli-mean-tokens
     elif model == "bert":
         model = "bert-base-nli-mean-tokens"
     nlp = SentenceTransformer(model)
-    logger.debug("Extracting features using the sentence level " + str(model) + " model. This is the best method.")
+    logger.debug(
+        "Extracting features using the sentence level "
+        + str(model)
+        + " model. This is the best method."
+    )
     sentence_embeddings = nlp.encode(sentences)
     return np.array(sentence_embeddings)
 
+
 def extract_features_spacy(sentences):
     tokens = list()
-    logger.debug("Extracting features using spacy. This method cannot tell which spacy model was used but it is highly recommended to use the medium or large model because the small model only includes context-sensitive tensors.")
+    logger.debug(
+        "Extracting features using spacy. This method cannot tell which spacy model was used but it is highly recommended to use the medium or large model because the small model only includes context-sensitive tensors."
+    )
     for sentence in sentences:
         # https://spacy.io/api/span#vector
         # A real-valued meaning representation. Defaults to an average of the token vectors.
         tokens.append(sentence.vector)
     return np.array(tokens)
 
-def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summarizer="extractive",
-            title_generation=False, num_topics=10, minibatch=False, feature_extraction="neural_sbert", **kwargs):
+
+def cluster(
+    text,
+    coverage_percentage=0.70,
+    final_sort_by=None,
+    cluster_summarizer="extractive",
+    title_generation=False,
+    num_topics=10,
+    minibatch=False,
+    feature_extraction="neural_sbert",
+    **kwargs
+):
     """Summarize ``text`` to ``coverage_percentage`` length of the original document by extracting features
     from the text, clustering based on those features, and finally summarizing each cluster.
     See the `scikit-learn documentation on clustering text <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html>`_ 
@@ -356,39 +444,86 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
     
     Returns:
         [str]: The summarized text as a normal string. Line breaks will be included if ``title_generation`` is true.
-    """    
+    """
     assert cluster_summarizer in ["extractive", "abstractive"]
     assert feature_extraction in ["neural_hf", "neural_sbert", "spacy", "bow"]
     if (cluster_summarizer == "extractive") and (feature_extraction != "bow"):
-        raise Exception("If cluster_summarizer is set to 'extractive', feature_extraction cannot be set to 'bow' because extractive summarization is based off the ranks calculated from the document-term matrix used for 'bow' feature extraction.")
+        raise Exception(
+            "If cluster_summarizer is set to 'extractive', feature_extraction cannot be set to 'bow' because extractive summarization is based off the ranks calculated from the document-term matrix used for 'bow' feature extraction."
+        )
     if final_sort_by:
         assert final_sort_by in ["order", "rating"]
-        
-        if title_generation: # if final_sort_by and title_generation
-            raise Exception("Cannot sort by " + str(final_sort_by) + " and generate titles. Only one option can be specified at a time. In order to generate titles the clusters must not be resorted so each title coresponds to a cluster.")
-    
+
+        if title_generation:  # if final_sort_by and title_generation
+            raise Exception(
+                "Cannot sort by "
+                + str(final_sort_by)
+                + " and generate titles. Only one option can be specified at a time. In order to generate titles the clusters must not be resorted so each title coresponds to a cluster."
+            )
+
     # If spacy is selected then return the `NLP_SENTENCES` as spacy Span objects instead of strings
     # so they have the `vector` property. Also use the large model to get *real* word vectors.
     # See: https://spacy.io/usage/vectors-similarity
     if feature_extraction == "spacy":
-        NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_SPAN, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE = get_sentences(text, model="en_core_web_lg")
+        (
+            NLP_DOC,
+            NLP_SENTENCES,
+            NLP_SENTENCES_SPAN,
+            NLP_SENTENCES_LEN,
+            NLP_SENTENCES_LEN_RANGE,
+        ) = get_sentences(text, model="en_core_web_lg")
     else:
-        NLP_DOC, NLP_SENTENCES, NLP_SENTENCES_SPAN, NLP_SENTENCES_LEN, NLP_SENTENCES_LEN_RANGE = get_sentences(text)
+        (
+            NLP_DOC,
+            NLP_SENTENCES,
+            NLP_SENTENCES_SPAN,
+            NLP_SENTENCES_LEN,
+            NLP_SENTENCES_LEN_RANGE,
+        ) = get_sentences(text)
 
     if cluster_summarizer == "abstractive":
-        NLP_WORDS = [token.text for token in NLP_DOC if token.is_stop != True and token.is_punct != True]
+        NLP_WORDS = [
+            token.text
+            for token in NLP_DOC
+            if token.is_stop != True and token.is_punct != True
+        ]
         NLP_WORDS_LEN = len(NLP_WORDS)
         ABS_MIN_LENGTH = int(coverage_percentage * NLP_WORDS_LEN / num_topics)
-        logger.debug(str(NLP_WORDS_LEN) + " (Number of Words in Document) * " + str(coverage_percentage) + " (Coverage Percentage) / " + str(num_topics) + " (Number Topics/Clusters) = " + str(ABS_MIN_LENGTH) + " (Abstractive Summary Minimum Length per Cluster)")
+        logger.debug(
+            str(NLP_WORDS_LEN)
+            + " (Number of Words in Document) * "
+            + str(coverage_percentage)
+            + " (Coverage Percentage) / "
+            + str(num_topics)
+            + " (Number Topics/Clusters) = "
+            + str(ABS_MIN_LENGTH)
+            + " (Abstractive Summary Minimum Length per Cluster)"
+        )
     else:
         NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
-        logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
+        logger.debug(
+            str(NLP_SENTENCES_LEN)
+            + " (Number of Sentences in Doc) * "
+            + str(coverage_percentage)
+            + " (Coverage Percentage) = "
+            + str(NUM_SENTENCES_IN_SUMMARY)
+            + " (Number of Sentences in Summary)"
+        )
         NUM_SENTENCES_PER_CLUSTER = int(NUM_SENTENCES_IN_SUMMARY / num_topics)
-        logger.debug(str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary) / " + str(num_topics) + " (Number Topics/Clusters) = " + str(NUM_SENTENCES_PER_CLUSTER) + " (Number of Sentences per Cluster")
-    
+        logger.debug(
+            str(NUM_SENTENCES_IN_SUMMARY)
+            + " (Number of Sentences in Summary) / "
+            + str(num_topics)
+            + " (Number Topics/Clusters) = "
+            + str(NUM_SENTENCES_PER_CLUSTER)
+            + " (Number of Sentences per Cluster"
+        )
+
     if feature_extraction == "bow":
         if cluster_summarizer == "extractive":
-            X, lsa_svd = extract_features_bow(NLP_SENTENCES, return_lsa_svd=True, **kwargs)
+            X, lsa_svd = extract_features_bow(
+                NLP_SENTENCES, return_lsa_svd=True, **kwargs
+            )
             u, sigma, v = lsa_svd
             ranks = compute_ranks(sigma, v)
             logger.debug("Ranks calculated")
@@ -396,7 +531,7 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
             X = extract_features_bow(NLP_SENTENCES, **kwargs)
     elif feature_extraction == "spacy":
         X = extract_features_spacy(NLP_SENTENCES_SPAN)
-    else: # `feature_extraction` contains "neural"
+    else:  # `feature_extraction` contains "neural"
         if "sbert" in feature_extraction:
             X = extract_features_neural_sbert(NLP_SENTENCES, **kwargs)
         else:
@@ -412,11 +547,15 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
     km.fit(X)
     logger.debug("done in %0.3fs" % (time() - t0))
 
-    sentence_clusters = [[] for _ in range(num_topics)] # initialize array with `num_topics` empty arrays inside
+    sentence_clusters = [
+        [] for _ in range(num_topics)
+    ]  # initialize array with `num_topics` empty arrays inside
 
     if cluster_summarizer == "extractive":
         SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order", "rating",))
-        infos = (SentenceInfo(*t) for t in zip(NLP_SENTENCES, NLP_SENTENCES_LEN_RANGE, ranks))
+        infos = (
+            SentenceInfo(*t) for t in zip(NLP_SENTENCES, NLP_SENTENCES_LEN_RANGE, ranks)
+        )
     else:
         SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order",))
         infos = (SentenceInfo(*t) for t in zip(NLP_SENTENCES, NLP_SENTENCES_LEN_RANGE))
@@ -428,7 +567,7 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
         cluster_num = km.labels_[info.order]
         sentence_clusters[cluster_num].append(info)
     logger.debug("Sorted info tuples by cluster")
-    
+
     if title_generation:
         final_sentences = list()
     else:
@@ -440,14 +579,18 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
     if title_generation:
         summarizer_title = initialize_abstractive_model("facebook/bart-large-xsum")
 
-    for idx, cluster in tqdm(enumerate(sentence_clusters), desc="Summarizing Clusters", total=len(sentence_clusters)):
+    for idx, cluster in tqdm(
+        enumerate(sentence_clusters),
+        desc="Summarizing Clusters",
+        total=len(sentence_clusters),
+    ):
         if cluster_summarizer == "extractive":
-            # If `title_generation` is enabled then create a single string holding the unsummarized 
-            # sentences so it can be passed to the title generation algorithm. Also, if 
-            # `title_generation` is enabled then 
+            # If `title_generation` is enabled then create a single string holding the unsummarized
+            # sentences so it can be passed to the title generation algorithm. Also, if
+            # `title_generation` is enabled then
             if title_generation:
                 cluster_unsummarized_sentences = " ".join([i.sentence for i in cluster])
-            
+
             # sort sentences by rating in descending order
             cluster = sorted(cluster, key=attrgetter("rating"), reverse=True)
             # get `count` first best rated sentences
@@ -465,7 +608,11 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
             # combine sentences in cluster into string
             cluster_unsummarized_sentences = " ".join([i.sentence for i in cluster])
             # summarize the sentences
-            cluster = generic_abstractive(cluster_unsummarized_sentences, summarizer_content, min_length=ABS_MIN_LENGTH)
+            cluster = generic_abstractive(
+                cluster_unsummarized_sentences,
+                summarizer_content,
+                min_length=ABS_MIN_LENGTH,
+            )
 
         if title_generation:
             final_sentences.append(cluster)
@@ -473,9 +620,13 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
             final_sentences += cluster
 
         if title_generation:
-            # generate a title by running the 
-            title = generic_abstractive(cluster_unsummarized_sentences, summarizer_title,
-                                        min_length=1, max_length=10)
+            # generate a title by running the
+            title = generic_abstractive(
+                cluster_unsummarized_sentences,
+                summarizer_title,
+                min_length=1,
+                max_length=10,
+            )
             titles.append(title)
 
     if cluster_summarizer == "extractive":
@@ -485,29 +636,34 @@ def cluster(text, coverage_percentage=0.70, final_sort_by=None, cluster_summariz
         else:
             # sort by cluster is default
             logger.debug("Extractive - Final sentences sorted by cluster")
-        if not title_generation: # if extractive and not generating titles
+        if not title_generation:  # if extractive and not generating titles
             final_sentences = " ".join([i.sentence for i in final_sentences])
-    
+
     if title_generation:
         final = ""
         for idx, group in enumerate(final_sentences):
-            final += ("Title: " + titles[idx] + "\nContent: " + group + "\n\n")
+            final += "Title: " + titles[idx] + "\nContent: " + group + "\n\n"
         return final
 
     return final_sentences
-    
+
+
 def initialize_abstractive_model(sum_model, use_hf_pipeline=True, *args, **kwargs):
     logger.debug("Loading " + sum_model + " model")
     if use_hf_pipeline:
         if sum_model == "bart":
             sum_model = "sshleifer/distilbart-cnn-12-6"
-        SUMMARIZER = pipeline("summarization", model=sum_model, tokenizer="facebook/bart-large-cnn")
+        SUMMARIZER = pipeline(
+            "summarization", model=sum_model, tokenizer="facebook/bart-large-cnn"
+        )
     else:
         if sum_model == "bart":
             import bart_sum
+
             SUMMARIZER = bart_sum.BartSumSummarizer(*args, **kwargs)
         elif sum_model == "presumm":
             import presumm.presumm as presumm
+
             SUMMARIZER = presumm.PreSummSummarizer(*args, **kwargs)
         else:
             logger.error("Valid model was not specified in `sum_model`. Returning -1.")
@@ -515,7 +671,10 @@ def initialize_abstractive_model(sum_model, use_hf_pipeline=True, *args, **kwarg
     logger.debug(sum_model + " model loaded successfully")
     return SUMMARIZER
 
-def generic_abstractive(to_summarize, summarizer=None, min_length=None, max_length=None, *args, **kwargs):
+
+def generic_abstractive(
+    to_summarize, summarizer=None, min_length=None, max_length=None, *args, **kwargs
+):
     if isinstance(summarizer, str):
         summarizer = initialize_abstractive_model(summarizer, *args, **kwargs)
     if not summarizer:
@@ -523,18 +682,21 @@ def generic_abstractive(to_summarize, summarizer=None, min_length=None, max_leng
 
     if not min_length:
         TO_SUMMARIZE_LENGTH = len(to_summarize.split())
-        min_length = int(TO_SUMMARIZE_LENGTH/6)
+        min_length = int(TO_SUMMARIZE_LENGTH / 6)
         if min_length > 512:
             # If the length is too long the model will start to repeat
             min_length = 512
     if not max_length:
-        max_length = min_length+200
-    LECTURE_SUMMARIZED = summarizer(to_summarize, min_length=min_length, max_length=max_length)
-    
+        max_length = min_length + 200
+    LECTURE_SUMMARIZED = summarizer(
+        to_summarize, min_length=min_length, max_length=max_length
+    )
+
     if type(LECTURE_SUMMARIZED) is list:  # hf pipeline was used
         return LECTURE_SUMMARIZED[0]["summary_text"]
 
     return LECTURE_SUMMARIZED
+
 
 def create_sumy_summarizer(algorithm, language="english"):
     stemmer = Stemmer(language)
@@ -554,13 +716,23 @@ def create_sumy_summarizer(algorithm, language="english"):
 
     return summarizer
 
-def generic_extractive_sumy(text, coverage_percentage=0.70, algorithm="text_rank", language="english"):
+
+def generic_extractive_sumy(
+    text, coverage_percentage=0.70, algorithm="text_rank", language="english"
+):
     _, _, _, NLP_SENTENCES_LEN, _ = get_sentences(text)
 
     # text = " ".join([token.text for token in NLP_DOC if token.is_stop != True])
 
     NUM_SENTENCES_IN_SUMMARY = int(NLP_SENTENCES_LEN * coverage_percentage)
-    logger.debug(str(NLP_SENTENCES_LEN) + " (Number of Sentences in Doc) * " + str(coverage_percentage) + " (Coverage Percentage) = " + str(NUM_SENTENCES_IN_SUMMARY) + " (Number of Sentences in Summary)")
+    logger.debug(
+        str(NLP_SENTENCES_LEN)
+        + " (Number of Sentences in Doc) * "
+        + str(coverage_percentage)
+        + " (Coverage Percentage) = "
+        + str(NUM_SENTENCES_IN_SUMMARY)
+        + " (Number of Sentences in Summary)"
+    )
 
     parser = PlaintextParser.from_string(text, Tokenizer(language))
 
@@ -569,11 +741,24 @@ def generic_extractive_sumy(text, coverage_percentage=0.70, algorithm="text_rank
 
     summarizer.stop_words = get_stop_words(language)
 
-    sentence_list = [str(sentence) for sentence in summarizer(parser.document, NUM_SENTENCES_IN_SUMMARY)]
+    sentence_list = [
+        str(sentence)
+        for sentence in summarizer(parser.document, NUM_SENTENCES_IN_SUMMARY)
+    ]
 
     return " ".join(sentence_list)
 
-def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, ending_char=" ", to_json=False, summarization_method="abstractive", *args, **kwargs):
+
+def structured_joined_sum(
+    ssa_path,
+    transcript_json_path,
+    frame_every_x=1,
+    ending_char=" ",
+    to_json=False,
+    summarization_method="abstractive",
+    *args,
+    **kwargs
+):
     """Summarize slides by combining the Slide Structure Analysis (SSA) and transcript json 
     to create a per slide summary of the transcript. The content from the beginning of one 
     slide to the start of the next to the nearest ``ending_char`` is considered the transcript 
@@ -611,12 +796,18 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
         If ``to_json`` is a path (string), then the JSON data will be dumped to the file specified
         and the path to the file will be returned.
     """
-    assert summarization_method in ["abstractive", "extractive", "none"], "Invalid summarization method"
-    
-    with open(ssa_path, "r") as ssa_file, open(transcript_json_path, "r") as transcript_json_file:
+    assert summarization_method in [
+        "abstractive",
+        "extractive",
+        "none",
+    ], "Invalid summarization method"
+
+    with open(ssa_path, "r") as ssa_file, open(
+        transcript_json_path, "r"
+    ) as transcript_json_file:
         ssa = json.load(ssa_file)
         transcript_json = json.load(transcript_json_file)
-    
+
     transcript_json_idx = 0
     current_time = 0
 
@@ -624,11 +815,14 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
     transcript_before_slides = ""
     while True:
         current_letter_obj = transcript_json[transcript_json_idx]
-        if current_time >= first_slide_timestamp_seconds and current_letter_obj["text"] == ending_char:
+        if (
+            current_time >= first_slide_timestamp_seconds
+            and current_letter_obj["text"] == ending_char
+        ):
             break
         try:
             current_time = current_letter_obj["start_time"]
-        except KeyError: # no `start_time` so use the previous value
+        except KeyError:  # no `start_time` so use the previous value
             pass
         transcript_before_slides += current_letter_obj["text"]
         transcript_json_idx += 1
@@ -636,7 +830,9 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
     final_dict = OrderedDict({"Preface": {"transcript": transcript_before_slides}})
 
     go_to_end = False
-    for idx, slide in tqdm(enumerate(ssa), total=len(ssa), desc="Grouping Slides and Transcript"):
+    for idx, slide in tqdm(
+        enumerate(ssa), total=len(ssa), desc="Grouping Slides and Transcript"
+    ):
         title_lines = [i for i, x in slide["category"].items() if x == 2]
 
         all_slide_content = []
@@ -647,7 +843,7 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
             # If the line number did not increase by 1 then assume a new paragraph
             if stored_line_num != prev_line_num + 1:
                 current_par_num += 1
-            
+
             # If the line is not footer text and is not a title
             if slide["category"][line_idx] not in (-1, 2):
                 # If the line is bold then add "**" on either side
@@ -659,23 +855,25 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
                         # Remove the first "**" from the line to be added
                         line = line[2:]
                         # Remove the last "**" from the previously added line
-                        all_slide_content[current_par_num] = all_slide_content[current_par_num][:-2]
+                        all_slide_content[current_par_num] = all_slide_content[
+                            current_par_num
+                        ][:-2]
                     # Add the line to the current paragraph with a space to avoid combined words
-                    all_slide_content[current_par_num] += (" " + line)
+                    all_slide_content[current_par_num] += " " + line
                 except IndexError:  # Paragraph not yet created, so create it
                     # Add the first line of a paragraph to `all_slide_content`
                     all_slide_content.append(line)
-                
+
                 # Update the previous line number to the current line number
                 prev_line_num = stored_line_num
-        
+
         # Only include paragraphs greater than 3 characters
         all_slide_content = [x for x in all_slide_content if len(x) > 3]
 
         title = " ".join([slide["text"][line] for line in title_lines]).strip()
         if not title:
             title = "Slide {}".format(idx + 1)
-        
+
         try:
             ssa[idx + 1]
             next_slide_timestamp_seconds = ssa[idx + 1]["frame_number"] * frame_every_x
@@ -687,24 +885,27 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
             # If `transcript_json` out of items break the loop
             if transcript_json_idx == len(transcript_json):
                 break
-            
+
             current_letter_obj = transcript_json[transcript_json_idx]
 
             # If `go_to_end` enabled then never break using this statement.
             # If the current time is past the next slide time advance to the next slide.
             # However, jump forward a few letter if necessary in order to end the current
             # transcript-slide segment with `endding_char`.
-            if (not go_to_end) and (current_time >= next_slide_timestamp_seconds and current_letter_obj["text"] == ending_char):
-                break    
+            if (not go_to_end) and (
+                current_time >= next_slide_timestamp_seconds
+                and current_letter_obj["text"] == ending_char
+            ):
+                break
 
             try:
                 current_time = current_letter_obj["start_time"]
-            except KeyError: # no `start_time` so use the previous value
+            except KeyError:  # no `start_time` so use the previous value
                 pass
 
             coresponding_transcript_text += current_letter_obj["text"]
             transcript_json_idx += 1
-        
+
         final_dict[title] = {"transcript": coresponding_transcript_text.strip()}
         final_dict[title]["slide_content"] = all_slide_content
         if "figure_paths" in slide.keys():
@@ -717,9 +918,13 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
         for title, content in tqdm(final_dict.items(), desc="Summarizing Slides"):
             content = content["transcript"]
             if summarization_method == "abstractive":
-                final_dict[title]["transcript"] = generic_abstractive(content, summarizer, *args, **kwargs)
+                final_dict[title]["transcript"] = generic_abstractive(
+                    content, summarizer, *args, **kwargs
+                )
             else:
-                final_dict[title]["transcript"] = generic_extractive_sumy(content, *args, **kwargs)
+                final_dict[title]["transcript"] = generic_extractive_sumy(
+                    content, *args, **kwargs
+                )
 
     if to_json:
         if type(to_json) is bool:
@@ -728,7 +933,7 @@ def structured_joined_sum(ssa_path, transcript_json_path, frame_every_x=1, endin
             with open(to_json, "w+") as json_file:
                 json.dump(final_dict, json_file)
                 return to_json
-    
+
     return final_dict
 
 

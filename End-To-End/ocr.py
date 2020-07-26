@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
+
 def all_in_folder(path):
     """Perform OCR using ``pytesseract`` on every file in folder and return results"""
     results = []
@@ -22,11 +23,14 @@ def all_in_folder(path):
     logger.debug("Returning results")
     return results
 
+
 def write_to_file(results, save_file):
     """Write everything stored in `results` to file at path `save_file`. Used to write results from `all_in_folder()` to `save_file`."""
     file_results = open(save_file, "a+")
     logger.info("Writing results to file " + str(save_file))
-    for item in tqdm(results, total=len(results), desc="> OCR: Writing To File Progress"):
+    for item in tqdm(
+        results, total=len(results), desc="> OCR: Writing To File Progress"
+    ):
         file_results.write(item + "\r\n")
     file_results.close()
     logger.debug("Results written to " + str(save_file))

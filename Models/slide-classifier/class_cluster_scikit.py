@@ -7,23 +7,31 @@ from sklearn.metrics import pairwise_distances_argmin_min
 import matplotlib as mpl
 from PIL import Image
 
-sys.path.insert(1, os.path.join(sys.path[0], '../Models/slide-classifier'))
+sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
 import inference
 
 logger = logging.getLogger(__name__)
 
-if os.environ.get('DISPLAY','') == '':
-    logger.debug('No display found. Using non-interactive Agg backend')
-    mpl.use('Agg')
+if os.environ.get("DISPLAY", "") == "":
+    logger.debug("No display found. Using non-interactive Agg backend")
+    mpl.use("Agg")
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 
+
 class Cluster:
-    def __init__(self, algorithm_name="kmeans", num_centroids=20, preference=None, damping=0.5, max_iter=200):
+    def __init__(
+        self,
+        algorithm_name="kmeans",
+        num_centroids=20,
+        preference=None,
+        damping=0.5,
+        max_iter=200,
+    ):
         """Set up cluster object by defining necessary variables and asserting that user provided algorithm is supported"""
         self.vectors = OrderedDict()
 
-        algorithms = ["kmeans","affinity_propagation"]
+        algorithms = ["kmeans", "affinity_propagation"]
         assert algorithm_name in algorithms
 
         self.algorithm_name = algorithm_name
@@ -38,7 +46,7 @@ class Cluster:
         self.preference = preference
         self.damping = damping
         self.max_iter = max_iter
-    
+
     def add(self, vector, filename):
         """Adds a filename and its coresponding feature vector to the cluster object"""
         self.vectors[filename] = vector
@@ -55,7 +63,9 @@ class Cluster:
             if self.algorithm_name == "kmeans":
                 self.create_kmeans(self.num_centroids)
             elif self.algorithm_name == "affinity_propagation":
-                self.create_affinity_propagation(self.preference, self.damping, self.max_iter)
+                self.create_affinity_propagation(
+                    self.preference, self.damping, self.max_iter
+                )
 
     def predict(self, array):
         """Wrapper function for algorithm.predict. Creates algorithm if it has not been created."""
@@ -73,7 +83,9 @@ class Cluster:
         logger.info("Creating and fitting affinity propagation cluster")
         vector_array = self.get_vector_array()
 
-        affinity_propagation = AffinityPropagation(preference=preference, damping=damping, max_iter=max_iter)
+        affinity_propagation = AffinityPropagation(
+            preference=preference, damping=damping, max_iter=max_iter
+        )
         affinity_propagation.fit(vector_array)
 
         centroids = affinity_propagation.cluster_centers_
@@ -105,14 +117,14 @@ class Cluster:
             self.labels = labels
 
         return kmeans, centroids, cost, labels
-    
+
     def get_move_list(self):
         """Creates a dictionary of file names and their coresponding centroid numbers"""
         if self.move_list is not None:
             return self.move_list
 
         self.create_algorithm_if_none()
-            
+
         move_list = dict()
         for idx, filename in enumerate(self.vectors):
             move_list[filename] = self.labels[idx]
@@ -163,7 +175,9 @@ class Cluster:
         feature_vectors = self.get_vector_array()
 
         writer = SummaryWriter(tensorboard_dir)
-        writer.add_embedding(feature_vectors, metadata=self.labels, label_img=torch.cat(images, 0))
+        writer.add_embedding(
+            feature_vectors, metadata=self.labels, label_img=torch.cat(images, 0)
+        )
         writer.close()
 
     def calculate_best_k(self, max_k=50):
@@ -180,7 +194,7 @@ class Cluster:
             kmeans, _, cost, _ = self.create_kmeans(num_centroids=i, store=False)
             costs.append(cost)
             logger.info("Iteration " + str(i) + ": " + cost)
-        
+
         costs = [int(float(cost)) for cost in costs]
 
         # plot the cost against K values

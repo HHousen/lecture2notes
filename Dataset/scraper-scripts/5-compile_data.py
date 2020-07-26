@@ -4,9 +4,9 @@ from pathlib import Path
 from distutils.dir_util import copy_tree
 from tqdm import tqdm
 
-videos_dir = Path('../videos')
-slides_dir = Path('../slides/images')
-data_dir = Path('../classifier-data')
+videos_dir = Path("../videos")
+slides_dir = Path("../slides/images")
+data_dir = Path("../classifier-data")
 
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
@@ -25,7 +25,9 @@ if sys.argv[1] == "all" or sys.argv[1] == "videos":
 
 if sys.argv[1] == "all" or sys.argv[1] == "slides":
     slide_images = os.listdir(slides_dir)
-    for item in tqdm(slide_images, total=len(slide_images), desc="Compiling Slideshow Images"):
+    for item in tqdm(
+        slide_images, total=len(slide_images), desc="Compiling Slideshow Images"
+    ):
         current_dir = slides_dir / item
         data_dir_slide = data_dir / "slide"
         copy_tree(str(current_dir), str(data_dir_slide))

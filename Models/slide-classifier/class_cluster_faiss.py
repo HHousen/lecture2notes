@@ -1,9 +1,11 @@
 import os, faiss, numpy
 import matplotlib as mpl
-if os.environ.get('DISPLAY','') == '':
-    print('=> Class Cluster: No display found. Using non-interactive Agg backend')
-    mpl.use('Agg')
+
+if os.environ.get("DISPLAY", "") == "":
+    print("=> Class Cluster: No display found. Using non-interactive Agg backend")
+    mpl.use("Agg")
 import matplotlib.pyplot as plt
+
 
 class Cluster:
     def __init__(self, num_centroids=20):
@@ -13,7 +15,7 @@ class Cluster:
         self.cost = None
         self.nearest_centroids = None
         self.num_centroids = num_centroids
-    
+
     def add(self, vector, filename):
         self.vectors[filename] = vector
 
@@ -27,27 +29,27 @@ class Cluster:
         kmeans = faiss.Kmeans(d, num_centroids, niter=niter, verbose=verbose)
         kmeans.train(vectors_to_cluster)
 
-        cost = str(kmeans.obj[niter-1])
+        cost = str(kmeans.obj[niter - 1])
         centroids = kmeans.centroids
 
         return kmeans, centroids, cost
-    
+
     def compute_nearest_centroids(self):
         if self.kmeans is None:
             kmeans, centroids, cost = self.create_kmeans(self.num_centroids)
             self.centroids = centroids
             self.kmeans = kmeans
             self.cost = cost
-        
+
         vector_array = numpy.stack(list(self.vectors.values()))
         _, nearest_centroids = self.kmeans.index.search(vector_array, 1)
         nearest_centroids = nearest_centroids.flatten()
         return nearest_centroids
-    
+
     def create_move_list(self):
         if self.nearest_centroids is None:
             self.nearest_centroids = self.compute_nearest_centroids()
-        
+
         move_list = dict()
         for idx, filename in enumerate(self.vectors):
             move_list[filename] = self.nearest_centroids[idx]
@@ -61,7 +63,7 @@ class Cluster:
             kmeans, _, cost = self.create_kmeans(num_centroids=i)
             costs.append(cost)
             print(cost)
-        
+
         costs = [int(float(cost)) for cost in costs]
 
         # plot the cost against K values

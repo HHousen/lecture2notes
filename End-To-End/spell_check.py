@@ -3,26 +3,37 @@ import pkg_resources
 from tqdm import tqdm
 from symspellpy.symspellpy import SymSpell, Verbosity
 
-class SpellChecker():
+
+class SpellChecker:
     """A spell checker."""
-    def __init__(self, max_edit_distance_dictionary=2, max_edit_distance_lookup=2, prefix_length=7):
+
+    def __init__(
+        self,
+        max_edit_distance_dictionary=2,
+        max_edit_distance_lookup=2,
+        prefix_length=7,
+    ):
         self.logger = logging.getLogger(__name__)
 
         # create object
         sym_spell = SymSpell(max_edit_distance_dictionary, prefix_length)
         # load dictionary
         dictionary_path = pkg_resources.resource_filename(
-            "symspellpy", "frequency_dictionary_en_82_765.txt")
+            "symspellpy", "frequency_dictionary_en_82_765.txt"
+        )
         bigram_path = pkg_resources.resource_filename(
-            "symspellpy", "frequency_bigramdictionary_en_243_342.txt")
+            "symspellpy", "frequency_bigramdictionary_en_243_342.txt"
+        )
         # term_index is the column of the term and count_index is the column of the term frequency
         if not sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1):
             self.logger.error("Dictionary file not found")
             return
-        if not sym_spell.load_bigram_dictionary(bigram_path, term_index=0, count_index=2):
+        if not sym_spell.load_bigram_dictionary(
+            bigram_path, term_index=0, count_index=2
+        ):
             self.logger.error("Bigram dictionary file not found")
             return
-        
+
         self.max_edit_distance_lookup = max_edit_distance_lookup
         self.prefix_length = prefix_length
         self.sym_spell = sym_spell
@@ -38,7 +49,9 @@ class SpellChecker():
         """
         # lookup suggestions for multi-word input strings (supports compound splitting & merging)
         # max edit distance per lookup is now per single word, not per whole input string
-        suggestions = self.sym_spell.lookup_compound(input_term, self.max_edit_distance_lookup)
+        suggestions = self.sym_spell.lookup_compound(
+            input_term, self.max_edit_distance_lookup
+        )
         # display suggestion term, edit distance, and term frequency
         # for suggestion in suggestions:
         #     print("{}, {}, {}".format(suggestion.term, suggestion.distance,
@@ -46,7 +59,7 @@ class SpellChecker():
         output_term_list = [suggestion.term for suggestion in suggestions]
 
         return output_term_list[0]
-    
+
     def check_all(self, input_terms):
         """Spell check multiple sequences by calling :meth:`~spell_check.check` for each item in ``input_terms``.
 
@@ -61,6 +74,7 @@ class SpellChecker():
             checked_term = self.check(term)
             output_terms.append(checked_term)
         return output_terms
+
 
 # Testing
 # spell_checker = SpellChecker()

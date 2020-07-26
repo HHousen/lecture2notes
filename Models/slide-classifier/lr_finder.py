@@ -6,9 +6,10 @@ import copy
 import os
 import torch
 import matplotlib as mpl
-if os.environ.get('DISPLAY','') == '':
-    print('=> LR Finder: No display found. Using non-interactive Agg backend')
-    mpl.use('Agg')
+
+if os.environ.get("DISPLAY", "") == "":
+    print("=> LR Finder: No display found. Using non-interactive Agg backend")
+    mpl.use("Agg")
 from tqdm.autonotebook import tqdm
 from torch.optim.lr_scheduler import _LRScheduler
 import matplotlib.pyplot as plt
@@ -47,7 +48,15 @@ class LRFinder(object):
 
     """
 
-    def __init__(self, model, optimizer, criterion, device=None, memory_cache=True, cache_dir=None):
+    def __init__(
+        self,
+        model,
+        optimizer,
+        criterion,
+        device=None,
+        memory_cache=True,
+        cache_dir=None,
+    ):
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
@@ -60,8 +69,8 @@ class LRFinder(object):
         # needed
         self.model_device = next(self.model.parameters()).device
         self.state_cacher = StateCacher(memory_cache, cache_dir=cache_dir)
-        self.state_cacher.store('model', self.model.state_dict())
-        self.state_cacher.store('optimizer', self.optimizer.state_dict())
+        self.state_cacher.store("model", self.model.state_dict())
+        self.state_cacher.store("optimizer", self.optimizer.state_dict())
 
         # If device is None, use the same as the model
         if device:
@@ -71,8 +80,8 @@ class LRFinder(object):
 
     def reset(self):
         """Restores the model and optimizer to their initial states."""
-        self.model.load_state_dict(self.state_cacher.retrieve('model'))
-        self.optimizer.load_state_dict(self.state_cacher.retrieve('optimizer'))
+        self.model.load_state_dict(self.state_cacher.retrieve("model"))
+        self.optimizer.load_state_dict(self.state_cacher.retrieve("optimizer"))
         self.model.to(self.model_device)
 
     def range_test(
@@ -294,10 +303,11 @@ class StateCacher(object):
 
         if self.cache_dir is None:
             import tempfile
+
             self.cache_dir = tempfile.gettempdir()
         else:
             if not os.path.isdir(self.cache_dir):
-                raise ValueError('Given `cache_dir` is not a valid directory.')
+                raise ValueError("Given `cache_dir` is not a valid directory.")
 
         self.cached = {}
 
@@ -305,20 +315,24 @@ class StateCacher(object):
         if self.in_memory:
             self.cached.update({key: copy.deepcopy(state_dict)})
         else:
-            fn = os.path.join(self.cache_dir, 'state_{}_{}.pt'.format(key, id(self)))
+            fn = os.path.join(self.cache_dir, "state_{}_{}.pt".format(key, id(self)))
             self.cached.update({key: fn})
             torch.save(state_dict, fn)
 
     def retrieve(self, key):
         if key not in self.cached:
-            raise KeyError('Target {} was not cached.'.format(key))
+            raise KeyError("Target {} was not cached.".format(key))
 
         if self.in_memory:
             return self.cached.get(key)
         else:
             fn = self.cached.get(key)
             if not os.path.exists(fn):
-                raise RuntimeError('Failed to load state in {}. File does not exist anymore.'.format(fn))
+                raise RuntimeError(
+                    "Failed to load state in {}. File does not exist anymore.".format(
+                        fn
+                    )
+                )
             state_dict = torch.load(fn, map_location=lambda storage, location: storage)
             return state_dict
 

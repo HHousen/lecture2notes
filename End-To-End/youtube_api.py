@@ -3,6 +3,7 @@ import googleapiclient.discovery
 import google_auth_oauthlib.flow
 import googleapiclient.errors
 
+
 def init_youtube(oauth=False):
     """Initialize the YouTube API. 
     If ``oauth`` then use the oauth ``client_secret.json`` located in the current directory, otherwise use the ``YT_API_KEY`` environment variable.
@@ -17,13 +18,16 @@ def init_youtube(oauth=False):
         scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
         client_secrets_file = "client_secret.json"
         flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-            client_secrets_file, scopes)
+            client_secrets_file, scopes
+        )
         credentials = flow.run_console()
         youtube = googleapiclient.discovery.build(
-            api_service_name, api_version, credentials=credentials)
+            api_service_name, api_version, credentials=credentials
+        )
     else:
         DEVELOPER_KEY = os.environ["YT_API_KEY"]
         youtube = googleapiclient.discovery.build(
-            api_service_name, api_version, developerKey = DEVELOPER_KEY)
+            api_service_name, api_version, developerKey=DEVELOPER_KEY
+        )
 
     return youtube

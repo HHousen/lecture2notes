@@ -227,10 +227,14 @@ def main(ARGS):
 
         OCR_RAW_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ocr.txt"
         OCR_JSON_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "slide-ssa.json"
-        OCR_RAW_TEXT, OCR_JSON_DATA = slide_structure_analysis.all_in_folder(BEST_SAMPLES_DIR)
+        OCR_RAW_TEXT, OCR_JSON_DATA = slide_structure_analysis.all_in_folder(
+            BEST_SAMPLES_DIR
+        )
         if "ocr" in ARGS.spell_check:
             OCR_RAW_TEXT = spell_checker.check_all(OCR_RAW_TEXT)
-        slide_structure_analysis.write_to_file(OCR_RAW_TEXT, OCR_JSON_DATA, OCR_RAW_OUTPUT_FILE, OCR_JSON_OUTPUT_FILE)
+        slide_structure_analysis.write_to_file(
+            OCR_RAW_TEXT, OCR_JSON_DATA, OCR_RAW_OUTPUT_FILE, OCR_JSON_OUTPUT_FILE
+        )
 
         end_time = timer() - start_time
         logger.info("Stage 6 (SSA and OCR Slides) took %s", end_time)
@@ -321,10 +325,15 @@ def main(ARGS):
                         ARGS.transcription_method == "deepspeech"
                         or YT_TRANSCRIPTION_FAILED
                     ):
-                        TRANSCRIPT, TRANSCRIPT_JSON = transcribe.transcribe_audio_deepspeech(
+                        (
+                            TRANSCRIPT,
+                            TRANSCRIPT_JSON,
+                        ) = transcribe.transcribe_audio_deepspeech(
                             AUDIO_PATH, ARGS.deepspeech_model_dir
                         )
-                        TRANSCRIPT, TRANSCRIPT_JSON = transcribe.segment_sentences(TRANSCRIPT, TRANSCRIPT_JSON)
+                        TRANSCRIPT, TRANSCRIPT_JSON = transcribe.segment_sentences(
+                            TRANSCRIPT, TRANSCRIPT_JSON
+                        )
                     else:
                         TRANSCRIPT = transcribe.transcribe_audio(
                             AUDIO_PATH, method=ARGS.transcription_method
@@ -338,7 +347,7 @@ def main(ARGS):
 
         if "transcript" in ARGS.spell_check:
             TRANSCRIPT = spell_checker.check(TRANSCRIPT)
-        
+
         transcribe.write_to_file(
             TRANSCRIPT,
             TRANSCRIPT_OUTPUT_FILE,
@@ -372,19 +381,30 @@ def main(ARGS):
                 OCR_RAW_TEXT
             )  # converts list of strings into one string where each item is separated by a space
         LECTURE_SUMMARIZED_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "summarized.txt"
-        LECTURE_SUMMARIZED_STRUCTURED_OUTPUT_FILE = ROOT_PROCESS_FOLDER / "summarized.json"
+        LECTURE_SUMMARIZED_STRUCTURED_OUTPUT_FILE = (
+            ROOT_PROCESS_FOLDER / "summarized.json"
+        )
 
         OCR_RESULTS_FLAT = OCR_RESULTS_FLAT.replace("\n", " ").replace(
             "\r", ""
         )  # remove line breaks
 
-        if ARGS.summarization_structured != "none" and ARGS.summarization_structured is not None:
+        if (
+            ARGS.summarization_structured != "none"
+            and ARGS.summarization_structured is not None
+        ):
             logger.info("Stage 9 (Summarization): Structured Summarization")
             ss_start_time = timer()
-            
+
             if ARGS.summarization_structured == "structured_joined":
-                structured_joined_sum(OCR_JSON_OUTPUT_FILE, TRANSCRIPT_JSON_OUTPUT_FILE, frame_every_x=EXTRACT_EVERY_X_SECONDS, ending_char=".", to_json=LECTURE_SUMMARIZED_STRUCTURED_OUTPUT_FILE)
-            
+                structured_joined_sum(
+                    OCR_JSON_OUTPUT_FILE,
+                    TRANSCRIPT_JSON_OUTPUT_FILE,
+                    frame_every_x=EXTRACT_EVERY_X_SECONDS,
+                    ending_char=".",
+                    to_json=LECTURE_SUMMARIZED_STRUCTURED_OUTPUT_FILE,
+                )
+
             ss_end_time = timer() - ss_start_time
             logger.info("Stage 9 (Summarization): Structured took %s", ss_end_time)
         else:
@@ -560,7 +580,8 @@ if __name__ == "__main__":
         choices=["structured_joined", "none"],
         help="""An additional summarization algorithm that creates a structured summary with 
                 figures, slide content (with bolded area), and summarized transcript content 
-                from the SSA (Slide Structure Analysis) and transcript JSON data.""")
+                from the SSA (Slide Structure Analysis) and transcript JSON data.""",
+    )
     PARSER.add_argument(
         "-tm",
         "--transcription_method",

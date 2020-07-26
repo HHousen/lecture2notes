@@ -13,5 +13,7 @@ for item in tqdm(pdfs, total=len(pdfs), desc="Converting PDFs to Images"):
 
     if not os.path.exists(output_dir_final):
         os.makedirs(output_dir_final)
-    
-    os.system('pdftoppm -png ' + str(item_path) + ' ' + str(output_dir_final) + '/' + name)
+
+    os.system(
+        "pdftoppm -png " + str(item_path) + " " + str(output_dir_final) + "/" + name
+    )

@@ -9,6 +9,7 @@ import cv2
 
 logger = logging.getLogger(__name__)
 
+
 def load_east(east_path="frozen_east_text_detection.pb"):
     """Load the pre-trained EAST model.
 
@@ -22,7 +23,10 @@ def load_east(east_path="frozen_east_text_detection.pb"):
     net = cv2.dnn.readNet(east_path)
     return net
 
-def get_text_bounding_boxes(image, net, min_confidence=0.5, resized_width=320, resized_height=320):
+
+def get_text_bounding_boxes(
+    image, net, min_confidence=0.5, resized_width=320, resized_height=320
+):
     """Determine the locations of text in an image.
 
     Args:
@@ -145,6 +149,7 @@ def get_text_bounding_boxes(image, net, min_confidence=0.5, resized_width=320, r
     # cv2.imwrite("text_bounding_boxes.png", orig)
 
     return scaled_boxes
+
 
 # show the output image
 # cv2.imshow("Text Detection", orig)

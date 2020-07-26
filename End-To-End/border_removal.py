@@ -130,7 +130,7 @@ def remove_border(image_path, output_path=None):
         if (
             len(approx) == 4  # four corners
             and cv2.isContourConvex(approx)  # convex and not concave
-            and min_area < cv2.contourArea(approx) < max_area # get the largest contour
+            and min_area < cv2.contourArea(approx) < max_area  # get the largest contour
         ):
             min_area = cv2.contourArea(approx)
             final_contour = approx[:, 0]
@@ -139,7 +139,7 @@ def remove_border(image_path, output_path=None):
     # and return the path of the original image
     if final_contour is None:
         return image_path
-    
+
     x, y, w, h = cv2.boundingRect(final_contour)
 
     crop = image[
