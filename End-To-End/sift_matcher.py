@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 OUTPUT_PATH_MODIFIER = "_cropped"
 
 
-def sift_flann_match(query_image, train_image, algorithm="orb"):
+def sift_flann_match(query_image, train_image, algorithm="orb", num_features=1000):
     """Locate ``query_image`` within ``train_image`` using ``algorithm`` for feature
     detection/description and `FLANN (Fast Library for Approximate Nearest Neighbors) <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_matcher/py_matcher.html#flann-based-matcher>`_ 
     for matching. You can read more about matching in the 
@@ -207,9 +207,6 @@ def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=
     # Distance calculation. Source: https://stackoverflow.com/a/1401828
     total_movement = np.linalg.norm(mean_new - mean_old)
 
-    # If movement amount is greater than gamma then movement is detected
-    return total_movement > gamma, total_movement
-
     # Draw the tracks
     # Create some random colors
     # color = np.random.randint(0, 255, (100, 3))
@@ -220,6 +217,9 @@ def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=
     #     frame = cv2.circle(frame, (a, b), 5, color[i].tolist(), -1)
     # img = cv2.add(frame, mask)
     # cv2.imwrite("frame.png", img)
+
+    # If movement amount is greater than gamma then movement is detected
+    return total_movement > gamma, total_movement
 
 
 def does_camera_move_all_in_folder(folder_path):
