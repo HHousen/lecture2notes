@@ -83,13 +83,13 @@ def detect_figures(
     image_path,
     output_path=None,
     east="frozen_east_text_detection.pb",
-    text_area_overlap_threshold=0.15,
+    text_area_overlap_threshold=0.32, #  0.15
     figure_max_area_percentage=0.60,
     text_max_area_percentage=0.30,
     large_box_detection=True,
     do_color_check=True,
     do_text_check=True,
-    entropy_check=3.5,
+    entropy_check=2.5,
     do_remove_subfigures=True,
 ):
     """Detect figures located in a slide.
@@ -115,7 +115,7 @@ def detect_figures(
             then that text block will be ignored. ``do_text_check`` must be true for this option 
             to take effect. Defaults to 0.30.
         large_box_detection (bool, optional): Detect edges and classify large rectangles as 
-            figures. This will only detect one figure and ignores `do_color_check` and 
+            figures. This will ignore `do_color_check` and 
             `do_text_check`. This is useful for finding tables for example. Defaults to True.
         do_color_check (bool, optional): Check that potential figures contain color. This 
             helps to remove large quantities of black and white text form the potential 
@@ -139,6 +139,16 @@ def detect_figures(
         and a list of paths to those figures on disk.
     """
     image = cv2.imread(image_path)
+
+    image = cv2.copyMakeBorder(
+        image,
+        20,
+        20,
+        20,
+        20,
+        cv2.BORDER_CONSTANT,
+        value=[0, 0, 0],
+    )
 
     image_height = image.shape[0]
     image_width = image.shape[1]
@@ -184,12 +194,11 @@ def detect_figures(
         contours_large[0] if len(contours_large) == 2 else contours_large[1]
     )
 
-    for contour in contours_large:
-        large_contour_img = image.copy()
-        large_contour_img = cv2.drawContours(
-            large_contour_img, [contour], -1, (0, 255, 0), 3
-        )
-        # cv2.imwrite("large_contour_img.png", large_contour_img)
+    # large_contour_img = image.copy()
+    # large_contour_img = cv2.drawContours(
+    #     large_contour_img, contours_large, -1, (0, 255, 0), 3
+    # )
+    # cv2.imwrite("large_contour_img.png", large_contour_img)
 
     bounding_boxes_large = np.array(
         [cv2.boundingRect(contour) for contour in contours_large]
@@ -202,6 +211,12 @@ def detect_figures(
         contours_small = (
             contours_small[0] if len(contours_small) == 2 else contours_small[1]
         )
+
+        # small_contour_img = image.copy()
+        # small_contour_img = cv2.drawContours(
+        #     small_contour_img, contours_small, -1, (0, 255, 0), 3
+        # )
+        # cv2.imwrite("small_contour_img.png", small_contour_img)
 
     max_area = int(figure_max_area_percentage * image_area)
     min_area = (image_height // 3) * (image_width // 6)
@@ -225,29 +240,29 @@ def detect_figures(
                 and cv2.isContourConvex(approx)
                 and min_area_small < cv2.contourArea(approx) < max_area
             ):
-                none_tested = False
-                min_area_small = cv2.contourArea(approx)
+                # none_tested = False
+                # min_area_small = cv2.contourArea(approx)
                 figure_contour = approx[:, 0]
 
-        if not none_tested:
-            bounding_box = cv2.boundingRect(figure_contour)
-            x, y, w, h = bounding_box
-            figure = original[
-                y - padding : y + h + padding, x - padding : x + w + padding
-            ]
-            figures.append(figure)
-            all_figure_boxes.append(convert_coords_to_corners(bounding_box))
+        # if not none_tested:
+                bounding_box = cv2.boundingRect(figure_contour)
+                x, y, w, h = bounding_box
+                figure = original[
+                    y - padding : y + h + padding, x - padding : x + w + padding
+                ]
+                figures.append(figure)
+                all_figure_boxes.append(convert_coords_to_corners(bounding_box))
 
     for box in bounding_boxes_large:
         x, y, w, h = box
         area = w * h
         aspect_ratio = w / h
-        if min_area < area < max_area and 0.2 < aspect_ratio < 5:
+        if min_area < area < max_area and 0.2 < aspect_ratio < 6:
             # Draw bounding box rectangle, crop using numpy slicing
             roi_rectangle = convert_coords_to_corners(box)
             # cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
             # cv2.imwrite("rect.png", image)
-            if y + h >= image_height or x + w >= image_width:
+            if y + h >= image_height or x + w >= image_width or y <= image_height or x <= image_width:
                 potential_figure = original[y : y + h, x : x + w]
             else:
                 potential_figure = original[
@@ -311,8 +326,8 @@ def detect_figures(
         if entropy_check:
             # If `entropy_check` is a boolean, then set it to the default
             if type(entropy_check) == bool and entropy_check:
-                entropy_check = 3.5
-            gray = cv2.cvtColor(potential_figure, cv2.COLOR_BGR2GRAY)
+                entropy_check = 2.5
+            gray = cv2.cvtColor(figure, cv2.COLOR_BGR2GRAY)
             high_entropy = shannon_entropy(gray) > entropy_check
             if not high_entropy:
                 continue
