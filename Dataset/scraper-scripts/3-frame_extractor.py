@@ -66,6 +66,9 @@ if sys.argv[1] == "auto":
                 video_id,
             )
 
+            if len(sys.argv) > 2 and sys.argv[2] == "remove":
+                os.remove(input_video_path)
+
 else:
     video_id = sys.argv[1]
     input_video_path = videos_dir / video_id / (video_id + ".mp4")

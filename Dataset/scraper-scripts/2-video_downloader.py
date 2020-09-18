@@ -32,6 +32,13 @@ PARSER.add_argument(
     help="Download the transcript INSTEAD of the video for each entry in `videos-dataset.csv`. This ignores the `downloaded` column in the CSV and will not download videos.",
 )
 PARSER.add_argument(
+    "-r",
+    "--resolution",
+    type=int,
+    default=None,
+    help="The resolution of the videos to download. Default is maximum resolution.",
+)
+PARSER.add_argument(
     "-l",
     "--log",
     dest="logLevel",
@@ -87,10 +94,10 @@ if ARGS.method == "csv":
             total=len(not_downloaded_df.index),
             desc="Downloading Videos",
         ):
-            download_video(row, VIDEO_DIR, OUTPUT_DIR_YT)
+            download_video(row, VIDEO_DIR, OUTPUT_DIR_YT, resolution=ARGS.resolution)
             df.at[index, "downloaded"] = True
 
     df.to_csv(CSV_PATH)
 elif ARGS.method == "youtube":
     # python video_downloader.py youtube 1Qws70XGSq4
-    download_video_yt(ARGS.video_id, OUTPUT_DIR_YT)
+    download_video_yt(ARGS.video_id, OUTPUT_DIR_YT, resolution=ARGS.resolution)

@@ -153,3 +153,4 @@ grad_cam_results/
 frozen_east_text_detection.pb
 delete/
 test_data/
+Dataset/classifier-data-train-val/

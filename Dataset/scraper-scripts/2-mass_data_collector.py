@@ -168,9 +168,10 @@ def add_top_k(k=10, remove=True):
         total=len(most_uncertain_k.index),
         desc="Processing Videos",
     ):
-        row_to_add = DOWNLOAD_DF.loc[DOWNLOAD_DF["video_id"] == row["video_id"]].iloc[0]
-        row_to_add["downloaded"] = False
-        VIDEOS_DATASET_DF.loc[len(VIDEOS_DATASET_DF.index)] = row_to_add
+        row_to_add = DOWNLOAD_DF.loc[DOWNLOAD_DF["video_id"] == row["video_id"]].squeeze()
+        if not row_to_add.empty:
+            row_to_add["downloaded"] = False
+            VIDEOS_DATASET_DF.loc[len(VIDEOS_DATASET_DF.index)] = row_to_add
 
     VIDEOS_DATASET_DF.to_csv(VIDEOS_DATASET_CSV_PATH)
 
