@@ -140,7 +140,9 @@ The ``--top-k`` (or ``-k``) argument can be specified to the script add the top 
 
 Examples:
 
-1. Recommended: Low Disk Space Usage, High Bandwidth, Duplicate Calculations
+1. Low Disk Space Usage, High Bandwidth, Duplicate Calculations, Large Dataset Filesize
+    **Recommended** if you want to build the dataset at full 1080p resolution so that it can be used with a plethora of model architectures. This was how the official dataset was compiled.
+
     The below commands do the following:
 
     1. Scrape the `MIT OpenCourseWare <https://www.youtube.com/channel/UCEBb1b_L6zDS3xTUrIALZOw>`_ YouTube channel for the latest 100 videos that are longer than 20 minutes and save the data to ``../mass-download-list.csv``
@@ -149,7 +151,7 @@ Examples:
 
     2. Run the *Mass Data Collector* to download each video at 480p and determine how certain the model is with its predictions on that video.
     3. Take the top 20 most uncertain videos and add them to the ``Dataset/videos-dataset.csv``.
-    4. Download the newly added 20 videos at full HD resolution
+    4. Download the newly added 20 videos at 480p
     5. Extract frames from the new videos
     6. Sort the frames from top 20 most uncertain videos
     7. Now it is time for you to check the model's predictions, fix them, and then train a better model on the new data.
@@ -163,10 +165,32 @@ Examples:
         python 3-frame_extractor.py auto
         python 4-auto_sort.py
 
-2. High Disk Space Usage, Higher Bandwidth, *No* Duplicate Calculations
-    Specifying the ``'--no_remove`` argument to ``2-mass_data_collector.py`` will make the script keep the processed videos instead of removing them. This means the videos can be copied to the ``Dataset/videos`` folder, manually inspected and fixed, and then :ref:`ss_compile_data` can be used to copy them to the ``Dataset/classifier-data`` folder.
+2. High Disk Space Usage, Higher Bandwidth, *No* Duplicate Calculations, Large Dataset Filesize
+    **Recommended** if you want to build the dataset at full 1080p resolution but do not want to "waste" compute resources on duplicate calculations.
+
+    Specifying the ``--no_remove`` argument to ``2-mass_data_collector.py`` will make the script keep the processed videos instead of removing them. This means the videos can be copied to the ``Dataset/videos`` folder, manually inspected and fixed, and then :ref:`ss_compile_data` can be used to copy them to the ``Dataset/classifier-data`` folder.
     
-    It is recommended to not set the ``--resolution`` if using this method because some of the downloaded videos will eventually be added to the dataset. The dataset is compiled at maximum resolution so that different models can be used that accept different resolutions.
+    It is recommended to not set the ``--resolution`` if using this method because some of the downloaded videos will eventually be added to the dataset. **The dataset is compiled at maximum resolution so that different models can be used that accept different resolutions.**
+
+3. Lower Disk Space Usage, Low Bandwidth, Duplicate Calculations, Small Dataset Filesize
+    **Recommended** if you want to build the dataset for a specific model architecture and if you want the dataset to take up a relatively small amount of disk space.
+    
+    If you want to train a ``resnet34``, for example, which expects 224x224 input images, then you can set the resolution to 240p when downloading videos since the frames will be scaled before being used for training anyway. However, if you ever want to train a model that expects larger input images, you will have to download and reprocess the entire dataset.
+
+    The modified commands look like this:
+
+    .. code-block:: bash
+
+        python 1-youtube_scraper.py channel UCEBb1b_L6zDS3xTUrIALZOw --num_pages 2 --min_length_check 20 -f ../mass-download-list.csv
+        python 2-mass_data_collector.py --resolution 240
+        python 2-mass_data_collector.py -k 20
+        python 2-video_downloader.py csv --resolution 240
+        python 3-frame_extractor.py auto
+        python 4-auto_sort.py
+    
+    Notice that the resolution was changed to 240 for the second command and the resolution option was added to the fourth command.
+
+    This option can be modified as described in the second method by adding the ``--no_remove`` argument to ``2-mass_data_collector.py``. This will increase disk usage but will prevent duplicate calculations and decrease overall bandwidth since videos will not have to be redownloaded.
 
 Mass Dataset Collector Script Help
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -250,6 +274,9 @@ Output of ``python 2-video_downloader.py --help``:
                             entry in `videos-dataset.csv`. This ignores the
                             `downloaded` column in the CSV and will not download
                             videos.
+    -r RESOLUTION, --resolution RESOLUTION
+                            The resolution of the videos to download. Default is
+                            maximum resolution.
     -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Set the logging level (default: 'Info').
 
