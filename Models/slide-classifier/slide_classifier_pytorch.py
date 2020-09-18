@@ -289,7 +289,6 @@ class SlideClassifier(pl.LightningModule):
                     [
                         transforms.Resize(self.hparams.input_size),
                         transforms.CenterCrop(self.hparams.input_size),
-                        transforms.RandomVerticalFlip(),
                         transforms.ToTensor(),
                         normalize,
                     ]
@@ -321,6 +320,8 @@ class SlideClassifier(pl.LightningModule):
 
     def train_dataloader(self):
         """Create train dataloader if it has not already been created, otherwise return the stored dataloader."""
+        # if not hasattr(self, "train_dataset"):
+        #     self.prepare_data()
         if self.train_dataloader_object:
             return self.train_dataloader_object
 
@@ -738,7 +739,7 @@ if __name__ == "__main__":
     # 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
     parser.add_argument(
         "--learning_rate",
-        default=4e-3,
+        default=0.006918309709189364,  #4e-3,
         type=float,
         metavar="LR",
         help="initial learning rate",
