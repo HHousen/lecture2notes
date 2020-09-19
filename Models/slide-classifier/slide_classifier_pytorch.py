@@ -258,52 +258,72 @@ class SlideClassifier(pl.LightningModule):
         normalize = transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         )
+        my_transforms = transforms.Compose([
+            transforms.Resize(self.hparams.input_size),
+            transforms.CenterCrop(self.hparams.input_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
 
-        if self.hparams.use_random_split:
+        if self.hparams.use_random_split or self.hparams.no_validation_split:
             # Random split dataset
-            full_dataset = datasets.ImageFolder(
-                self.hparams.data_path,
-                transforms.Compose(
-                    [
-                        transforms.Resize(self.hparams.input_size),
-                        transforms.CenterCrop(self.hparams.input_size),
-                        transforms.RandomVerticalFlip(),
-                        transforms.ToTensor(),
-                        normalize,
-                    ]
-                ),
-            )
-            train_size = int(0.8 * len(full_dataset))
-            val_size = len(full_dataset) - train_size
-            train_dataset, val_dataset = torch.utils.data.random_split(
-                full_dataset, [train_size, val_size]
-            )
+            if type(self.hparams.data_path) is list:
+                datasets_to_add = []
+                for data_path in self.hparams.data_path:
+                    dataset = datasets.ImageFolder(
+                        data_path,
+                        my_transforms
+                    )
+                    datasets_to_add.append(dataset)
+                
+                full_dataset = torch.utils.data.ConcatDataset(datasets_to_add)
+            else:
+                full_dataset = datasets.ImageFolder(
+                    self.hparams.data_path,
+                    my_transforms
+                )
+            
+            if self.hparams.no_validation_split:
+                train_dataset = full_dataset
+                val_dataset = full_dataset
+            else:
+                train_size = int(0.8 * len(full_dataset))
+                val_size = len(full_dataset) - train_size
+                train_dataset, val_dataset = torch.utils.data.random_split(
+                    full_dataset, [train_size, val_size]
+                )
 
             classes = full_dataset.classes
+        elif self.hparams.cv_split:
+            if "," in self.hparams.data_path:
+                self.hparams.data_path = self.hparams.data_path.split(",")
+            
+            datasets_to_add = []
+            for data_path in self.hparams.data_path:
+                dataset = datasets.ImageFolder(
+                    data_path,
+                    my_transforms
+                )
+                datasets_to_add.append(dataset)
+            
+            train_dataset = torch.utils.data.ConcatDataset(datasets_to_add)
+            
+            val_dataset = datasets.ImageFolder(
+                self.hparams.val_data_split_path,
+                my_transforms
+            )
+
+            classes = datasets_to_add[0].classes
         else:
             traindir = os.path.join(self.hparams.data_path, "train")
             valdir = os.path.join(self.hparams.data_path, "val")
             train_dataset = datasets.ImageFolder(
                 traindir,
-                transforms.Compose(
-                    [
-                        transforms.Resize(self.hparams.input_size),
-                        transforms.CenterCrop(self.hparams.input_size),
-                        transforms.ToTensor(),
-                        normalize,
-                    ]
-                ),
+                my_transforms
             )
             val_dataset = datasets.ImageFolder(
                 valdir,
-                transforms.Compose(
-                    [
-                        transforms.Resize(self.hparams.input_size),
-                        transforms.CenterCrop(self.hparams.input_size),
-                        transforms.ToTensor(),
-                        normalize,
-                    ]
-                ),
+                my_transforms
             )
             classes = train_dataset.classes
 
@@ -384,7 +404,7 @@ class SlideClassifier(pl.LightningModule):
             )
 
         elif self.hparams.optimizer == "ranger":
-            from ranger.ranger import Ranger
+            from pytorch_ranger import Ranger
 
             optimizer = Ranger(
                 params_to_update,
@@ -684,6 +704,11 @@ class SlideClassifier(pl.LightningModule):
             help="use random_split to create train and val set instead of train and val folders",
         )
         parser.add_argument(
+            "--no_validation_split",
+            action="store_true",
+            help="Don't split the data. Use the full dataset for training and evaluation.",
+        )
+        parser.add_argument(
             "--relu_to_mish",
             action="store_true",
             help="convert any relu activations to mish activations",
@@ -699,6 +724,17 @@ class SlideClassifier(pl.LightningModule):
             "--optimizer",
             default="adamw",
             help="Optimizer to use (default=AdamW)",
+        )
+        parser.add_argument(
+            "--cv_split",
+            action="store_true",
+            help="Train on data from multiple folders and test on data from one folder. Useful for cross validation. Requires `--val_data_split_path` to be set.",
+        )
+        parser.add_argument(
+            "--val_data_split_path",
+            default=None,
+            type=str,
+            help="The location of the validation dataset when `--cv_split` is used."
         )
 
         return parser

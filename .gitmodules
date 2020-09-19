@@ -1,6 +1,3 @@
 [submodule "Models/summarizer"]
 	path = Models/summarizer
 	url = https://github.com/HHousen/DocSum
-[submodule "Models/slide-classifier/ranger"]
-	path = Models/slide-classifier/ranger
-	url = https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer
