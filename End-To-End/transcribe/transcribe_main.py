@@ -1,14 +1,17 @@
 import os
+import sys
 import glob
 import json
 import shlex
 import wave
+import sox
 import contextlib
 import logging
 import subprocess
 from pathlib import Path
 import speech_recognition as sr
 from pydub import AudioSegment
+from vosk import Model, KaldiRecognizer
 from pydub.silence import split_on_silence
 from tqdm import tqdm
 from timeit import default_timer as timer
@@ -41,7 +44,7 @@ def extract_audio(video_path, output_path):
     return output_path
 
 
-def transcribe_audio(audio_path, method="sphinx"):
+def transcribe_audio(audio_path, method="sphinx", **kwargs):
     """Transcribe an audio file using CMU Sphinx or Google through the speech_recognition library
 
     Arguments:
@@ -52,6 +55,9 @@ def transcribe_audio(audio_path, method="sphinx"):
     Returns:
         [str]: the transcript of the audio file
     """
+    if method == "vosk":
+        return transcribe_audio_vosk(audio_path, **kwargs)
+    
     assert method in ["sphinx", "google"]
     transcript = None
     logger.debug("Initializing speech_recognition library")
@@ -77,14 +83,63 @@ def transcribe_audio(audio_path, method="sphinx"):
 
     return transcript
 
+def load_vosk_model(model_dir):
+    if type(model_dir) is Model:
+        return model_dir
+    model = Model(model_dir)
+    return model
 
-def read_wave(path, desired_sample_rate=None):
+def transcribe_audio_vosk(audio_path_or_chunks, model_dir="../vosk_models", chunks=False, desired_sample_rate=16000, chunk_size=2000):
+    if chunks:
+        audio = audio_path_or_chunks
+    else:
+        pcm_data, sample_rate, duration = read_wave(
+            audio_path_or_chunks, desired_sample_rate, force=False
+        )
+        if type(pcm_data) is bytes:
+            pcm_data = np.frombuffer(pcm_data)
+        pcm_data = np.array_split(pcm_data, pcm_data.shape[0]/chunk_size)
+        audio = pcm_data
+
+    model = load_vosk_model(model_dir)
+    rec = KaldiRecognizer(model, desired_sample_rate)
+
+    results = []
+    for data in tqdm(audio, desc="Vosk Transcribing"):
+        # if data.size == 0:
+        #     break
+        if rec.AcceptWaveform(data):
+            result = rec.Result()
+            result = json.loads(result)
+            if result["text"] != "":
+                # input(result["text"])
+                results.extend(result["result"])
+        # else:
+        #     partial_result = rec.PartialResult()
+        #     if partial_result is not None:
+        #         partial_result = json.loads(partial_result)
+        #         if partial_result["partial"] != "":
+        #             input(partial_result["partial"])
+        #             results.append(partial_result["partial"])
+    
+    final_result = rec.FinalResult()
+    if final_result is not None:
+        final_result = json.loads(final_result)
+        if final_result["text"] != "":
+            results.extend(final_result["result"])
+
+    results_json = results
+    results_text = [x["word"] if type(x) is dict else x for x in results]
+
+    return " ".join(results_text), results_json
+
+def read_wave(path, desired_sample_rate=None, force=False):
     """Reads a ".wav" file and converts to `desired_sample_rate` with one channel.
 
     Arguments:
         path (str): path to wave file to load
         desired_sample_rate (int, optional): resample the loaded pcm data from the wave file
-            to this sample rate Default is None, no resampling.
+            to this sample rate. Default is None, no resampling.
 
     Returns:
         [tuple]: (PCM audio data, sample rate, duration)
@@ -101,7 +156,7 @@ def read_wave(path, desired_sample_rate=None):
             desired_sample_rate = sample_rate
 
         num_channels = wf.getnchannels()  # stereo or mono
-        if num_channels == 1 and sample_rate == desired_sample_rate:
+        if num_channels == 1 and sample_rate == desired_sample_rate and not force:
             # no resampling is needed
             pcm_data = wf.readframes(frames)
         else:
@@ -163,18 +218,21 @@ def segment_sentences(text, text_json=None):
 
     # add periods after each predicted sentence boundary
     final_text = ". ".join(segmented_text).strip()
+    # add period to final sentence
+    final_text += "."
 
     if text_json is not None:
-        boundaries = [len(sentence) for sentence in segmented_text]
-        boundaries = [x for x in boundaries]
-        text_dict = json.loads(text_json)
+        if type(text_json) is str:
+            text_json = json.loads(text_json)
+        
+        boundaries = [len(sentence.split(" ")) for sentence in segmented_text]
+        
         for idx, boundary in enumerate(boundaries):
             if idx != 0:
-                boundary += boundaries[idx - 1] + 2
+                boundary += boundaries[idx - 1] + 1
                 boundaries[idx] = boundary
-            text_dict.insert(boundary, {"text": "."})
-
-        return final_text, json.dumps(text_dict)
+            text_json.insert(boundary, {"start": 0, "end": 0, "word": "."})
+        return final_text, json.dumps(text_json)
 
     return final_text
 
@@ -219,20 +277,23 @@ def convert_samplerate(audio_path, desired_sample_rate):
         [tuple]: (desired_sample_rate, output) where ``desired_sample_rate`` is the new 
             sample rate and ``output`` is the newly resampled pcm data
     """
-    sox_cmd = "sox {} --type raw --bits 16 --channels 1 --rate {} --encoding signed-integer --endian little --compression 0.0 --no-dither - ".format(
-        quote(str(audio_path)), desired_sample_rate
-    )
-    try:
-        output = subprocess.check_output(shlex.split(sox_cmd), stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError("SoX returned non-zero status: {}".format(e.stderr))
-    except OSError as e:
-        raise OSError(
-            e.errno,
-            "SoX not found, use {}hz files or install it: {}".format(
-                desired_sample_rate, e.strerror
-            ),
-        )
+    tfm = sox.Transformer()
+    tfm.set_output_format(rate=desired_sample_rate, channels=1)
+    output = tfm.build_array(input_filepath=str(audio_path))
+    # sox_cmd = "sox {} --type raw --bits 16 --channels 1 --rate {} --encoding signed-integer --endian little --compression 0.0 --no-dither - ".format(
+    #     quote(str(audio_path)), desired_sample_rate
+    # )
+    # try:
+    #     output = subprocess.check_output(shlex.split(sox_cmd), stderr=subprocess.PIPE)
+    # except subprocess.CalledProcessError as e:
+    #     raise RuntimeError("SoX returned non-zero status: {}".format(e.stderr))
+    # except OSError as e:
+    #     raise OSError(
+    #         e.errno,
+    #         "SoX not found, use {}hz files or install it: {}".format(
+    #             desired_sample_rate, e.strerror
+    #         ),
+    #     )
 
     return desired_sample_rate, output
 
@@ -335,13 +396,43 @@ def transcribe_audio_deepspeech(
     else:
         model_output_metadata = model.sttWithMetadata(audio, 1).transcripts[0]
         transcript_json = json.dumps(metadata_to_list(model_output_metadata))
-
+        # with open("delete.json", "w+") as file:
+        #     json.dump(transcript_json, file)
     transcript_text = metadata_to_string(model_output_metadata)
+
+    # Convert deepspeech json from letter-by-letter to word-by-word
+    transcript_json_converted = convert_deepspeech_json(transcript_json)
 
     inference_end = timer() - inference_start
     logger.debug("Inference (transcription) took %0.3fs." % inference_end)
 
-    return transcript_text, transcript_json
+    return transcript_text, transcript_json_converted
+
+
+def convert_deepspeech_json(transcript_json):
+    if type(transcript_json) is str:
+        transcript_json = json.loads(transcript_json)
+
+    final_transcript_json = []
+    current_word = ""
+    start_time = 0
+    for char_details in transcript_json:
+        at_word_end = char_details["text"] == " " or char_details["text"] == "."
+        if at_word_end and looking_for_word_end:
+            end_time = char_details["start_time"]
+            final_transcript_json.append({"start": start_time, "end": end_time, "word": current_word})
+            current_word = ""
+            looking_for_word_end = False
+        
+        elif char_details["text"] != " ":
+            start_time = char_details["start_time"]
+            looking_for_word_end = True
+            current_word += char_details["text"]
+        
+        if char_details["text"] == ".":
+            final_transcript_json.append({"start": char_details["start_time"], "end": char_details["start_time"], "word": char_details["text"]})
+    
+    return final_transcript_json
 
 
 def write_to_file(
@@ -410,13 +501,13 @@ def chunk_by_speech(
 
 
 def process_segments(
-    segments, ds_model, audio_length="unknown", do_segment_sentences=True
+    segments, model, audio_length="unknown", method="deepspeech", do_segment_sentences=True
 ):
     """Transcribe a list of byte strings containing pcm data
 
     Args:
         segments (list): list of byte strings containing pcm data (generated by :meth:`~transcribe.transcribe_main.chunk_by_speech`)
-        ds_model (deepspeech model): a deepspeech model object or a path to a folder
+        model (deepspeech model): a deepspeech model object or a path to a folder
             containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`).
         audio_length (str, optional): the length of the audio file if known (used for logging statements)
             Default is "unknown".
@@ -424,28 +515,35 @@ def process_segments(
     Returns:
         [str]: the combined transcript of all the items in `segments`.
     """
-    if isinstance(ds_model, str):
-        ds_model = load_deepspeech_model(ds_model)
+    if method == "deepspeech" and isinstance(model, str):
+        model = load_deepspeech_model(model)
+    elif model == "vosk":
+        model = load_vosk_model(model)
 
     full_transcript = ""
     full_transcript_json = []
     start_time = timer()
-    json_detected = False
 
     # `segments` is a generator so total length is not known
     # also, this means that the audio file is split on voice activity as needed
     # (the entire file is not split and stored in memory at once)
-    for i, segment in tqdm(enumerate(segments), desc="Processing Segments"):
-        # Run deepspeech on each chunk which completed VAD
-        audio = np.frombuffer(segment, dtype=np.int16)
-        transcript, transcript_json = transcribe_audio_deepspeech(
-            segment, ds_model, raw_audio_data=True
+    if method == "deepspeech":
+        for i, segment in tqdm(enumerate(segments), desc="Processing Segments"):
+            # Run deepspeech on each chunk which completed VAD
+            audio = np.frombuffer(segment, dtype=np.int16)
+            transcript, transcript_json = transcribe_audio_deepspeech(
+                segment, model, raw_audio_data=True
+            )
+            logging.debug("Chunk Transcript: %s" % transcript)
+
+            full_transcript_json.extend(json.loads(transcript_json))
+            full_transcript_json.append({"start_time": full_transcript_json[-1], "text": " ", "timestep": 0})
+
+            full_transcript += transcript + " "
+    elif method == "vosk":
+        full_transcript, full_transcript_json = transcribe_audio_vosk(
+            segments, model, chunks=True
         )
-        logging.debug("Chunk Transcript: %s" % transcript)
-
-        full_transcript_json.extend(json.loads(transcript_json))
-
-        full_transcript += transcript + " "
 
     # Convert `full_transcript_json` to json string
     full_transcript_json = json.dumps(full_transcript_json)
@@ -602,4 +700,19 @@ def check_transcript(generated_transcript, ground_truth_transcript):
 # transcript = transcribe_audio_deepspeech("process/audio.wav", "../deepspeech-models")
 # print(transcript)
 
-# print(segment_sentences("the following content is provided under a creative commons license your support will help him it open course where continued to offer high quality educational resources for free to make a donation or view additional materials from hundreds of mit courses visit it open course were at octavie's begin sosimenes before this artistic will be recorded fridays again in future lectures if you don't want to have the back of your head show up just don't sit in this this friend area here so first of all low what a crowd you guys were finally and twenty six one hundred six your bull one made it big huh so good afternoon and welcome to the very first class of six or belindas six hundred the semester so my name is annabel for senna langbein a lecture and the easiest apartment and i'll be giving some of the lectures for to day along with later on in the in the term professor crimson who sitting right down there we'll be giving some of the lectures well okay so to day are going to go over some just basic administering level what computer do just to make sure we're all in the same page and then we're going to die right into a pythonic rental a little bit about mathematical operations you can do with pity and then we're going to talk about pineries and types so as i mentioned in my introductory email all the slides in code that all talk about during electrolier lecture so i highly encourage you to download them and to have them open we're going to go through some class exercises which will be available theatre a friend it is true in this is a really fast pace course and we ramp up really quickly so we do want to position you to succeed in this course so as i was writing this estranging about when i was first starting to program now what help me get through my first merry first programming course and this is really a like a good list so the first thing was i just read the piece seasons they came out made sure that you know the terminology kind of just sunk in and then during lectures you know if the lecture was talking about something that i suddenly remembered all i saw that word in the piece i didn't know what it was will he now i know what it is right so just give it a reed he don't need to start it if your new operating i think the caristie so it's like math or reading the more you practice the better you get at it if you're not going to sort programming but watching me right for gramps cassidy no how to program right you say to practice so down become before life farfallo along whatever i type by can tie and i think also one of the big things is if your atargatis your kind of afraid that you're going to break your computer right and you can't really do that just by running anaconda and and typing in some commands so don't be afraid to just type sayson and see what it does worse case you just restarted the computer right so ye ye so that's probably the big thing right there i should probably highlighted it but don't be afraid great so this is pretty much a romp of olive six triple one or six hundred as i've just explained it to their three make things we want you to get out of this course bikers thing is the knowledge of concepts which is pretty much true of any class that i'll take right plastileather something through lectures example test how much you know this is a class and programming breathe other thing we need you we want you to get out of it is programming skills and lasting and i think this is what makes his plateaus we teach you how to solve problems and we do that through the pieces so that's really of yolara of this course looks like an underlying all of these is just practice so you have to just type some stuff away and coat blot and you'll succeed in this course i think kate so what are the things we're going to learn in this class i feel like but things were now learn this class can be divided into basically three different sections so the first one is related to these first two first items here so it's really about learning how to program saleroom is part of it is figuring out what um what objects to create you'll learn about these later how do you represent knowledge with the destructors that sort of the broad term for that and then as your writing for grannie to programs are just the near sometimes programs jump around they make decisions there some control float to programs so that's what the second line is going to be about the second big part of the score is a little bit more abstract and deals with how do you write good coat good style cobered able so when you write god you want to ride it such that no you're mad company other people will read it other people would use it so as to be readable and understandable by others so to that end unit write code that well organized lodger is to understand it and not only that not only will your code be read by other people but next year maybe you'll take another course and you want to look back at some of the promises you wrote in this class you kind of want to be better weary your coat right if it's a big mess you might not be able to understand or rounders and what you what you were doing so writing read preble coating organizing cups also big part and the last section is going to deal with us the first two are actually part of the programming in introduction to programming a computer science and python and the last one deals aloides with the computer science part in introduction to programming a computer sciences yon storial about once you florodora programs in pitanatae programs and pipe to how do you know that one program is better than the other right how do you know that one program is more efficient than the other how do you know that one albertists better than the other so that's where we're going to talk about in the last partook so that's all for it at the servant minister to part of the course selects let's start by talking and let a high level what is a computer do so fund"))
+# result, _ = transcribe_audio_vosk("process/audio.wav", "../vosk-model-en-us-daanzu-20200905")
+# print(result)
+# load_vosk_model("../vosk-model-en-us-daanzu-20200905")
+
+# segments, _, audio_length = chunk_by_speech(
+#     "process/audio.wav", desired_sample_rate=16000
+# )
+# transcript, transcript_json = process_segments(
+#     segments,
+#     "../deepspeech-models",
+#     method="deepspeech",
+#     audio_length=audio_length,
+#     do_segment_sentences=True,
+# )
+# with open("delete.json", "r") as file:
+#     thing = json.loads(json.load(file))

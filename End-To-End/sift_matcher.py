@@ -516,7 +516,7 @@ def match_features(
             kp1 = sift_outputs[1]
             kp2 = sift_outputs[2]
             print("Matches " + str(len(sift_matches)))
-            ransac_transform(*sift_outputs, draw_matches=True)
+            # ransac_transform(*sift_outputs, draw_matches=True)
             if len(sift_matches) > min_match_count:  # Images contain the same slide
                 logger.info(
                     "%s contains the 'slide' at %s according to the number of matches",

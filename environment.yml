@@ -61,3 +61,4 @@ dependencies:
     - imutils
     - opencv-contrib-python
     - pytorch-ranger
+    - vosk

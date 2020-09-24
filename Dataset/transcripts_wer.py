@@ -34,10 +34,22 @@ PARSER.add_argument(
     help="path to the directory containing transcripts downloaded with 2-video_downloader.py",
 )
 PARSER.add_argument(
-    "--deepspeech_dir",
+    "--model_dir",
     type=str,
     default="../deepspeech-models",
-    help="path to the directory containing the DeepSpeech models",
+    help="path to the directory containing the models for `--method`",
+)
+PARSER.add_argument(
+    "--method",
+    type=str,
+    default=None,
+    help="Method to use to transcribe. Any method allowed by `transcribe.transcribe_audio()` will work. Defaults to 'deepspeech'."
+)
+PARSER.add_argument(
+    "--audio_format",
+    type=str,
+    default="wav",
+    help="The format to convert downloaded audio to. Raw WAV is required for most recognizers."
 )
 PARSER.add_argument(
     "--suffix",
@@ -76,7 +88,7 @@ if ARGS.mode == "transcribe":
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
-                "preferredcodec": "wav",
+                "preferredcodec": ARGS.audio_format,
                 "preferredquality": "192",
             }
         ],
@@ -89,8 +101,14 @@ if ARGS.mode == "transcribe":
     # Remove entries that are not files
     transcripts = [x for x in transcripts if os.path.isfile(TRANSCRIPTS_DIR / x)]
 
-    # Create DeepSpeech model
-    ds_model = transcribe.load_deepspeech_model(ARGS.deepspeech_dir)
+    # Create DeepSpeech model if using 'deepspeech' method
+    if ARGS.method == "deepspeech":
+        model = transcribe.load_deepspeech_model(ARGS.model_dir)
+        desired_sample_rate = ds_model.sampleRate()
+    elif ARGS.method == "vosk":
+        model = transcribe.load_vosk_model(ARGS.model_dir)
+        desired_sample_rate = 16000
+    
     for transcript in tqdm(transcripts, desc="Transcribing"):
         video_id = transcript.split(".")[0]
         transcript_ml_path = TRANSCRIPTS_DIR / (transcript[:-4] + ARGS.suffix + ".txt")
@@ -115,7 +133,7 @@ if ARGS.mode == "transcribe":
                 else:
                     break
 
-            audio_path = process_folder / (video_id + ".wav")
+            audio_path = process_folder / (video_id + "." + ARGS.audio_format)
 
             end_time = timer() - start_time
             logger.info("Stage 1 (Download and Convert Audio) took %s" % end_time)
@@ -123,17 +141,24 @@ if ARGS.mode == "transcribe":
             # Transcribe
             start_time = timer()
             if ARGS.no_chunk:
-                transcript = transcribe.transcribe_audio_deepspeech(
-                    audio_path, ds_model
-                )
+                if ARGS.method != "deepspeech":
+                    transcript = transcribe.transcribe_audio(
+                        audio_path, method=ARGS.method, model_dir=ARGS.model_dir,
+                    )
+                    if type(transcript) is tuple:
+                        transcript = transcript[0]
+                else:
+                    transcript, _ = transcribe.transcribe_audio_deepspeech(
+                        audio_path, model
+                    )
             else:
-                desired_sample_rate = ds_model.sampleRate()
                 segments, _, audio_length = transcribe.chunk_by_speech(
                     audio_path, desired_sample_rate=desired_sample_rate
                 )
-                transcript = transcribe.process_segments(
+                transcript, _ = transcribe.process_segments(
                     segments,
-                    ds_model,
+                    model,
+                    method=ARGS.method,
                     audio_length=audio_length,
                     do_segment_sentences=False,
                 )
