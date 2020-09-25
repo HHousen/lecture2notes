@@ -125,7 +125,7 @@ dmypy.json
 .pyre/
 
 # Custom
-Dataset/classifier-data
+Dataset/classifier-data*/
 Dataset/videos
 Dataset/slides
 Dataset/transcripts
@@ -153,4 +153,3 @@ grad_cam_results/
 frozen_east_text_detection.pb
 delete/
 test_data/
-Dataset/classifier-data-train-val/

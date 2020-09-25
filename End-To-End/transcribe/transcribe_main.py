@@ -90,6 +90,18 @@ def load_vosk_model(model_dir):
     return model
 
 def transcribe_audio_vosk(audio_path_or_chunks, model_dir="../vosk_models", chunks=False, desired_sample_rate=16000, chunk_size=2000):
+    """Transcribe audio using a ``vosk`` model.
+
+    Args:
+        audio_path_or_chunks (str or generator): Path to an audio file or a generator of chunks created by :meth:`~transcribe.transcribe_main.chunk_by_speech`
+        model_dir (str, optional): Path to the directory containing the `vosk` models. Defaults to "../vosk_models".
+        chunks (bool, optional): If the `audio_path_or_chunks` is chunks. Defaults to False.
+        desired_sample_rate (int, optional): The sample rate that the model requires to convert audio to. Defaults to 16000.
+        chunk_size (int, optional): The number of wave frames per loop. Amount of audio data transcribed at a time. Defaults to 2000.
+
+    Returns:
+        tuple: (text_transcript, results_json) The transcript as a string and as JSON.
+    """
     if chunks:
         audio = audio_path_or_chunks
     else:
@@ -134,15 +146,17 @@ def transcribe_audio_vosk(audio_path_or_chunks, model_dir="../vosk_models", chun
     return " ".join(results_text), results_json
 
 def read_wave(path, desired_sample_rate=None, force=False):
-    """Reads a ".wav" file and converts to `desired_sample_rate` with one channel.
+    """Reads a ".wav" file and converts to ``desired_sample_rate`` with one channel.
 
     Arguments:
         path (str): path to wave file to load
         desired_sample_rate (int, optional): resample the loaded pcm data from the wave file
             to this sample rate. Default is None, no resampling.
+        force (bool, optional): Force the audio to be converted even if it is detected to meet
+            the necessary criteria.
 
     Returns:
-        [tuple]: (PCM audio data, sample rate, duration)
+        tuple: (PCM audio data, sample rate, duration)
     """
     with contextlib.closing(wave.open(str(path), "rb")) as wf:
         sample_width = wf.getsampwidth()
@@ -192,14 +206,18 @@ def write_wave(path, audio, sample_rate):
         wf.writeframes(audio)
 
 
-def segment_sentences(text, text_json=None):
+def segment_sentences(text, text_json=None, do_capitalization=True):
     """Detect sentence boundaries without punctuation or capitalization.
 
     Arguments:
-        text (str): The string to segment by sentence
+        text (str): The string to segment by sentence.
+        text_json (str or dict, optional): If the detected sentence boundaries should 
+            be applied to the JSON format of a transcript. Defaults to None.
+        do_capitalization (bool, optiona): If the first letter of each detected sentence
+            should be capitalized. Defaults to True.
 
     Returns:
-        [str]: The punctuated string
+        str: The punctuated (and optionally capitalized) string
     """
     from deepsegment import DeepSegment
 
@@ -216,6 +234,9 @@ def segment_sentences(text, text_json=None):
         + " to split transcript into sentences."
     )
 
+    if do_capitalization:
+        segmented_text = [x.capitalize() for x in segmented_text]
+
     # add periods after each predicted sentence boundary
     final_text = ". ".join(segmented_text).strip()
     # add period to final sentence
@@ -227,22 +248,33 @@ def segment_sentences(text, text_json=None):
         
         boundaries = [len(sentence.split(" ")) for sentence in segmented_text]
         
+        if do_capitalization:
+            text_json[0]["word"] = text_json[0]["word"].title()
+
         for idx, boundary in enumerate(boundaries):
             if idx != 0:
                 boundary += boundaries[idx - 1] + 1
                 boundaries[idx] = boundary
             text_json.insert(boundary, {"start": 0, "end": 0, "word": "."})
+            
+            if do_capitalization:
+                try:
+                    text_json[boundary+1]["word"] = text_json[boundary+1]["word"].title()
+                except IndexError:
+                    pass
+        
         return final_text, json.dumps(text_json)
 
     return final_text
 
 
 def metadata_to_string(metadata):
-    """ Helper function to handle metadata tokens from deepspeech """
+    """ Helper function to convert metadata tokens from deepspeech to a string. """
     return "".join(token.text for token in metadata.tokens)
 
 
 def metadata_to_json(candidate_transcript):
+    """ Helper function to convert metadata tokens from deepspeech to a dictionary. """
     json_result = {
         "confidence": candidate_transcript.confidence,
         "tokens": [
@@ -263,49 +295,31 @@ def metadata_to_list(candidate_transcript):
 
 
 def convert_samplerate(audio_path, desired_sample_rate):
-    """Use `SoX` to resample wave files to 16 bits, 1 channel, and `desired_sample_rate` sample rate.
+    """Use `SoX` to resample wave files to 16 bits, 1 channel, and ``desired_sample_rate`` sample rate.
 
     Arguments:
         audio_path (str): path to wave file to process
         desired_sample_rate (int): sample rate in hertz to convert the wave file to
 
-    Raises:
-        RuntimeError: if SoX returns a non-zero status
-        OSError: if SoX is not found
-
     Returns:
-        [tuple]: (desired_sample_rate, output) where ``desired_sample_rate`` is the new 
+        tuple: (desired_sample_rate, output) where ``desired_sample_rate`` is the new 
             sample rate and ``output`` is the newly resampled pcm data
     """
     tfm = sox.Transformer()
     tfm.set_output_format(rate=desired_sample_rate, channels=1)
     output = tfm.build_array(input_filepath=str(audio_path))
-    # sox_cmd = "sox {} --type raw --bits 16 --channels 1 --rate {} --encoding signed-integer --endian little --compression 0.0 --no-dither - ".format(
-    #     quote(str(audio_path)), desired_sample_rate
-    # )
-    # try:
-    #     output = subprocess.check_output(shlex.split(sox_cmd), stderr=subprocess.PIPE)
-    # except subprocess.CalledProcessError as e:
-    #     raise RuntimeError("SoX returned non-zero status: {}".format(e.stderr))
-    # except OSError as e:
-    #     raise OSError(
-    #         e.errno,
-    #         "SoX not found, use {}hz files or install it: {}".format(
-    #             desired_sample_rate, e.strerror
-    #         ),
-    #     )
 
     return desired_sample_rate, output
 
 
-def resolve_models(dir_name):
+def resolve_deepspeech_models(dir_name):
     """Resolve directory path for deepspeech models and fetch each of them.
 
     Arguments:
         dir_name (str): Path to the directory containing pre-trained models
 
     Returns:
-        [tuple]: a tuple containing each of the model files (pb, scorer)
+        tuple: a tuple containing each of the model files (pb, scorer)
     """
 
     pb = glob.glob(dir_name + "/*.pbmm")[0]
@@ -327,11 +341,11 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
         lm_beta (float, optional): beta parameter of langage model. Default is None.
 
     Returns:
-        [deepspeech model]: the loaded deepspeech model
+        deepspeech.Model: the loaded deepspeech model
     """
     from deepspeech import Model
 
-    model, scorer = resolve_models(model_dir)
+    model, scorer = resolve_deepspeech_models(model_dir)
     logger.debug("Loading model...")
     model = Model(model)
     model.setBeamWidth(beam_width)
@@ -363,7 +377,7 @@ def transcribe_audio_deepspeech(
             in json format.
 
     Returns:
-        [tuple]: (transcript_text, transcript_json) the transcribed audio file in string format 
+        tuple: (transcript_text, transcript_json) the transcribed audio file in string format 
         and the transcript in json
     """
     if isinstance(model, str):
@@ -395,9 +409,7 @@ def transcribe_audio_deepspeech(
         model_output_metadata = model_output_metadata.transcripts[0]
     else:
         model_output_metadata = model.sttWithMetadata(audio, 1).transcripts[0]
-        transcript_json = json.dumps(metadata_to_list(model_output_metadata))
-        # with open("delete.json", "w+") as file:
-        #     json.dump(transcript_json, file)
+        transcript_json = metadata_to_list(model_output_metadata)
     transcript_text = metadata_to_string(model_output_metadata)
 
     # Convert deepspeech json from letter-by-letter to word-by-word
@@ -410,6 +422,15 @@ def transcribe_audio_deepspeech(
 
 
 def convert_deepspeech_json(transcript_json):
+    """Convert a deepspeech json transcript from a letter-by-letter format to word-by-word.
+
+    Args:
+        transcript_json (dict or str): The json format transcript as a dictionary or a json
+            string, which will be loaded using ``json.loads()``.
+
+    Returns:
+        dict: The word-by-word transcript json.
+    """
     if type(transcript_json) is str:
         transcript_json = json.loads(transcript_json)
 
@@ -432,6 +453,9 @@ def convert_deepspeech_json(transcript_json):
         if char_details["text"] == ".":
             final_transcript_json.append({"start": char_details["start_time"], "end": char_details["start_time"], "word": char_details["text"]})
     
+    end_time = transcript_json[-1]["start_time"]
+    final_transcript_json.append({"start": start_time, "end": end_time, "word": current_word})
+
     return final_transcript_json
 
 
@@ -441,7 +465,7 @@ def write_to_file(
     transcript_json=None,
     transcript_json_save_path=None,
 ):
-    """ Write ``results`` to ``save_file``."""
+    """ Write ``transcript`` to ``transcript_save_file`` and ``transcript_json`` to ``transcript_json_save_path``."""
     with open(transcript_save_file, "w+") as file_results:
         logger.info("Writing text transcript to file " + str(transcript_save_file))
         file_results.write(transcript)
@@ -473,7 +497,7 @@ def chunk_by_speech(
             the same rate of the input audio file. Defaults to None.
     
     Returns:
-        [tuple]: segments, sample_rate, audio_length. See :meth:`~transcribe.webrtcvad_utils.vad_segment_generator`.
+        tuple: (segments, sample_rate, audio_length). See :meth:`~transcribe.webrtcvad_utils.vad_segment_generator`.
     """
     if desired_sample_rate:
         assert desired_sample_rate in (
@@ -511,9 +535,14 @@ def process_segments(
             containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`).
         audio_length (str, optional): the length of the audio file if known (used for logging statements)
             Default is "unknown".
+        method (str, optional): The model to use to perform speech-to-text. Supports 'deepspeech' and 
+            'vosk'. Defaults to "deepspeech".
+        do_segment_sentences (bool, optional): Find sentence boundaries using 
+            :meth:`~transcribe.transcribe_main.segment_sentences`. Defaults to True.
 
     Returns:
-        [str]: the combined transcript of all the items in `segments`.
+        tuple: (full_transcript, full_transcript_json) The combined transcript of all the items in 
+        ``segments`` as a string and as dictionary/json.
     """
     if method == "deepspeech" and isinstance(model, str):
         model = load_deepspeech_model(model)
@@ -534,10 +563,11 @@ def process_segments(
             transcript, transcript_json = transcribe_audio_deepspeech(
                 segment, model, raw_audio_data=True
             )
+
             logging.debug("Chunk Transcript: %s" % transcript)
 
-            full_transcript_json.extend(json.loads(transcript_json))
-            full_transcript_json.append({"start_time": full_transcript_json[-1], "text": " ", "timestep": 0})
+            full_transcript_json.extend(transcript_json)
+            # full_transcript_json.append({"start": full_transcript_json[-1]["start"], "end": full_transcript_json[-1]["start"], "word": " ",})
 
             full_transcript += transcript + " "
     elif method == "vosk":
@@ -614,7 +644,10 @@ def chunk_by_silence(
 
 
 def process_chunks(chunk_dir, method="sphinx", model_dir=None):
-    """Runs transcription on every chunk (audio file) in a directory"""
+    """
+    Performs transcription on every voice activity chunk (audio file) created by 
+    :meth:`~transcribe.transcribe_main.chunk_by_silence` in a directory.
+    """
     chunks = os.listdir(chunk_dir)
     chunks.sort()
     full_transcript = ""
@@ -714,5 +747,6 @@ def check_transcript(generated_transcript, ground_truth_transcript):
 #     audio_length=audio_length,
 #     do_segment_sentences=True,
 # )
-# with open("delete.json", "r") as file:
-#     thing = json.loads(json.load(file))
+# print(transcript)
+# print(" ".join([x["word"] for x in json.loads(transcript_json)]))
+# write_to_file(transcript, "process/audio.txt", transcript_json, "process/audio.json")

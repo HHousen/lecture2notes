@@ -753,7 +753,7 @@ def structured_joined_sum(
     ssa_path,
     transcript_json_path,
     frame_every_x=1,
-    ending_char=" ",
+    ending_char=".",
     to_json=False,
     summarization_method="abstractive",
     *args,
@@ -815,18 +815,31 @@ def structured_joined_sum(
     transcript_before_slides = ""
     while True:
         current_letter_obj = transcript_json[transcript_json_idx]
-        if (
-            current_time >= first_slide_timestamp_seconds
-            and current_letter_obj["text"] == ending_char
-        ):
-            break
         try:
-            current_time = current_letter_obj["start_time"]
-        except KeyError:  # no `start_time` so use the previous value
+            current_time_to_be_set = current_letter_obj["start"]
+            if current_time_to_be_set != 0:
+                current_time = current_time_to_be_set
+        except KeyError:  # no `start` so use the previous value
             pass
-        transcript_before_slides += current_letter_obj["text"]
+        
+        try:
+            add_space = not transcript_json[transcript_json_idx+1]["word"] == "."
+        except IndexError:
+            add_space = False
+
+        to_add = current_letter_obj["word"]
+        if add_space:
+            to_add += " "
+        transcript_before_slides += to_add
         transcript_json_idx += 1
 
+        if (
+            current_time >= first_slide_timestamp_seconds
+            and current_letter_obj["word"] == ending_char
+        ):
+            break
+
+    transcript_before_slides = transcript_before_slides.strip()
     final_dict = OrderedDict({"Preface": {"transcript": transcript_before_slides}})
 
     go_to_end = False
@@ -888,23 +901,34 @@ def structured_joined_sum(
 
             current_letter_obj = transcript_json[transcript_json_idx]
 
+            try:
+                current_time_to_be_set = current_letter_obj["start"]
+                if current_time_to_be_set != 0:
+                    current_time = current_time_to_be_set
+            except KeyError:  # no `start` so use the previous value
+                pass
+
+            try:
+                add_space = not transcript_json[transcript_json_idx+1]["word"] == "."
+            except IndexError:
+                add_space = False
+
+            to_add = current_letter_obj["word"]
+            if add_space:
+                to_add += " "
+
+            coresponding_transcript_text += to_add
+            transcript_json_idx += 1
+
             # If `go_to_end` enabled then never break using this statement.
             # If the current time is past the next slide time advance to the next slide.
             # However, jump forward a few letter if necessary in order to end the current
             # transcript-slide segment with `endding_char`.
             if (not go_to_end) and (
                 current_time >= next_slide_timestamp_seconds
-                and current_letter_obj["text"] == ending_char
+                and current_letter_obj["word"] == ending_char
             ):
                 break
-
-            try:
-                current_time = current_letter_obj["start_time"]
-            except KeyError:  # no `start_time` so use the previous value
-                pass
-
-            coresponding_transcript_text += current_letter_obj["text"]
-            transcript_json_idx += 1
 
         final_dict[title] = {"transcript": coresponding_transcript_text.strip()}
         final_dict[title]["slide_content"] = all_slide_content
@@ -937,4 +961,4 @@ def structured_joined_sum(
     return final_dict
 
 
-# structured_joined_sum("remove2.json", "process/audio.json")
+# structured_joined_sum("process/slide-ssa.json", "process/audio.json", to_json="process/summarized.json")
