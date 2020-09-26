@@ -101,7 +101,8 @@ if ARGS.mode == "transcribe":
     # Remove entries that are not files
     transcripts = [x for x in transcripts if os.path.isfile(TRANSCRIPTS_DIR / x)]
 
-    # Create DeepSpeech model if using 'deepspeech' method
+    # Create DeepSpeech or Vosk model if using 'deepspeech' or 'vosk' method
+    model = None
     if ARGS.method == "deepspeech":
         model = transcribe.load_deepspeech_model(ARGS.model_dir)
         desired_sample_rate = ds_model.sampleRate()
@@ -141,16 +142,9 @@ if ARGS.mode == "transcribe":
             # Transcribe
             start_time = timer()
             if ARGS.no_chunk:
-                if ARGS.method != "deepspeech":
-                    transcript = transcribe.transcribe_audio(
-                        audio_path, method=ARGS.method, model_dir=ARGS.model_dir,
-                    )
-                    if type(transcript) is tuple:
-                        transcript = transcript[0]
-                else:
-                    transcript, _ = transcribe.transcribe_audio_deepspeech(
-                        audio_path, model
-                    )
+                transcript, _ = transcribe.transcribe_audio(
+                    audio_path, method=ARGS.method, model=model
+                )
             else:
                 segments, _, audio_length = transcribe.chunk_by_speech(
                     audio_path, desired_sample_rate=desired_sample_rate

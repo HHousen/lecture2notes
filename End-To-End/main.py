@@ -6,7 +6,6 @@ import json
 import argparse
 import logging
 import spacy
-import traceback
 from shutil import rmtree
 from pathlib import Path
 from helpers import *
@@ -304,46 +303,50 @@ def main(ARGS):
                     transcribe.chunk_by_silence(AUDIO_PATH, CHUNK_DIR)
                     TRANSCRIPT, TRANSCRIPT_JSON = transcribe.process_chunks(
                         CHUNK_DIR,
-                        model_dir=ARGS.deepspeech_model_dir,
+                        model_dir=ARGS.transcribe_model_dir,
                         method=ARGS.transcription_method,
                     )
 
+                    if ARGS.transcribe_segment_sentences:
+                        TRANSCRIPT, TRANSCRIPT_JSON = transcribe.segment_sentences(
+                            TRANSCRIPT, TRANSCRIPT_JSON
+                        )
+
                 elif ARGS.chunk == "speech":
-                    ds_model = transcribe.load_deepspeech_model(
-                        ARGS.deepspeech_model_dir
+                    stt_model = transcribe.load_model(
+                        ARGS.transcription_method, ARGS.transcribe_model_dir
                     )
-                    desired_sample_rate = ds_model.sampleRate()
+                    
+                    # Only DeepSpeech has a `sampleRate()` method but `stt_model` could contain
+                    # a DeepSpeech or Vosk model
+                    try:
+                        desired_sample_rate = stt_model.sampleRate()
+                    except AttributeError:
+                        # default sample rate to convert to is 16000
+                        desired_sample_rate = 16000
+                    
                     segments, _, audio_length = transcribe.chunk_by_speech(
                         AUDIO_PATH, desired_sample_rate=desired_sample_rate
                     )
                     TRANSCRIPT, TRANSCRIPT_JSON = transcribe.process_segments(
-                        segments, ds_model, audio_length=audio_length
+                        segments, stt_model, method=ARGS.transcription_method, audio_length=audio_length, do_segment_sentences=ARGS.transcribe_segment_sentences
                     )
 
                 else:  # if not chunking
-                    if (
-                        ARGS.transcription_method == "deepspeech"
-                        or YT_TRANSCRIPTION_FAILED
-                    ):
-                        (
-                            TRANSCRIPT,
-                            TRANSCRIPT_JSON,
-                        ) = transcribe.transcribe_audio_deepspeech(
-                            AUDIO_PATH, ARGS.deepspeech_model_dir
-                        )
+                    TRANSCRIPT, TRANSCRIPT_JSON = transcribe.transcribe_audio(
+                        AUDIO_PATH, method=ARGS.transcription_method, model=ARGS.transcribe_model_dir
+                    )
+
+                    if ARGS.transcribe_segment_sentences:
                         TRANSCRIPT, TRANSCRIPT_JSON = transcribe.segment_sentences(
                             TRANSCRIPT, TRANSCRIPT_JSON
                         )
-                    else:
-                        TRANSCRIPT = transcribe.transcribe_audio(
-                            AUDIO_PATH, method=ARGS.transcription_method
-                        )
+            
             except Exception as e:
                 logger.error(
                     "Audio transcription failed. Retry by running this script with the skip_to parameter set to 6."
                 )
-                logger.error("Full error: " + str(e))
-                traceback.print_exc()
+                raise
 
         if "transcript" in ARGS.spell_check:
             TRANSCRIPT = spell_checker.check(TRANSCRIPT)
@@ -518,9 +521,9 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "-c",
         "--chunk",
-        default="speech",
+        default="none",
         choices=["silence", "speech", "none"],
-        help="split the audio into small chunks on `silence` using PyDub or voice activity `speech` using py-webrtcvad. set to 'none' to disable. (default: 'speech').",
+        help="split the audio into small chunks on `silence` using PyDub or voice activity `speech` using py-webrtcvad. set to 'none' to disable. Recommend 'speech' for DeepSpeech and 'none' for Vosk. (default: 'none').",
     )
     PARSER.add_argument(
         "-rd",
@@ -585,13 +588,19 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "-tm",
         "--transcription_method",
-        default="deepspeech",
-        choices=["sphinx", "google", "youtube", "deepspeech"],
+        default="vosk",
+        choices=["sphinx", "google", "youtube", "deepspeech", "vosk"],
         help="""specify the program that should be used for transcription. 
-                        CMU Sphinx: use pocketsphinx (works offline)
-                        Google Speech Recognition: probably will require chunking
-                        YouTube: pull a video transcript from YouTube based on `--video_id`
-                        DeepSpeech: Use the deepspeech library (works offline with great accuracy)""",
+                        CMU Sphinx: use pocketsphinx
+                        Google Speech Recognition: probably will require chunking (online, free, max 1 minute chunks)
+                        YouTube: download a video transcript from YouTube based on `--video_id`
+                        DeepSpeech: Use the deepspeech library (fast with good GPU)
+                        Vosk: Use the vosk library (extremely small low-resource model with great accuracy, this is the default)""",
+    )
+    PARSER.add_argument(
+        "--transcribe_segment_sentences",
+        action="store_false",
+        help="Disable DeepSegment automatic sentence boundary detection. Specifying this option will output transcripts without punctuation."
     )
     PARSER.add_argument(
         "-sc",
@@ -608,10 +617,10 @@ if __name__ == "__main__":
         help="id of youtube video to get subtitles from. set `--transcription_method` to `youtube` for this argument to take effect.",
     )
     PARSER.add_argument(
-        "--deepspeech_model_dir",
+        "--transcribe_model_dir",
         type=str,
         metavar="DIR",
-        help="path containing the DeepSpeech model files. See the documentation for details.",
+        help="path containing the model files for Vosk/DeepSpeech if `--transcription_method` is set to one of those models. See the documentation for details.",
     )
     PARSER.add_argument(
         "--tensorboard",
@@ -651,9 +660,9 @@ if __name__ == "__main__":
     ARGS = PARSER.parse_args()
 
     # Perform argument checks
-    if ARGS.transcription_method == "deepspeech" and ARGS.deepspeech_model_dir is None:
+    if (ARGS.transcription_method == "deepspeech" or ARGS.transcription_method == "vosk") and ARGS.transcribe_model_dir is None:
         PARSER.error(
-            "DeepSpeech method requires --deepspeech_model_dir to be set to the directory containing the deepspeech models. See the documentation for details."
+            "DeepSpeech and Vosk methods requires --transcribe_model_dir to be set to the directory containing the deepspeech/vosk models. See the documentation for details."
         )
 
     if (ARGS.summarization_mods is not None) and (

@@ -45,6 +45,26 @@ def extract_audio(video_path, output_path):
 
 
 def transcribe_audio(audio_path, method="sphinx", **kwargs):
+    """Transcribe audio using DeepSpeech, Vosk, or a method offered by 
+    :meth:`~transcribe.transcribe_main.transcribe_audio_generic`.
+
+    Args:
+        audio_path (str): Path to the audio file to transcribe.
+        method (str, optional): The method to use for transcription. Defaults to "sphinx".
+        ``**kwargs``: Passed to the transcription function.
+
+    Returns:
+        tuple: (transcript_text, transcript_json)
+    """
+    if method == "vosk":
+        return transcribe_audio_vosk(audio_path, **kwargs)
+    if method == "deepspeech":
+        return transcribe_audio_deepspeech(audio_path, **kwargs)
+    else:
+        return transcribe_audio_generic(audio_path, method, **kwargs), None
+
+
+def transcribe_audio_generic(audio_path, method="sphinx", **kwargs):
     """Transcribe an audio file using CMU Sphinx or Google through the speech_recognition library
 
     Arguments:
@@ -53,11 +73,8 @@ def transcribe_audio(audio_path, method="sphinx", **kwargs):
             Default is "sphinx".
 
     Returns:
-        [str]: the transcript of the audio file
+        str: the transcript of the audio file
     """
-    if method == "vosk":
-        return transcribe_audio_vosk(audio_path, **kwargs)
-    
     assert method in ["sphinx", "google"]
     transcript = None
     logger.debug("Initializing speech_recognition library")
@@ -89,12 +106,12 @@ def load_vosk_model(model_dir):
     model = Model(model_dir)
     return model
 
-def transcribe_audio_vosk(audio_path_or_chunks, model_dir="../vosk_models", chunks=False, desired_sample_rate=16000, chunk_size=2000):
+def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=False, desired_sample_rate=16000, chunk_size=2000, **kwargs):
     """Transcribe audio using a ``vosk`` model.
 
     Args:
         audio_path_or_chunks (str or generator): Path to an audio file or a generator of chunks created by :meth:`~transcribe.transcribe_main.chunk_by_speech`
-        model_dir (str, optional): Path to the directory containing the `vosk` models. Defaults to "../vosk_models".
+        model (str or vosk.Model, optional): Path to the directory containing the ``vosk`` models or loaded ``vosk.Model``. Defaults to "../vosk_models".
         chunks (bool, optional): If the `audio_path_or_chunks` is chunks. Defaults to False.
         desired_sample_rate (int, optional): The sample rate that the model requires to convert audio to. Defaults to 16000.
         chunk_size (int, optional): The number of wave frames per loop. Amount of audio data transcribed at a time. Defaults to 2000.
@@ -113,7 +130,7 @@ def transcribe_audio_vosk(audio_path_or_chunks, model_dir="../vosk_models", chun
         pcm_data = np.array_split(pcm_data, pcm_data.shape[0]/chunk_size)
         audio = pcm_data
 
-    model = load_vosk_model(model_dir)
+    model = load_vosk_model(model)
     rec = KaldiRecognizer(model, desired_sample_rate)
 
     results = []
@@ -359,9 +376,17 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
 
     return model
 
+def load_model(method, *args, **kwargs):
+    if method == "deepspeech":
+        return load_deepspeech_model(*args, **kwargs)
+    elif method == "vosk":
+        return load_vosk_model(*args, **kwargs)
+    else:
+        logger.error("There is no method with name '%s'", method)
+
 
 def transcribe_audio_deepspeech(
-    audio_path_or_data, model, raw_audio_data=False, json_num_transcripts=None
+    audio_path_or_data, model, raw_audio_data=False, json_num_transcripts=None, **kwargs
 ):
     """Transcribe an audio file or pcm data with the deepspeech model
 
@@ -567,7 +592,6 @@ def process_segments(
             logging.debug("Chunk Transcript: %s" % transcript)
 
             full_transcript_json.extend(transcript_json)
-            # full_transcript_json.append({"start": full_transcript_json[-1]["start"], "end": full_transcript_json[-1]["start"], "word": " ",})
 
             full_transcript += transcript + " "
     elif method == "vosk":
@@ -645,7 +669,7 @@ def chunk_by_silence(
 
 def process_chunks(chunk_dir, method="sphinx", model_dir=None):
     """
-    Performs transcription on every voice activity chunk (audio file) created by 
+    Performs transcription on every noise activity chunk (audio file) created by 
     :meth:`~transcribe.transcribe_main.chunk_by_silence` in a directory.
     """
     chunks = os.listdir(chunk_dir)
@@ -656,15 +680,15 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
     for chunk in tqdm(chunks, desc="Processing Chunks"):
         if chunk.endswith(".wav"):
             chunk_path = Path(chunk_dir) / chunk
-            if method == "deepspeech":
+            if method == "deepspeech" or method == "vosk":
                 assert model_dir is not None
-                ds_model = load_deepspeech_model(model_dir)
-                transcript, transcript_json = transcribe_audio_deepspeech(
-                    chunk_path, ds_model
+                model = load_model(method, model_dir)
+                transcript, transcript_json = transcribe_audio(
+                    chunk_path, method, model=model
                 )
                 full_transcript_json.extend(json.loads(transcript_json))
             else:
-                transcript = transcribe_audio(chunk_path, method)
+                transcript = transcribe_audio_generic(chunk_path, method)
             full_transcript += transcript + " "
 
     # Convert `full_transcript_json` to json string if it contains any items
