@@ -103,6 +103,7 @@ def full_sents(ocr_text, transcript_text, remove_newlines=True, cut_off=0.70):
 
 
 def compute_ranks(sigma, v_matrix):
+    # Source: https://github.com/miso-belica/sumy/blob/master/sumy/summarizers/lsa.py
     MIN_DIMENSIONS = 3
     REDUCTION_RATIO = 1 / 1
 
@@ -123,6 +124,7 @@ def compute_ranks(sigma, v_matrix):
 
 
 def get_best_sentences(sentences, count, rating, *args, **kwargs):
+    # Inspired by https://github.com/miso-belica/sumy/blob/master/sumy/summarizers/lsa.py
     SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order", "rating",))
     rate = rating
     if isinstance(rating, list):
@@ -762,7 +764,7 @@ def structured_joined_sum(
     """Summarize slides by combining the Slide Structure Analysis (SSA) and transcript json 
     to create a per slide summary of the transcript. The content from the beginning of one 
     slide to the start of the next to the nearest ``ending_char`` is considered the transcript 
-    that belongs to that slide. The summarized transcript content is organzed in a dictionary 
+    that belongs to that slide. The summarized transcript content is organized in a dictionary 
     where the slide titles are keys. This dictionary can be returned as json or written to a 
     json file.
 

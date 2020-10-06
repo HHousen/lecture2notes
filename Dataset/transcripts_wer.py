@@ -204,6 +204,8 @@ elif ARGS.mode == "calc":
             truth_transform=transformation,
             hypothesis_transform=transformation,
         )
+        measures["token_count_ground_truth"] = len(transformation(transcript_ground_truth))
+        measures["token_count_prediction"] = len(transformation(transcript_prediction))
 
         transcripts_tqdm.write(
             video_id
@@ -213,6 +215,10 @@ elif ARGS.mode == "calc":
             + str(measures["mer"])
             + "  WIL: "
             + str(measures["wil"])
+            + "  GT Tokens: "
+            + str(measures["token_count_ground_truth"])
+            + "  Prediction Tokens: "
+            + str(measures["token_count_prediction"])
         )
         errors.append(measures)
 
@@ -220,7 +226,11 @@ elif ARGS.mode == "calc":
     average_wer = sum([x["wer"] for x in errors]) / num_errors
     average_mer = sum([x["mer"] for x in errors]) / num_errors
     average_wil = sum([x["wil"] for x in errors]) / num_errors
+    average_token_count_ground_truth = sum([x["token_count_ground_truth"] for x in errors]) / num_errors
+    average_token_count_prediction = sum([x["token_count_prediction"] for x in errors]) / num_errors
 
     logger.info("Average WER: " + str(average_wer))
     logger.info("Average MER: " + str(average_mer))
     logger.info("Average WIL: " + str(average_wil))
+    logger.info("Average # Ground Truth Tokens: " + str(average_token_count_ground_truth))
+    logger.info("Average # Prediction Tokens: " + str(average_token_count_prediction))

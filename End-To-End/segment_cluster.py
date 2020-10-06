@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import logging
+# import statistics
 from scipy import spatial
 from helpers import make_dir_if_not_exist
 from pathlib import Path
@@ -25,7 +26,7 @@ class SegmentCluster:
         self.model = inference.load_model()
         self.change_indexes = None
 
-    def extract_and_add_features(self):
+    def extract_and_add_features(self, gamma=1.3):
         """Extracts features from the images in ``slides_dir`` and saves feature vectors"""
         num_slides = len(self.slides_list)
 
@@ -49,10 +50,11 @@ class SegmentCluster:
             for i in range(1, len(all_features))
         ]
         mean_similarities = sum(similarities) / len(similarities)
+        # std_similarities = statistics.pstdev(similarities)
 
         # A larger `sim_compare_value` = less segments
         # A larger divisor = more segments
-        sim_compare_value = mean_similarities
+        sim_compare_value = mean_similarities * gamma
 
         change_indexes = [
             i

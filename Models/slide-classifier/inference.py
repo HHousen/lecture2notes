@@ -83,7 +83,7 @@ def load_model(model_path="model_best.ckpt"):
 sm = torch.nn.Softmax(dim=1)
 
 
-def transform_image(image, input_size):
+def transform_image(image, input_size=224):
     my_transforms = transforms.Compose(
         [
             transforms.Resize(input_size),
