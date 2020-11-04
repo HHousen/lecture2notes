@@ -31,8 +31,9 @@ from sklearn.metrics import (
 )
 
 import pytorch_lightning as pl
-from pytorch_lightning import loggers
-from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning import loggers, Trainer, seed_everything
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+
 
 from custom_nnmodules import *  # pylint: disable=wildcard-import
 from slide_classifier_helpers import convert_relu_to_mish, plot_confusion_matrix
@@ -594,7 +595,11 @@ class SlideClassifier(pl.LightningModule):
         predictions = torch.cat([x["prediction"] for x in outputs], 0).cpu().numpy()
         targets = torch.cat([x["target"] for x in outputs], 0).cpu().numpy()
 
-        plot_confusion_matrix(predictions, targets, self.hparams.classes)
+        save_path = os.path.join(self.logger.experiment.dir, "confusion_matrix.png")
+        plot_confusion_matrix(predictions, targets, self.hparams.classes, save_path=save_path)
+        save_path_normalized = os.path.join(self.logger.experiment.dir, "confusion_matrix_normalized.png")
+        plot_confusion_matrix(predictions, targets, self.hparams.classes, normalize=True, save_path=save_path_normalized)
+
         report = classification_report(
             targets, predictions, target_names=self.hparams.classes
         )
@@ -787,6 +792,12 @@ if __name__ == "__main__":
         help="Check val every n train epochs.",
     )
     parser.add_argument(
+        "--log_every_n_steps",
+        default=50,
+        type=int,
+        help="How often to add logging rows (does not write to disk)",
+    )
+    parser.add_argument(
         "--gpus",
         default=-1,
         type=int,
@@ -936,9 +947,10 @@ if __name__ == "__main__":
             project="slide-classifier-private", log_model=True
         )
         args.logger = wandb_logger
-        models_path = os.path.join(wandb_logger.experiment.dir, "models/")
-    else:
-        models_path = "models/"
+
+    args.checkpoint_callback = ModelCheckpoint(
+        save_top_k=-1, period=1, verbose=True,
+    )
 
     trainer = Trainer.from_argparse_args(args)
 
