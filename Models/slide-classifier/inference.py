@@ -111,7 +111,7 @@ def get_prediction(model, image, percent=False, extract_features=True):
                 copy_data
             )
         else:
-            hook = model.classification_model[1][6].register_forward_hook(copy_data)
+            hook = model.classification_model[2].register_forward_hook(copy_data)
     else:
         extracted_features = 0
 
