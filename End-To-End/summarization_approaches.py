@@ -684,12 +684,12 @@ def generic_abstractive(
 
     if not min_length:
         TO_SUMMARIZE_LENGTH = len(to_summarize.split())
-        min_length = int(TO_SUMMARIZE_LENGTH / 6)
+        min_length = int(TO_SUMMARIZE_LENGTH * 0.1)
         if min_length > 512:
             # If the length is too long the model will start to repeat
             min_length = 512
     if not max_length:
-        max_length = min_length + 200
+        max_length = int(TO_SUMMARIZE_LENGTH * 0.6)
     LECTURE_SUMMARIZED = summarizer(
         to_summarize, min_length=min_length, max_length=max_length
     )
@@ -758,6 +758,7 @@ def structured_joined_sum(
     ending_char=".",
     to_json=False,
     summarization_method="abstractive",
+    max_summarize_len=50,
     *args,
     **kwargs
 ):
@@ -786,6 +787,8 @@ def structured_joined_sum(
         summarization_method (str, optional): The method to use to summarize each slide's 
             transcript content. Options include "abstractive", "extractive", or "none". Defaults 
             to "abstractive".
+        max_summarize_len (int, optional): Text longer than this many tokens will be summarized.
+            Defaults to 50.
         ``*args`` and ``**kwargs`` are passed to the summarization function, which is either
             :meth:`~summarization_approaches.generic_abstractive` or 
             :meth:`~summarization_approaches.generic_extractive_sumy` depending on 
@@ -943,21 +946,25 @@ def structured_joined_sum(
 
         for title, content in tqdm(final_dict.items(), desc="Summarizing Slides"):
             content = content["transcript"]
-            if summarization_method == "abstractive":
-                final_dict[title]["transcript"] = generic_abstractive(
-                    content, summarizer, *args, **kwargs
-                )
+            if len(content.split(" ")) > max_summarize_len:
+                if summarization_method == "abstractive":
+                    final_dict[title]["transcript"] = generic_abstractive(
+                        content, summarizer, *args, **kwargs
+                    )
+                else:
+                    final_dict[title]["transcript"] = generic_extractive_sumy(
+                        content, *args, **kwargs
+                    )
             else:
-                final_dict[title]["transcript"] = generic_extractive_sumy(
-                    content, *args, **kwargs
-                )
+                final_dict[title]["transcript"] = content
 
     if to_json:
+        json_list_dict = [{"title": key, **value} for key, value in final_dict.items()]
         if type(to_json) is bool:
-            return json.dumps(final_dict)
+            return json.dumps(json_list_dict)
         else:
             with open(to_json, "w+") as json_file:
-                json.dump(final_dict, json_file)
+                json.dump(json_list_dict, json_file)
                 return to_json
 
     return final_dict
