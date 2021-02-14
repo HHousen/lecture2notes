@@ -137,6 +137,8 @@ def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=F
     for data in tqdm(audio, desc="Vosk Transcribing"):
         # if data.size == 0:
         #     break
+        if type(data) is np.ndarray:
+            data = data.tobytes() 
         if rec.AcceptWaveform(data):
             result = rec.Result()
             result = json.loads(result)
