@@ -1,7 +1,7 @@
 # Grad-CAM implementation based on https://github.com/kazuto1011/grad-cam-pytorch
 # by Kazuto Nakashima (http://kazuto1011.github.io) which was created on 2017-05-26
 
-from collections import Sequence
+from collections.abc import Sequence
 import argparse
 
 import os
