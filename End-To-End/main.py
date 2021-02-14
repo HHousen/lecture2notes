@@ -468,7 +468,7 @@ def main(ARGS):
             ARGS.summarization_abs != "none" and ARGS.summarization_abs is not None
         ):  # if abstractive method was specified
             LECTURE_SUMMARIZED = generic_abstractive(
-                SUMMARIZED_EXT, ARGS.summarization_abs
+                SUMMARIZED_EXT, ARGS.summarization_abs,
             )
         else:  # if no abstractive summarization method was specified
             LECTURE_SUMMARIZED = SUMMARIZED_EXT
@@ -572,8 +572,8 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "-sa",
         "--summarization_abs",
-        default="bart",
-        choices=["none", "bart", "presumm"],
+        default="allenai/led-large-16384-arxiv",
+        choices=["none", "bart", "presumm", "allenai/led-large-16384-arxiv"],
         help="which abstractive summarization approach/model to use. more information in documentation.",
     )
     PARSER.add_argument(
