@@ -4,6 +4,7 @@ import random
 import logging
 from collections import OrderedDict
 from tqdm import tqdm
+from argparse import Namespace
 
 import torch
 import torch.nn as nn
@@ -56,6 +57,9 @@ class SlideClassifier(pl.LightningModule):
 
     def __init__(self, hparams):
         super(SlideClassifier, self).__init__()
+
+        if type(hparams) is not Namespace:
+            hparams = Namespace(**hparams)
 
         self.hparams = hparams
 
