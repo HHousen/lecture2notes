@@ -2,13 +2,14 @@ name: lecture2notes
 channels:
   - conda-forge
   - powerai
+  - anaconda
   - pytorch
   - local
 dependencies:
-  - pytorch=1.4.0
+  - pytorch
   - torchvision
   # - cudatoolkit
-  - cudatoolkit=10.0
+  - cudatoolkit
   - cudnn
   # - cudnn=7.6
   # - faiss-gpu
@@ -26,10 +27,9 @@ dependencies:
   - google-auth-httplib2
   - pandas
   - spacy
-  - pillow=6.1
+  - pillow
   - sox
   - pyaudio
-  - tensorboard
   - isodate
   # DocSum
   - appdirs
@@ -37,7 +37,6 @@ dependencies:
   - imagehash
   - imageio
   - sphinx
-  - tensorflow # needed for deepsegment
   # - fairseq # for Semsim model import in DocSum BartSumSummarizer
   - pip
   - pip: 
@@ -46,13 +45,15 @@ dependencies:
     - halo
     - webvtt-py
     - efficientnet-pytorch
-    - setuptools==41.0.0
+    # - setuptools==41.0.0
     - opencv-python
     - summa
     - sumy
     - symspellpy
     - sentence-transformers
     - transformers
+    - tensorflow==2.2.0 # needed for deepsegment
+    - sox
     - deepsegment
     - pygifsicle
     - pytorch_lightning
