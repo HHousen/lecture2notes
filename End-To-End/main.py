@@ -529,12 +529,12 @@ if __name__ == "__main__":
         "-rd",
         "--remove_duplicates",
         action="store_true",
-        help="remove duplicate slides before perspective cropping and before clustering (helpful when `--cluster_method` is `segment`",
+        help="remove duplicate slides before perspective cropping and before clustering (helpful when `--cluster_method` is `segment`)",
     )
     PARSER.add_argument(
         "-cm",
         "--cluster_method",
-        default="",
+        default="segment",
         choices=["normal", "segment"],
         help="which clustering method to use. `normal` uses a clustering algorithm from scikit-learn and `segment` uses the special method that iterates through frames in order and splits based on large visual differences",
     )
