@@ -324,7 +324,7 @@ def detect_figures(
     for idx, figure in enumerate(figures):
         if entropy_check:
             # If `entropy_check` is a boolean, then set it to the default
-            if type(entropy_check) == bool and entropy_check:
+            if type(entropy_check) is bool and entropy_check:
                 entropy_check = 2.5
             gray = cv2.cvtColor(figure, cv2.COLOR_BGR2GRAY)
             high_entropy = shannon_entropy(gray) > entropy_check
