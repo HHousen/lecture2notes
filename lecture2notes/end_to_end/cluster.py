@@ -8,7 +8,7 @@ from lecture2notes.models.slide_classifier.class_cluster_scikit import (
     Cluster,
 )  # pylint: disable=import-error,wrong-import-position
 from lecture2notes.models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-import lecture2notes.models.slide_classifier.inference
+from lecture2notes.models.slide_classifier import inference
 from PIL import Image
 
 logger = logging.getLogger(__name__)
