@@ -5,7 +5,7 @@ import json
 import logging
 import pytesseract
 from PIL import Image
-from text_detection import get_text_bounding_boxes, load_east
+from .text_detection import get_text_bounding_boxes, load_east
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -16,7 +16,7 @@ from tqdm import tqdm
 from skimage.feature import peak_local_max
 from skimage import img_as_float
 
-from helpers import frame_number_from_filename
+from .helpers import frame_number_from_filename
 
 prev_line_num = 0
 logger = logging.getLogger(__name__)

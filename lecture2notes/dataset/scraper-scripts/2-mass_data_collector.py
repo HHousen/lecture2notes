@@ -9,8 +9,8 @@ from shared_functions import get_sec, get_length, get_extract_every_x_seconds
 
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], "../../End-To-End"))
-# Even hackier hack to allow imported scripts to import from "Models/slide-classifier" directory
-sys.path.insert(1, os.path.join(sys.path[0], "../../Models/slide-classifier"))
+# Even hackier hack to allow imported scripts to import from "models/slide_classifier" directory
+sys.path.insert(1, os.path.join(sys.path[0], "../../models/slide_classifier"))
 from frames_extractor import (
     extract_frames,
 )  # pylint: disable=import-error,wrong-import-position

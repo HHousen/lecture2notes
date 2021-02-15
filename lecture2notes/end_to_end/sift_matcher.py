@@ -9,9 +9,9 @@ from time import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from imutils import auto_canny
-from corner_crop_transform import persp_transform
-from figure_detection import convert_coords_to_corners, area_of_overlapping_rectangles
-from helpers import frame_number_from_filename
+from .corner_crop_transform import persp_transform
+from .figure_detection import convert_coords_to_corners, area_of_overlapping_rectangles
+from .helpers import frame_number_from_filename
 
 logger = logging.getLogger(__name__)
 

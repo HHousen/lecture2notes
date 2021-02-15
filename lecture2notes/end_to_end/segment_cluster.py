@@ -4,14 +4,12 @@ import shutil
 import logging
 # import statistics
 from scipy import spatial
-from helpers import make_dir_if_not_exist
+from .helpers import make_dir_if_not_exist
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 
-# Hack to import modules from different parent directory
-sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
-import inference
+from lecture2notes.models.slide_classifier import inference
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +18,10 @@ class SegmentCluster:
     """Iterates through frames in order and splits based on large visual differences
         (measured by the cosine difference between the feature vectors from the slide classifier)"""
 
-    def __init__(self, slides_dir):
+    def __init__(self, slides_dir, model_path="model_best.ckpt"):
         self.slides_dir = Path(slides_dir)
         self.slides_list = sorted(os.listdir(self.slides_dir))
-        self.model = inference.load_model()
+        self.model = inference.load_model(model_path)
         self.change_indexes = None
 
     def extract_and_add_features(self, gamma=1.3):

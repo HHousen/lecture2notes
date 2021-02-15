@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import logging
-from helpers import make_dir_if_not_exist
+from .helpers import make_dir_if_not_exist
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ import cv2
 import imageio
 from pygifsicle import optimize
 import logging
-from helpers import copy_all, make_dir_if_not_exist
+from .helpers import copy_all, make_dir_if_not_exist
 
 logger = logging.getLogger(__name__)
 

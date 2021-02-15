@@ -2,15 +2,13 @@ import sys, os, shutil
 import logging
 from tqdm import tqdm
 import numpy as np
-from helpers import make_dir_if_not_exist
+from .helpers import make_dir_if_not_exist
 
-# Hack to import modules from different parent directory
-sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
-from class_cluster_scikit import (
+from lecture2notes.models.slide_classifier.class_cluster_scikit import (
     Cluster,
 )  # pylint: disable=import-error,wrong-import-position
-from custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-import inference
+from lecture2notes.models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
+import lecture2notes.models.slide_classifier.inference
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -27,9 +25,10 @@ class ClusterFilesystem(Cluster):
         preference=None,
         damping=0.5,
         max_iter=200,
+        model_path="model_best.ckpt"
     ):
         self.slides_dir = slides_dir
-        self.model = inference.load_model()
+        self.model = inference.load_model(model_path)
         super().__init__(
             algorithm_name=algorithm_name,
             preference=preference,

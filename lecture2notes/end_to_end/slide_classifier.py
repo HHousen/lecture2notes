@@ -1,19 +1,17 @@
 import os, sys, shutil
 import logging
-from helpers import make_dir_if_not_exist
+from .helpers import make_dir_if_not_exist
 from termcolor import colored
 from PIL import Image
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
-# Hack to import modules from different parent directory
-sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
-from custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-import inference  # pylint: disable=wrong-import-position
+from lecture2notes.models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
+from lecture2notes.models.slide_classifier import inference  # pylint: disable=wrong-import-position
 
 
-def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
+def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60, model_path="model_best.ckpt"):
     """Classifies images in a directory using the slide classifier model.
 
     Args:
@@ -26,7 +24,7 @@ def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60):
     Returns:
         [tuple]: (frames_sorted_dir, certainties, percent_wrong)
     """
-    model = inference.load_model()
+    model = inference.load_model(model_path)
 
     certainties = []
     frames_sorted_dir = frames_dir.parents[0] / "frames_sorted"

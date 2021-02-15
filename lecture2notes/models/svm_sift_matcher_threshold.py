@@ -1,5 +1,5 @@
 # The purpose of this file is to find the best threshold value for the `min_match_count`
-# value of `End-To-End/sift_matcher.match_features()`. The `yes` and `no` variables
+# value of `end_to_end/sift_matcher.match_features()`. The `yes` and `no` variables
 
 from sklearn import svm
 import numpy as np

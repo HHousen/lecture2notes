@@ -7,8 +7,7 @@ from sklearn.metrics import pairwise_distances_argmin_min
 import matplotlib as mpl
 from PIL import Image
 
-sys.path.insert(1, os.path.join(sys.path[0], "../Models/slide-classifier"))
-import inference
+from . import inference
 
 logger = logging.getLogger(__name__)
 

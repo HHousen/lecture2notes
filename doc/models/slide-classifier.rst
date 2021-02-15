@@ -35,7 +35,7 @@ Script Descriptions
 
 * **class_cluster_scikit.py**: Implements ``KMeans`` and ``AffinityPropagation`` from ``sklearn.cluster`` to provde a ``Cluster`` class. The code is documented in file. The purpose is to add feature vectors using ``add()``, then cluster the features, and finally return a list of files and their corresponding cluster centroids with ``create_move_list()``. Three important functions and their use cases follow:
 
-    * ``create_move_list()`` is called by ``End-To-End/cluster.py`` and returns a list of filenames and their corresponding clusters.
+    * ``create_move_list()`` is called by ``end_to_end/cluster.py`` and returns a list of filenames and their corresponding clusters.
     * ``calculate_best_k()`` generates a graph (saved to ``best_k_value.png`` if using Agg matplotlib backend) that graphs the cost (squared error) as a function of the number of centroids (value of k) if the algorithm is ``"kmeans"``. The point at which the graph becomes essentially linear is the optimal value of k.
     * ``visualize()`` creates a tensorboard projection of the cluster for simplified viewing and understanding.
 
@@ -44,7 +44,7 @@ Script Descriptions
 * **inference.py**: Sets up model and provides ``get_prediction()``, which takes an image and returns a prediction and extracted features. 
 * **lr_finder.py**: Slightly modified (allows usage of matplotlib Agg backend) code from `davidtvs/pytorch-lr-finder <https://github.com/davidtvs/pytorch-lr-finder>`_ to find the best learning rate.
 * **mish.py**: Code for the mish activation function.
-* **slide-classifier-fastai.ipynb**: Notebook to train simple fastai classifier on the dataset in ``Dataset/classifier-data``. It is outdated and not supported and only remains in the repository as an example.
+* **slide-classifier-fastai.ipynb**: Notebook to train simple fastai classifier on the dataset in ``dataset/classifier-data``. It is outdated and not supported and only remains in the repository as an example.
 * **slide_classifier_helpers.py**: Helper functions for ``slide_classifier_pytorch.py``. Includes RELU to Mish activation function conversion and confusion matrix plotting functions among others.
 * **slide_classifier_pytorch.py**: The main model code which uses advanced features such as the AdamW optimizer and a modified ResNet that allows for more effective pre-training/feature extracting.
 * **slide-classifier-pytorch-old.py**: The old version of the slide classifier model training code. This old version was not organized as well as the current version. The old version was raw PyTorch code since it did not utilize ``pytorch_lightning``.
@@ -77,7 +77,7 @@ The commands and individual results in table form for each model trained. Scroll
 
     .. code-block:: bash
 
-        python slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --use_scheduler onecycle --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
+        python slide_classifier_pytorch.py ../../dataset/classifier-data-train-val/ --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --use_scheduler onecycle --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
     
     Results:
 
@@ -117,43 +117,43 @@ The commands and individual results in table form for each model trained. Scroll
 
     .. code-block:: bash
 
-        slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --use_scheduler onecycle
+        slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --use_scheduler onecycle
 
 3. **efficientnet-b0_ranger:**
 
     .. code-block:: bash
 
-        python slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
+        python slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
 
 4. **efficientnet-b0_adamw:**
 
     .. code-block:: bash
 
-        slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0
+        slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0
 
 5. **resnet34_ranger_onecycle:**
 
     .. code-block:: bash
 
-        python slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34 --use_scheduler onecycle --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
+        python slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34 --use_scheduler onecycle --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
 
 6. **resnet34_adamw_onecycle:**
 
     .. code-block:: bash
 
-        slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34 --use_scheduler onecycle
+        slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34 --use_scheduler onecycle
 
 7. **resnet34_ranger:**
 
     .. code-block:: bash
 
-        python slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34 --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
+        python slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34 --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
 
 8. **resnet34_adamw:**
 
     .. code-block:: bash
 
-        slide_classifier_pytorch.py ../../Dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34
+        slide_classifier_pytorch.py ../../dataset/classifier-data/ --random_split --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch resnet34
 
 Slide-Classifier-Pytorch Help
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

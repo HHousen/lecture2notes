@@ -15,9 +15,9 @@ from vosk import Model, KaldiRecognizer
 from pydub.silence import split_on_silence
 from tqdm import tqdm
 from timeit import default_timer as timer
-from transcript_downloader import TranscriptDownloader
+from ..transcript_downloader import TranscriptDownloader
 import webvtt
-import transcribe.webrtcvad_utils as webrtcvad_utils
+from . import webrtcvad_utils
 import spacy
 import numpy as np
 

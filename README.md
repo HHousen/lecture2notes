@@ -8,18 +8,18 @@ Brief Summary: A
 
 While this project was designed to process presentations with slides, it will work if there are no slides, but only audio will be used for summarization.
 
-<!-- Some code supports fastai since that was the library that was initially used to train `Models/slide-classifier`. However, certain sections do not support fastai (most noteably is [Models/slide-classifier/inference.py](Models/slide-classifier/inference.py) which feature extraction component that is necessary for clustering). For this reason, it is recommended to use only pytorch, although the sections that support fastai should work (but have not been tested in a while). -->
+<!-- Some code supports fastai since that was the library that was initially used to train `models/slide_classifier`. However, certain sections do not support fastai (most noteably is [models/slide_classifier/inference.py](models/slide_classifier/inference.py) which feature extraction component that is necessary for clustering). For this reason, it is recommended to use only pytorch, although the sections that support fastai should work (but have not been tested in a while). -->
 
 ## Install
 Installation is made easy due to conda environments. Simply run this command from the root project directory: `conda env create` and conda will create and environment called `lecture2notes` with all the required packages in [environment.yml](environment.yml).
 
-Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on the spacy [starter models](https://spacy.io/models/en-starters) and [core models](https://spacy.io/models/en) documentation. More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model (the `.pbmm` acoustic model and the scorer) from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](End-To-End/transcribe.py) file.
+Certain functions in the End-To-End [transcribe](end_to_end/transcribe.py) file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files are not necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on the spacy [starter models](https://spacy.io/models/en-starters) and [core models](https://spacy.io/models/en) documentation. More importantly, the default transcription method is to use `DeepSpeech`. You need to download the `DeepSearch` model (the `.pbmm` acoustic model and the scorer) from the [releases page](https://github.com/mozilla/DeepSpeech/releases) to use this method or you can specify a different method with the `--transcription_method` flag such as `--transcription_method sphinx`. You can learn more in the section of the documentation regarding the End-To-End [transcribe](end_to_end/transcribe.py) file.
 
 ### Step-by-Step Instructions
 1. Clone this repository: `git clone https://github.com/HHousen/lecture2notes.git`.
 2. Change to project diretory: `cd lecture2notes`.
 3. Run installation command: `conda env create`.
-4. If you will be running the [End-To-End/main.py](End-To-End/main.py) script then run the following command in the project root:
+4. If you will be running the [end_to_end/main.py](end_to_end/main.py) script then run the following command in the project root:
     ```bash
     python -m spacy download en_core_web_sm
     ```
@@ -27,42 +27,42 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
     ```bash
     python -m spacy download en_core_web_lg
     ```
-    to use certain similarity features (as discussed above) or to use spacy as a feature extractor in [End-To-End/summarization_approaches.py](End-To-End/summarization_approaches.py) with the default options (note: the default is *not* to use spacy for feature extraction but the large model *is* the default if spacy is manually chosen).
+    to use certain similarity features (as discussed above) or to use spacy as a feature extractor in [end_to_end/summarization_approaches.py](end_to_end/summarization_approaches.py) with the default options (note: the default is *not* to use spacy for feature extraction but the large model *is* the default if spacy is manually chosen).
 5. **(Optional)** YouTube API
     1. Run `cp .env.example .env` to create a copy of the example `.env` file.
-    2. Add your YouTube API key (if you want to scraping YouTube with the [Dataset/scraper-scripts](Dataset/scraper-scripts)) to your `.env` file. 
-    3. Place your `client_secret.json` in the [Dataset/scraper-scripts](Dataset/scraper-scripts) folder (if you want to download transcripts with the `scraper-scripts`) or in [End-To-End](End-To-End) (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes) if you want to download video transcripts with the YouTube API (the default is to use `youtube-dl` which needs no key).
+    2. Add your YouTube API key (if you want to scraping YouTube with the [dataset/scraper-scripts](dataset/scraper-scripts)) to your `.env` file. 
+    3. Place your `client_secret.json` in the [dataset/scraper-scripts](dataset/scraper-scripts) folder (if you want to download transcripts with the `scraper-scripts`) or in [End-To-End](End-To-End) (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes) if you want to download video transcripts with the YouTube API (the default is to use `youtube-dl` which needs no key).
 
 ## Components
 
 ### Dataset
 
-> The code used to compile the data needed to train Models/slide-classifier
+> The code used to compile the data needed to train models/slide_classifier
 
 #### Folder Structure
 
-* **classifier-data**: Created by [scraper-scripts/5-compile_data.py](Dataset/scraper-scripts/5-compile_data.py). Contains all extracted slides and extracted sorted frames from the slides and videos directories. This is the folder that should be given to the model for training.
+* **classifier-data**: Created by [scraper-scripts/5-compile_data.py](dataset/scraper-scripts/5-compile_data.py). Contains all extracted slides and extracted sorted frames from the slides and videos directories. This is the folder that should be given to the model for training.
 * **scraper-scripts**: Contains all of the scripts needed to obtain and manipulate the data.
 * **slides**: 
-    * *pdfs* subdirectory: Used by [scraper-scripts/2-slides_downloader.py](Dataset/scraper-scripts/2-slides_downloader.py) as the location to save downloaded slideshow pdfs.
-    * *images* subdirectory: Used by [scraper-scripts/3-pdf2image.py](Dataset/scraper-scripts/3-pdf2image.py) as the location to save slide images extracted from slideshows in *pdfs* subdirectory.
+    * *pdfs* subdirectory: Used by [scraper-scripts/2-slides_downloader.py](dataset/scraper-scripts/2-slides_downloader.py) as the location to save downloaded slideshow pdfs.
+    * *images* subdirectory: Used by [scraper-scripts/3-pdf2image.py](dataset/scraper-scripts/3-pdf2image.py) as the location to save slide images extracted from slideshows in *pdfs* subdirectory.
 * **videos**: Contains the following directory structure for each downloaded video:
     * `video_id`: The parent folder containing all the files related to the specific video.
-        * frames: All frames extracted from `video_id` by [scraper-scripts/3-frame_extractor.py](Dataset/scraper-scripts/3-frame_extractor.py)
-        * frames_sorted: Frames from `video_id` that are grouped into correct classes. [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) can help with this but you must verify correctness. More info in *Script Descriptions*.
-* **slides-dataset.csv**: A list of all slides used in the dataset. **NOT** automatically updated by [scraper-scripts/2-slides_downloader.py](Dataset/scraper-scripts/2-slides_downloader.py). You need to manually update this file if you want the dataset to be reproducible.
-* **sort_file_map.csv**: A list of filenames and categories. Used exclusively by [scraper-scripts/4-sort_from_file.py](Dataset/scraper-scripts/4-sort_from_file.py) to either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`.
-* **to-be-sorted.csv**: A list of videos and specific frames that have been sorted by [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) but need to be checked by a human for correctness. When running [scraper-scripts/4-auto_sort.py](Dataset/scraper-scripts/4-auto_sort.py) any frames where the AI model's confidence level is below a threshold are added to this list as most likely incorrect.
-* **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](Dataset/scraper-scripts/1-youtube_scraper.py) and [scraper-scripts/1-website_scraper.py](Dataset/scraper-scripts/1-website_scraper.py). The `provider` column is used to determine how to download the video in [scraper-scripts/2-video_downloader.py](Dataset/scraper-scripts/2-video_downloader.py).
+        * frames: All frames extracted from `video_id` by [scraper-scripts/3-frame_extractor.py](dataset/scraper-scripts/3-frame_extractor.py)
+        * frames_sorted: Frames from `video_id` that are grouped into correct classes. [scraper-scripts/4-auto_sort.py](dataset/scraper-scripts/4-auto_sort.py) can help with this but you must verify correctness. More info in *Script Descriptions*.
+* **slides-dataset.csv**: A list of all slides used in the dataset. **NOT** automatically updated by [scraper-scripts/2-slides_downloader.py](dataset/scraper-scripts/2-slides_downloader.py). You need to manually update this file if you want the dataset to be reproducible.
+* **sort_file_map.csv**: A list of filenames and categories. Used exclusively by [scraper-scripts/4-sort_from_file.py](dataset/scraper-scripts/4-sort_from_file.py) to either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`.
+* **to-be-sorted.csv**: A list of videos and specific frames that have been sorted by [scraper-scripts/4-auto_sort.py](dataset/scraper-scripts/4-auto_sort.py) but need to be checked by a human for correctness. When running [scraper-scripts/4-auto_sort.py](dataset/scraper-scripts/4-auto_sort.py) any frames where the AI model's confidence level is below a threshold are added to this list as most likely incorrect.
+* **videos-dataset.csv**: A list of all videos used in the dataset. Automatically updated by [scraper-scripts/1-youtube_scraper.py](dataset/scraper-scripts/1-youtube_scraper.py) and [scraper-scripts/1-website_scraper.py](dataset/scraper-scripts/1-website_scraper.py). The `provider` column is used to determine how to download the video in [scraper-scripts/2-video_downloader.py](dataset/scraper-scripts/2-video_downloader.py).
 
 #### Script Descriptions
-> All scripts that are needed to obtain and manipulate the data. Located in `Dataset/scraper-scripts`
+> All scripts that are needed to obtain and manipulate the data. Located in `dataset/scraper-scripts`
 
-* **website_scraper**: Takes a video page link, video download link, and video published date and then adds that information to [videos-dataset.csv](Dataset/videos-dataset.csv).
+* **website_scraper**: Takes a video page link, video download link, and video published date and then adds that information to [videos-dataset.csv](dataset/videos-dataset.csv).
     * Command: `python 1-website_scraper.py <date> <page_link> <video_download_link> <description (optional)>`
     * Examples:
         * `python 1-website_scraper.py 1-1-2010 https://oyc.yale.edu/astronomy/astr-160/update-1 http://openmedia.yale.edu/cgi-bin/open_yale/media_downloader.cgi?file=/courses/spring07/astr160/mov/astr160_update01_070212.mov`
-* **youtube_scraper**: Takes a video id or channel id from youtube, extracts important information using the YouTube Data API, and then adds that information to [videos-dataset.csv](Dataset/videos-dataset.csv).
+* **youtube_scraper**: Takes a video id or channel id from youtube, extracts important information using the YouTube Data API, and then adds that information to [videos-dataset.csv](dataset/videos-dataset.csv).
     * Output of `python 1-youtube_scraper.py --help`:
     ```
     usage: 1-youtube_scraper.py [-h] [-n N] [-t] {video,channel,transcript} STR
@@ -82,32 +82,32 @@ Certain functions in the End-To-End [transcribe](End-To-End/transcribe.py) file 
                             `channel`
     -t, --transcript      Download transcript for each video scraped.
     ```
-* **slides_downloader**: Takes a link to a pdf slideshow and downloads it to `Dataset/slides/pdfs` or downloads every entry in [slides-dataset.csv](Dataset/slides-dataset.csv).
+* **slides_downloader**: Takes a link to a pdf slideshow and downloads it to `dataset/slides/pdfs` or downloads every entry in [slides-dataset.csv](dataset/slides-dataset.csv).
     * Command: `python slides_downloader.py <csv/your_url>`
     * Examples:
         * If *csv*: `python 2-slides_downloader.py csv`
         * If *your_url*: `python 2-slides_downloader.py https://ocw.mit.edu/courses/history/21h-343j-making-books-the-renaissance-and-today-spring-2016/lecture-slides/MIT21H_343JS16_Print.pdf`
     * Required Software: `wget`
-* **video_downloader**: Uses youtube-dl (for `youtube` videos) and wget (for `website` videos) to download either a youtube video by id or every video that has not been download in [videos-dataset.csv](Dataset/videos-dataset.csv).
+* **video_downloader**: Uses youtube-dl (for `youtube` videos) and wget (for `website` videos) to download either a youtube video by id or every video that has not been download in [videos-dataset.csv](dataset/videos-dataset.csv).
     * Command: `python 2-video_downloader.py <csv/youtube your_youtube_video_id>`
     * Examples:
         * If *csv*: `python 2-video_downloader.py csv`
         * If *your_youtube_video_id*: `python 2-video_downloader.py youtube 1Qws70XGSq4`
     * Required Software: `youtube-dl` ([Github](https://github.com/ytdl-org/youtube-dl)/[Website](https://ytdl-org.github.io/youtube-dl/index.html)), `wget`
-* **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. `extract_every_x_seconds` can be set to auto to use the `get_extract_every_x_seconds()` function to automatically determine a good number of frames to extract. `auto` mode uses this feature and allows for exact reconstruction of the dataset. Extracted frames are saved into `Dataset/videos/video_id/frames`.
+* **frame_extractor**: Extracts either every n frames from a video file (selected by id and must be in `videos` folder) or, in `auto` mode, every n frames from every video in the dataset that has been downloaded and has not had its frames extracted already. `extract_every_x_seconds` can be set to auto to use the `get_extract_every_x_seconds()` function to automatically determine a good number of frames to extract. `auto` mode uses this feature and allows for exact reconstruction of the dataset. Extracted frames are saved into `dataset/videos/video_id/frames`.
     * Command: `python 3-frame_extractor.py <video_id/auto> <extract_every_x_seconds/auto> <quality>`
     * Examples:
         * If *video_id*: `python 3-frame_extractor.py VT2o4KCEbes 20 5` or to automatically extract a good number of frames: `python 3-frame_extractor.py 63hAHbkzJG4 auto 5`
         * If *auto*:  `python 3-frame_extractor.py auto`
     * Required Software: `ffmpeg` ([Github](https://github.com/FFmpeg/FFmpeg)/[Website](https://www.ffmpeg.org/))
-* **pdf2image**: Takes every page in all pdf files in `Dataset/slides/pdfs`, converts them to png images, and saves them in `Dataset/slides/images/pdf_file_name`. Requires `pdftoppm` package. 
+* **pdf2image**: Takes every page in all pdf files in `dataset/slides/pdfs`, converts them to png images, and saves them in `dataset/slides/images/pdf_file_name`. Requires `pdftoppm` package. 
     * Command: `python 3-pdf2image.py`
     * Required Software: `poppler-utils (pdftoppm)` ([Man Page](https://linux.die.net/man/1/pdftoppm)/[Website](https://poppler.freedesktop.org/))
-* **auto_sort**: Goes through every extracted frame for all videos in the dataset that don’t have sorted frames and classifies them using `Models/slide-classifier`. You need either a trained fastai or pytorch model to use this. This code works with both fastai and pytorch models. Creates a list of frames that need to be checked for correctness by humans in [to-be-sorted.csv](Dataset/to-be-sorted.csv). This also requires certain files from `Models/slide-classifier`.
+* **auto_sort**: Goes through every extracted frame for all videos in the dataset that don’t have sorted frames and classifies them using `models/slide_classifier`. You need either a trained fastai or pytorch model to use this. This code works with both fastai and pytorch models. Creates a list of frames that need to be checked for correctness by humans in [to-be-sorted.csv](dataset/to-be-sorted.csv). This also requires certain files from `models/slide_classifier`.
     * Command: `python 4-auto_sort.py <fastai/pytorch>`
-* **sort_from_file**: Either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](Dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`. Only purpose is to exactly reconstruct the dataset without downloading already sorted images.
+* **sort_from_file**: Either `make` a file mapping of the category to which each frame belongs or to `sort` each file in [sort_file_map.csv](dataset/sort_file_map.csv), moving the respective frame from `video_id/frames` to `video_id/frames_sorted/category`. Only purpose is to exactly reconstruct the dataset without downloading already sorted images.
     * Command: `python 4-sort_from_file.py <make/sort>`
-* **compile_data**: Merges the sorted frames from all the videos in the dataset to `Dataset/classifier-data`.
+* **compile_data**: Merges the sorted frames from all the videos in the dataset to `dataset/classifier-data`.
     * Command: `python 5-compile_data.py`
 
 #### Walkthrough (Step-by-Step Instructions to Create Dataset)
@@ -153,11 +153,11 @@ This model classifies a video frame from a lecture video according to the follow
 
 ##### Training Configurations (Commands)
 
-1. **efficientnet-ranger:** python slide-classifier-pytorch.py -a efficientnet-b0 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/efficientnet-adamw
-2. **efficientnet-adamw:** python slide-classifier-pytorch.py -a efficientnet-b0 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/efficientnet-adamw-optimized --momentum 0.95 --eps 1e-5 --wd 0
-3. **resnet34-adamw:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-adamw
-4. **resnet34-ranger:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-ranger -o ranger -k 3 --momentum 0.95 --eps 1e-5 --wd 0
-5. **resnet34-adamw-mish:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../Dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-adamw-mish --relu_to_mish
+1. **efficientnet-ranger:** python slide-classifier-pytorch.py -a efficientnet-b0 --random_split --pretrained --feature_extract advanced  ../../dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/efficientnet-adamw
+2. **efficientnet-adamw:** python slide-classifier-pytorch.py -a efficientnet-b0 --random_split --pretrained --feature_extract advanced  ../../dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/efficientnet-adamw-optimized --momentum 0.95 --eps 1e-5 --wd 0
+3. **resnet34-adamw:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-adamw
+4. **resnet34-ranger:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-ranger -o ranger -k 3 --momentum 0.95 --eps 1e-5 --wd 0
+5. **resnet34-adamw-mish:** python slide-classifier-pytorch.py -a resnet34 --random_split --pretrained --feature_extract advanced  ../../dataset/classifier-data -b 10 --epochs 10 --tensorboard runs/resnet34-adamw-mish --relu_to_mish
 
 ##### Pretrained Models
 
@@ -170,13 +170,13 @@ Not completed yet.
 ##### Script Descriptions
 
 * **class_cluster_scikit**: Implements `KMeans` and `AffinityPropagation` from `sklearn.cluster` to provde a `Cluster` class. Code is documented in file. Purpose is to add feature vectors using `add()`, then cluster the features, and finally return a list of files and their corresponding cluster centroids with `create_move_list()`. Two important functions and their use cases follow:
-    * `create_move_list()` function is what is called by [cluster.py](End-To-End/cluster.py) and returns a list of filenames and their coresponding clusters.
+    * `create_move_list()` function is what is called by [cluster.py](end_to_end/cluster.py) and returns a list of filenames and their coresponding clusters.
     * `calculate_best_k()` function generates a graph (saved to `best_k_value.png` if using Agg matplotlib backend) that graphs the cost (squared error) as a function of the number of centroids (value of k) if the algorithm is `"kmeans"`.
-* **class_cluster_faiss**: An outdated version of [class_cluster_scikit.py](Models/slide-classifier/class_cluster_scikit.py) that uses [facebookresearch/faiss](https://github.com/facebookresearch/faiss) (specifically the kmeans implementation documented [here](https://github.com/facebookresearch/faiss/wiki/Faiss-building-blocks:-clustering,-PCA,-quantization)) to provide a `Cluster` class. More details in the `class_cluster_scikit` entry of this section of the documentation.
+* **class_cluster_faiss**: An outdated version of [class_cluster_scikit.py](models/slide_classifier/class_cluster_scikit.py) that uses [facebookresearch/faiss](https://github.com/facebookresearch/faiss) (specifically the kmeans implementation documented [here](https://github.com/facebookresearch/faiss/wiki/Faiss-building-blocks:-clustering,-PCA,-quantization)) to provide a `Cluster` class. More details in the `class_cluster_scikit` entry of this section of the documentation.
 * **custom_nnmodules**: Provides a few custom (copied from [fastai](https://github.com/fastai/fastai)) nn.Modules.
 * **inference**: Sets up model and provides `get_prediction()`, which takes an image and returns a prediction and extracted features. 
 * **lr_finder**: Slightly modified (allows usage of matplotlib Agg backend) code from [davidtvs/pytorch-lr-finder](https://github.com/davidtvs/pytorch-lr-finder)
-* **slide-classifier-fastai.ipynb**: Notebook to train simple fastai classifier on the dataset in `Dataset/classifier-data`.
+* **slide-classifier-fastai.ipynb**: Notebook to train simple fastai classifier on the dataset in `dataset/classifier-data`.
 * **slide-classifier-pytorch.py**: The main model code which is written completely in PyTorch and uses advanced features such as the AdamW optimizer and a modified ResNet that allows for more effective pretraining/feature extracting.
     * Output of `python slide-classifier-pytorch.py --help`:
     ```
@@ -302,7 +302,7 @@ Run `python main.py <path_to_video>` to get a notes file.
 * **transcribe**: Implements transcription using four different methods from 3 libraries and other miscellaneous functions related to audio transcription. 
     * The `sphinx` and `google` methods use the [SpeechRecognition library](https://pypi.org/project/SpeechRecognition/) to access pockersphinx-python and Google Speech Recognition, respectively.
     * The `youtube` method is implemented in `get_youtube_transcript()` which will download the transcript for a specific `video_id` from youtube using the `TranscriptDownloader` class implemented in `transcript_downloader`. 
-    * Finally, the `deepspeech` method uses the [Mozilla DeepSpeech](https://github.com/mozilla/DeepSpeech) library, which achieves very good accuracy on the [LibriSpeech clean test corpus](https://www.openslr.org/12). In order to use this method in the [main](End-To-End/main.py) script you need to download the latest DeepSpeech model from their [releases page](https://github.com/mozilla/DeepSpeech/releases). Mozilla provides code to download and extract the model on the [project's documentation](https://deepspeech.readthedocs.io/en/v0.6.1/USING.html#getting-the-pre-trained-model). It is possible to manually specify the names of these files. However, if they are named as shown below then you only have to specify one directory and the script with "just work" (the directory name is not important but `deepspeech-models` is descriptive).
+    * Finally, the `deepspeech` method uses the [Mozilla DeepSpeech](https://github.com/mozilla/DeepSpeech) library, which achieves very good accuracy on the [LibriSpeech clean test corpus](https://www.openslr.org/12). In order to use this method in the [main](end_to_end/main.py) script you need to download the latest DeepSpeech model from their [releases page](https://github.com/mozilla/DeepSpeech/releases). Mozilla provides code to download and extract the model on the [project's documentation](https://deepspeech.readthedocs.io/en/v0.6.1/USING.html#getting-the-pre-trained-model). It is possible to manually specify the names of these files. However, if they are named as shown below then you only have to specify one directory and the script with "just work" (the directory name is not important but `deepspeech-models` is descriptive).
         ```
         deepspeech-models/
         ├── lm.binary

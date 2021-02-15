@@ -2,7 +2,7 @@ import io
 import os
 import subprocess
 import logging
-from youtube_api import init_youtube
+from .youtube_api import init_youtube
 from googleapiclient.http import MediaIoBaseDownload
 from pathlib import Path
 

@@ -36,8 +36,8 @@ from pytorch_lightning import loggers, Trainer, seed_everything
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
 
-from custom_nnmodules import *  # pylint: disable=wildcard-import
-from slide_classifier_helpers import convert_relu_to_mish, plot_confusion_matrix
+from .custom_nnmodules import *  # pylint: disable=wildcard-import
+from .slide_classifier_helpers import convert_relu_to_mish, plot_confusion_matrix
 
 logger = logging.getLogger(__name__)
 

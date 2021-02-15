@@ -48,7 +48,7 @@ Command used to create above image:
 
 .. code-block:: bash
 
-    python corner_crop_transform.py file ../Dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_130_debug.gif -d -di -dg -dgo
+    python corner_crop_transform.py file ../dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_130_debug.gif -d -di -dg -dgo
 
 Timeline of images (click image for larger view):
 
@@ -64,7 +64,7 @@ Command used to create above image:
 
 .. code-block:: bash
 
-    python corner_crop_transform.py file ../Dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_068.jpg -d -di -dg -dgo
+    python corner_crop_transform.py file ../dataset/classifier-data/presenter_slide/IJquEYhiq_U-img_068.jpg -d -di -dg -dgo
 
 Timeline of images (click image for larger view):
 

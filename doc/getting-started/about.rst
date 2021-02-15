@@ -34,9 +34,9 @@ Components
 1. Slide Classifier
     * **Overview:** The slide classifier is a computer vision machine learning model that classifies images into 9 categories as listed on :ref:`its documentation page <sc_overview>`. 
     * **Key Info:** Most importantly are the ``slide`` and ``presenter_slide`` categories which refer to slides from a screen capture and slides as recorded by a video camera, respectively. When a video camera is pointed at the slides, the frame will usually include the presenter, which is the reasoning behind the name choices. Frames from the ``slide`` class are processed differently than those from the ``presenter_slide`` class. Namely, those from ``presenter_slide`` are automatically perspective cropped while those from ``slide`` are not.
-    * **Dataset:** The dataset was collected using the scraper scripts in ``Dataset/scraper-scripts``. To learn about how to collect the dataset visit :ref:`dataset_general_walkthrough`. You can view information about each script in :ref:`ss_home`.
+    * **Dataset:** The dataset was collected using the scraper scripts in ``dataset/scraper-scripts``. To learn about how to collect the dataset visit :ref:`dataset_general_walkthrough`. You can view information about each script in :ref:`ss_home`.
 2. Summarization Models
-    * **Locations:** The neural summarization models are located in ``Models`` while the non-neural algorithms are implemented in :ref:`e2e_summarization_approaches` (``End-To-End/summarization_approaches``).
+    * **Locations:** The neural summarization models are located in ``Models`` while the non-neural algorithms are implemented in :ref:`e2e_summarization_approaches` (``end_to_end/summarization_approaches``).
     * **Neural Extractive Models:** https://github.com/HHousen/TransformerExtSum
     * **Neural Abstractive Models:** https://github.com/HHousen/DocSum
     * **More Info:** See :ref:`summarizers`.
@@ -51,10 +51,10 @@ Components
 The directory structure of the project should be relatively easy to follow. There is essentially a subfolder in the project root for each major component discussed above (and the documentation). 
 
 .. note::
-    The slide classifier dataset is located in ``Dataset`` and the model is located in ``Models/slide-classifier``. This separation was made to disconnect the data collection code from the model training code, since they are two distinct stages of the process that require little interaction (the only interaction is the copying of the final dataset).
+    The slide classifier dataset is located in ``Dataset`` and the model is located in ``models/slide_classifier``. This separation was made to disconnect the data collection code from the model training code, since they are two distinct stages of the process that require little interaction (the only interaction is the copying of the final dataset).
 
 * ``Dataset``: Data collection code for the slide classifier.
-* ``End-To-End``: Contains all the code (except ``Models/slide-classifier/inference.py`` and some summarization models) required to summarize a lecture video. This includes frame extraction, OCR, clustering, perspective cropping, spell checking, speech to text, and more.
+* ``End-To-End``: Contains all the code (except ``models/slide_classifier/inference.py`` and some summarization models) required to summarize a lecture video. This includes frame extraction, OCR, clustering, perspective cropping, spell checking, speech to text, and more.
 * ``Models``: Contains the slide classifier model training code and the neural summarization model repositories as git modules.
 
 FRQ

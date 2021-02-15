@@ -6,8 +6,8 @@ import cv2
 from PIL import Image, ImageStat
 from imutils import auto_canny
 from skimage.measure.entropy import shannon_entropy
-from text_detection import get_text_bounding_boxes, load_east
-from helpers import frame_number_filename_mapping
+from .text_detection import get_text_bounding_boxes, load_east
+from .helpers import frame_number_filename_mapping
 
 
 logger = logging.getLogger(__name__)

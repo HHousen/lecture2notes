@@ -36,7 +36,7 @@ from sumy.utils import get_stop_words
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
-sys.path.insert(1, os.path.join(os.getcwd(), "../Models/summarizer"))
+sys.path.insert(1, os.path.join(os.getcwd(), "../models/summarizer"))
 
 logger = logging.getLogger(__name__)
 
@@ -965,7 +965,7 @@ def structured_joined_sum(
         else:
             with open(to_json, "w+") as json_file:
                 json.dump(json_list_dict, json_file)
-                return to_json
+                return json.dumps(json_list_dict)
 
     return final_dict
 

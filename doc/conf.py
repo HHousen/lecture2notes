@@ -12,13 +12,13 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../End-To-End'))
-sys.path.insert(0, os.path.abspath('../Models/slide-classifier'))
+sys.path.insert(0, os.path.abspath('./lecture2notes/end_to_end'))
+sys.path.insert(0, os.path.abspath('./lecture2notes/models/slide_classifier'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'Lecture2Notes'
-copyright = '2020, Hayden Housen'
+copyright = '2021, Hayden Housen'
 author = 'Hayden Housen'
 
 # The full version, including alpha/beta/rc tags

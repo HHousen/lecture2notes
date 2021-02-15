@@ -20,19 +20,19 @@ Lecture2Notes: End-To-End Lecture Summarization
    :maxdepth: 2
    :caption: Models:
 
-   models/slide-classifier
-   models/slide-classifier-api
+   models/slide_classifier
+   models/slide_classifier-api
    models/summarizers
 
 .. toctree::
    :maxdepth: 2
    :caption: End-To-End:
 
-   end-to-end/general
-   end-to-end/summarization-approaches
-   end-to-end/transcribe
-   end-to-end/corner-crop-transform
-   end-to-end/api
+   end_to_end/general
+   end_to_end/summarization-approaches
+   end_to_end/transcribe
+   end_to_end/corner-crop-transform
+   end_to_end/api
 
 
 Indices and tables
