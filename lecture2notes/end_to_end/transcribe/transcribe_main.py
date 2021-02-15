@@ -362,11 +362,11 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
     Returns:
         deepspeech.Model: the loaded deepspeech model
     """
-    from deepspeech import Model
+    from deepspeech import Model as ds_Model
 
     model, scorer = resolve_deepspeech_models(model_dir)
     logger.debug("Loading model...")
-    model = Model(model)
+    model = ds_Model(model)
     model.setBeamWidth(beam_width)
 
     if scorer:

@@ -12,7 +12,6 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import matplotlib.cm as cm
-import numpy as np
 from torchvision import transforms
 from tqdm import tqdm
 
