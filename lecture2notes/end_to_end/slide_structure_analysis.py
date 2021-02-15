@@ -59,14 +59,16 @@ def identify_title(
     image,
     left_start_maximum=0.77,
     character_limit=3,
-    enabled_checks=[
-        "in_upper_third",
-        "in_top_left",
-        "large_stroke_width",
-        "large_height",
-        "meets_character_limit",
-    ],
+    enabled_checks=None,
 ):
+    if enabled_checks is None:
+        enabled_checks = [
+                "in_upper_third",
+                "in_top_left",
+                "large_stroke_width",
+                "large_height",
+                "meets_character_limit",
+            ]
     image_height, image_width = image.shape[:2]
     # Critera to be classified as a title:
     # it is in the upper third of the image,
