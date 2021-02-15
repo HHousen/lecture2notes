@@ -55,7 +55,8 @@ class LectureSummarizer():
             # root_process_folder
             params = Namespace(params)
         elif type(params) is str or type(params) is Path:
-            params = json.loads(params)
+            with open(params, "r") as json_file:
+                params = json.load(json_file)
         
         # Perform argument checks
         if (params.transcription_method == "deepspeech" or params.transcription_method == "vosk") and params.transcribe_model_dir is None:
