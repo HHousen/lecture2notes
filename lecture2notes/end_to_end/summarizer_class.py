@@ -57,7 +57,7 @@ class LectureSummarizer():
         
         if type(params) is dict:
             # root_process_folder
-            params = Namespace(params)
+            params = Namespace(**params)
         
         # Perform argument checks
         if (params.transcription_method == "deepspeech" or params.transcription_method == "vosk") and params.transcribe_model_dir is None:
