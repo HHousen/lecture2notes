@@ -86,7 +86,7 @@ class TranscriptDownloader:
                 + " does not contain a subtitle file for the specified language and format."
             )
             return None
-        elif " " in errors or "ERROR" in errors or "WARNING" in errors:
+        if " " in errors or "ERROR" in errors or "WARNING" in errors:
             logger.info("The youtube-dl command returned the following error message:")
             logger.error(errors)
             return None

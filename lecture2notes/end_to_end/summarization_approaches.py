@@ -70,8 +70,7 @@ def get_complete_sentences(text, return_string=False):
                 complete_sentences.append(sent)
     if return_string:
         return NUM_TOKENS, " ".join(complete_sentences)
-    else:
-        return NUM_TOKENS, complete_sentences
+    return NUM_TOKENS, complete_sentences
 
 
 def full_sents(ocr_text, transcript_text, remove_newlines=True, cut_off=0.70):
@@ -98,8 +97,7 @@ def full_sents(ocr_text, transcript_text, remove_newlines=True, cut_off=0.70):
         return (
             complete_sentences_string + transcript_text
         )  # use complete sentences and transcript
-    else:  # ratio does not meet `cut_off`
-        return transcript_text  # only use transcript
+    return transcript_text  # only use transcript
 
 
 def compute_ranks(sigma, v_matrix):
@@ -318,8 +316,7 @@ def extract_features_bow(
 
     if return_lsa_svd:
         return features, lsa_svd
-    else:
-        return features
+    return features
 
 
 def extract_features_neural_hf(
@@ -962,10 +959,9 @@ def structured_joined_sum(
         json_list_dict = [{"title": key, **value} for key, value in final_dict.items()]
         if type(to_json) is bool:
             return json.dumps(json_list_dict)
-        else:
-            with open(to_json, "w+") as json_file:
-                json.dump(json_list_dict, json_file)
-                return json.dumps(json_list_dict)
+        with open(to_json, "w+") as json_file:
+            json.dump(json_list_dict, json_file)
+            return json.dumps(json_list_dict)
 
     return final_dict
 

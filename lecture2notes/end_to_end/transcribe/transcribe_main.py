@@ -60,8 +60,7 @@ def transcribe_audio(audio_path, method="sphinx", **kwargs):
         return transcribe_audio_vosk(audio_path, **kwargs)
     if method == "deepspeech":
         return transcribe_audio_deepspeech(audio_path, **kwargs)
-    else:
-        return transcribe_audio_generic(audio_path, method, **kwargs), None
+    return transcribe_audio_generic(audio_path, method, **kwargs), None
 
 
 def transcribe_audio_generic(audio_path, method="sphinx", **kwargs):
@@ -381,10 +380,9 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
 def load_model(method, *args, **kwargs):
     if method == "deepspeech":
         return load_deepspeech_model(*args, **kwargs)
-    elif method == "vosk":
+    if method == "vosk":
         return load_vosk_model(*args, **kwargs)
-    else:
-        logger.error("There is no method with name '%s'", method)
+    logger.error("There is no method with name '%s'", method)
 
 
 def transcribe_audio_deepspeech(
