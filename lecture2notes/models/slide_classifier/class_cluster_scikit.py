@@ -123,7 +123,7 @@ class Cluster:
 
         self.create_algorithm_if_none()
 
-        move_list = dict()
+        move_list = {}
         for idx, filename in enumerate(self.vectors):
             move_list[filename] = self.labels[idx]
         self.move_list = move_list
@@ -148,7 +148,7 @@ class Cluster:
         vector_array = self.get_vector_array()
         closest, _ = pairwise_distances_argmin_min(self.centroids, vector_array)
         self.closest = closest
-        closest_filenames = list()
+        closest_filenames = []
         for centroid_number, sample_index in enumerate(closest):
             # vector = vector_array[sample_index]
             vector_filenames = list(self.vectors.keys())
@@ -164,7 +164,7 @@ class Cluster:
         import torch
         from torch.utils.tensorboard import SummaryWriter
 
-        images = list()
+        images = []
         for current_image, _ in self.vectors.items():
             img = Image.open(self.slides_dir / current_image)
             images.append(inference.transform_image(img).float())

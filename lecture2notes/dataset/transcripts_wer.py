@@ -182,7 +182,7 @@ elif ARGS.mode == "calc":
     # Only select transcripts created by the ML model
     transcripts = [x for x in transcripts if ARGS.suffix in x]
 
-    errors = list()
+    errors = []
     transcripts_tqdm = tqdm(transcripts, desc="Calculating WER")
     for transcript_ml_path in transcripts_tqdm:
         video_id = re.search("(.*)" + ARGS.suffix, transcript_ml_path)

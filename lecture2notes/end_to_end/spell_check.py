@@ -69,7 +69,7 @@ class SpellChecker:
         Returns:
             [list]: a list of corrected strings
         """
-        output_terms = list()
+        output_terms = []
         for term in tqdm(input_terms, desc="Spell Checking"):
             checked_term = self.check(term)
             output_terms.append(checked_term)
