@@ -6,8 +6,8 @@ import spacy
 import math
 from time import time
 from tqdm import tqdm
-from collections import namedtuple, defaultdict, OrderedDict
-from operator import attrgetter, itemgetter
+from collections import namedtuple, OrderedDict
+from operator import attrgetter
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -17,7 +17,6 @@ from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
-from sklearn import metrics
 from sklearn.cluster import KMeans, MiniBatchKMeans
 
 # Sumy Imports for generic_extractive_sumy()

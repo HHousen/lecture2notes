@@ -1,4 +1,4 @@
-import os, operator, sys, shutil
+import os, sys, shutil
 from pathlib import Path
 from termcolor import colored
 import pandas as pd
@@ -7,8 +7,6 @@ from PIL import Image
 videos_dir = Path("../videos")
 sorted_videos_list = []
 csv_path = Path("../to-be-sorted.csv")
-
-import inspect
 
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], "../../models/slide_classifier"))

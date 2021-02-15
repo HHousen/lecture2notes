@@ -1,4 +1,4 @@
-import sys, os
+import os
 from pathlib import Path
 from tqdm import tqdm
 
