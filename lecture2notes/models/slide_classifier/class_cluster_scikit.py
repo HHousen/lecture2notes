@@ -135,8 +135,7 @@ class Cluster:
             cluster_centers_indices = self.algorithm.cluster_centers_indices_
             n_clusters_ = len(cluster_centers_indices)
             return n_clusters_
-        else:
-            return self.num_centroids
+        return self.num_centroids
 
     def get_closest_sample_filenames_to_centroids(self):
         """

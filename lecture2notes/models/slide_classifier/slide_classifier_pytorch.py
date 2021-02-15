@@ -456,8 +456,7 @@ class SlideClassifier(pl.LightningModule):
             # every batch.
             scheduler_dict = {"scheduler": scheduler, "interval": "step"}
             return [optimizer], [scheduler_dict]
-        else:
-            return optimizer
+        return optimizer
 
     def calculate_stats(self, output, target):
         """Used for the training, validation, and testing steps to calculate various statistics.

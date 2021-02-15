@@ -325,16 +325,15 @@ class StateCacher(object):
 
         if self.in_memory:
             return self.cached.get(key)
-        else:
-            fn = self.cached.get(key)
-            if not os.path.exists(fn):
-                raise RuntimeError(
-                    "Failed to load state in {}. File does not exist anymore.".format(
-                        fn
-                    )
+        fn = self.cached.get(key)
+        if not os.path.exists(fn):
+            raise RuntimeError(
+                "Failed to load state in {}. File does not exist anymore.".format(
+                    fn
                 )
-            state_dict = torch.load(fn, map_location=lambda storage, location: storage)
-            return state_dict
+            )
+        state_dict = torch.load(fn, map_location=lambda storage, location: storage)
+        return state_dict
 
     def __del__(self):
         """Check whether there are unused cached files existing in `cache_dir` before

@@ -59,8 +59,7 @@ def detect_color_image(image, thumb_size=40, MSE_cutoff=22, adjust_color_bias=Tr
         MSE = float(SSE) / (thumb_size * thumb_size)
         if MSE <= MSE_cutoff:
             return "grayscale"
-        else:
-            return "color"
+        return "color"
     elif len(bands) == 1:
         return "b&w"
     else:

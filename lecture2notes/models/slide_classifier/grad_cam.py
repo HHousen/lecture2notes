@@ -136,8 +136,7 @@ class GradCAM(_BaseWrapper):
     def _find(self, pool, target_layer):
         if target_layer in pool.keys():
             return pool[target_layer]
-        else:
-            raise ValueError("Invalid layer name: {}".format(target_layer))
+        raise ValueError("Invalid layer name: {}".format(target_layer))
 
     def generate(self, target_layer):
         fmaps = self._find(self.fmap_pool, target_layer)
