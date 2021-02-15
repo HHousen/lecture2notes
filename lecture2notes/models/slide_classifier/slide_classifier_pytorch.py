@@ -3,6 +3,7 @@ import os
 import random
 import logging
 from collections import OrderedDict
+import sys
 from tqdm import tqdm
 from argparse import Namespace
 
@@ -220,7 +221,7 @@ class SlideClassifier(pl.LightningModule):
 
         else:
             logger.critical("Invalid model name, exiting...")
-            exit()
+            sys.exit()
 
         if self.hparams.relu_to_mish:
             convert_relu_to_mish(model_ft)

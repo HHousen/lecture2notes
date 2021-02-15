@@ -1,3 +1,4 @@
+import sys
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -43,7 +44,7 @@ def initialize_model(arch, num_classes):
 
     else:
         print("Invalid model name, exiting...")
-        exit()
+        sys.exit()
 
     return model
 

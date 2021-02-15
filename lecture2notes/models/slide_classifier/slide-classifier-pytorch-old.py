@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 import shutil
+import sys
 import time
 import warnings
 import logging
@@ -217,7 +218,7 @@ def main_worker(gpu, ngpus_per_node, args, writer=None):
         lr_finder = LRFinder(model, lr_optimizer, criterion, device="cuda")
         lr_finder.range_test(train_loader, end_lr=100, num_iter=100)
         lr_finder.plot()
-        exit()
+        sys.exit()
 
     if args.optim == "sgd":
         optimizer = torch.optim.SGD(params_to_update, args.lr,
@@ -457,7 +458,7 @@ def initialize_model(num_classes, feature_extract, args):
 
     else:
         logging.critical("Invalid model name, exiting...")
-        exit()
+        sys.exit()
 
     if args.relu_to_mish:
         convert_relu_to_mish(model_ft)
