@@ -3,11 +3,11 @@ import logging
 from tqdm import tqdm
 from .helpers import make_dir_if_not_exist
 
-from lecture2notes.models.slide_classifier.class_cluster_scikit import (
+from ..models.slide_classifier.class_cluster_scikit import (
     Cluster,
 )  # pylint: disable=import-error,wrong-import-position
-from lecture2notes.models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-from lecture2notes.models.slide_classifier import inference
+from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
+from ..models.slide_classifier import inference
 from PIL import Image
 
 logger = logging.getLogger(__name__)

@@ -70,6 +70,18 @@ class LectureSummarizer():
                 "If 'none' is specified in --summarization_mods then no other options can be selected."
             )
 
+        self.all_step_functions = [
+            self.step_extract_frames,
+            self.step_classify_slides,
+            self.step_black_border_removal,
+            self.step_perspective_crop,
+            self.step_cluster_slides,
+            self.step_slide_structure_analysis,
+            self.step_extract_figures,
+            self.step_transcribe_audio,
+            self.step_summarize
+        ]
+
         if params.spell_check:
             self.spell_checker = SpellChecker()
 

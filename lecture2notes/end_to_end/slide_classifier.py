@@ -6,8 +6,8 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
-from lecture2notes.models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-from lecture2notes.models.slide_classifier import inference  # pylint: disable=wrong-import-position
+from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
+from ..models.slide_classifier import inference  # pylint: disable=wrong-import-position
 
 
 def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60, model_path="model_best.ckpt"):

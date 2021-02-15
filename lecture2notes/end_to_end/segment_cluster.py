@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 
-from lecture2notes.models.slide_classifier import inference
+from ..models.slide_classifier import inference
 
 logger = logging.getLogger(__name__)
 

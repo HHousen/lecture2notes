@@ -6,7 +6,7 @@ from .summarizer_class import LectureSummarizer
 
 logger = logging.getLogger(__name__)
 
-from lecture2notes.models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wildcard-import,wrong-import-position
+from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wildcard-import,wrong-import-position
 
 def main(ARGS):
     summarizer = LectureSummarizer(ARGS)
