@@ -1,11 +1,9 @@
 import os
-import re
 import sys
 import itertools
 import logging
 import numpy as np
 import cv2
-from time import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from imutils import auto_canny

@@ -1,10 +1,8 @@
 import argparse
 import os
-import random
 import logging
 from collections import OrderedDict
 import sys
-from tqdm import tqdm
 from argparse import Namespace
 
 import torch
@@ -19,12 +17,9 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
-from torch.utils.tensorboard import SummaryWriter
 
 from efficientnet_pytorch import EfficientNet
 from efficientnet_pytorch.utils import MemoryEfficientSwish
-
-import numpy as np
 
 from sklearn.metrics import (
     accuracy_score,

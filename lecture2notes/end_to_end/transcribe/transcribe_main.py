@@ -1,13 +1,10 @@
 import os
-import sys
 import glob
 import json
-import shlex
 import wave
 import sox
 import contextlib
 import logging
-import subprocess
 from pathlib import Path
 import speech_recognition as sr
 from pydub import AudioSegment

@@ -1,8 +1,5 @@
 # Main process to convert video to notes (end-to-end)
 
-import sys
-import os
-import json
 import argparse
 import logging
 from .summarizer_class import LectureSummarizer

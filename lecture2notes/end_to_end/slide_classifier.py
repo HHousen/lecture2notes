@@ -1,7 +1,6 @@
-import os, sys, shutil
+import os, shutil
 import logging
 from .helpers import make_dir_if_not_exist
-from termcolor import colored
 from PIL import Image
 from tqdm import tqdm
 

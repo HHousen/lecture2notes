@@ -1,11 +1,8 @@
 import os
-import re
 import cv2
 import json
 import logging
 import pytesseract
-from PIL import Image
-from .text_detection import get_text_bounding_boxes, load_east
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

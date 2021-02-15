@@ -1,7 +1,7 @@
 import logging
 import pkg_resources
 from tqdm import tqdm
-from symspellpy.symspellpy import SymSpell, Verbosity
+from symspellpy.symspellpy import SymSpell
 
 
 class SpellChecker:

@@ -1,9 +1,6 @@
-import sys
 import os
 import json
-import argparse
 import logging
-import spacy
 from argparse import Namespace
 from shutil import rmtree
 from functools import wraps
