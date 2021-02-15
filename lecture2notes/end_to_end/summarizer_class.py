@@ -51,12 +51,13 @@ def time_this(f):
 
 class LectureSummarizer():
     def __init__(self, params):
+        if type(params) is str or type(params) is Path:
+            with open(params, "r") as json_file:
+                params = json.load(json_file)
+        
         if type(params) is dict:
             # root_process_folder
             params = Namespace(params)
-        elif type(params) is str or type(params) is Path:
-            with open(params, "r") as json_file:
-                params = json.load(json_file)
         
         # Perform argument checks
         if (params.transcription_method == "deepspeech" or params.transcription_method == "vosk") and params.transcribe_model_dir is None:
