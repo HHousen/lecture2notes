@@ -34,12 +34,12 @@ if sys.argv[1] == "cv":
                 split_idx = None
                 
                 for idx, split in enumerate(cv_splits):
-                    if any([x in image for x in split]):
+                    if any(x in image for x in split):
                         split_idx = str(idx)
                 
                 if split_idx is None:
                     for idx, split in enumerate(cv_splits_slides):
-                        if any([x in image for x in split]):
+                        if any(x in image for x in split):
                             split_idx = str(idx)
                 
                 split_name = "split_" + split_idx
@@ -117,7 +117,7 @@ elif sys.argv[1] == "split":
             num_val = 0
             num_train = 0
             for image in tqdm(current_category_data, total=len(current_category_data), desc="Images"):
-                if any([x in image for x in video_ids_test]):  # image should be in validation set
+                if any(x in image for x in video_ids_test):  # image should be in validation set
                     os.makedirs(output_dir / "val" / category, exist_ok=True)
                     shutil.copy(current_dir / image, output_dir / "val" / category / image)
                     num_val += 1
