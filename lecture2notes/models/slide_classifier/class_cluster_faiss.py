@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 class Cluster:
     def __init__(self, num_centroids=20):
-        self.vectors = dict()
+        self.vectors = {}
         self.centroids = None
         self.kmeans = None
         self.cost = None
@@ -50,7 +50,7 @@ class Cluster:
         if self.nearest_centroids is None:
             self.nearest_centroids = self.compute_nearest_centroids()
 
-        move_list = dict()
+        move_list = {}
         for idx, filename in enumerate(self.vectors):
             move_list[filename] = self.nearest_centroids[idx]
         return move_list

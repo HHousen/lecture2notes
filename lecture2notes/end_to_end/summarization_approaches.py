@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 def get_complete_sentences(text, return_string=False):
     nlp = spacy.load("en_core_web_sm")
-    complete_sentences = list()
+    complete_sentences = []
 
     text = text.replace("\n", " ").replace("\r", "")
 
@@ -328,7 +328,7 @@ def extract_features_neural_hf(
 ):
     """ Extract features using a transformer model from the huggingface/transformers library """
     nlp = pipeline("feature-extraction", model=model, tokenizer=tokenizer, **kwargs)
-    features = list()
+    features = []
     vec = np.zeros((len(sentences), n_hidden))
     logger.debug(
         "Extracting features using the " + str(model) + " huggingface neural model"
@@ -362,7 +362,7 @@ def extract_features_neural_sbert(sentences, model="roberta-base-nli-mean-tokens
 
 
 def extract_features_spacy(sentences):
-    tokens = list()
+    tokens = []
     logger.debug(
         "Extracting features using spacy. This method cannot tell which spacy model was used but it is highly recommended to use the medium or large model because the small model only includes context-sensitive tensors."
     )
@@ -567,10 +567,10 @@ def cluster(
     logger.debug("Sorted info tuples by cluster")
 
     if title_generation:
-        final_sentences = list()
+        final_sentences = []
     else:
         final_sentences = ""
-    titles = list()
+    titles = []
 
     if cluster_summarizer == "abstractive":
         summarizer_content = initialize_abstractive_model("bart")
