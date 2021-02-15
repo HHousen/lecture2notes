@@ -58,7 +58,7 @@ def sort_by_duplicates(img_dir, hash_func="phash"):
 
         img_hash = hashfunc(Image.open(current_img_path))
         if img_hash in images:
-            logger.debug(img, " already exists as", " ".join(images[img_hash]))
+            logger.debug("%s already exists as %s", img, " ".join(images[img_hash]))
         # store the image at with its hash as a key (add the image to the list for the respective key if
         # that key already exists)
         images[img_hash] = images.get(img_hash, []) + [img]
