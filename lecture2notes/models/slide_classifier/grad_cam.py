@@ -16,7 +16,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 
-class _BaseWrapper(object):
+class _BaseWrapper():
     def __init__(self, model):
         super(_BaseWrapper, self).__init__()
         self.device = next(model.parameters()).device

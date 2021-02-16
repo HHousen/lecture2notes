@@ -15,7 +15,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 import matplotlib.pyplot as plt
 
 
-class LRFinder(object):
+class LRFinder():
     """Learning rate range test.
 
     The learning rate range test increases the learning rate in a pre-training run
@@ -296,7 +296,7 @@ class ExponentialLR(_LRScheduler):
         return [base_lr * (self.end_lr / base_lr) ** r for base_lr in self.base_lrs]
 
 
-class StateCacher(object):
+class StateCacher():
     def __init__(self, in_memory, cache_dir=None):
         self.in_memory = in_memory
         self.cache_dir = cache_dir

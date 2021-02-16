@@ -9,7 +9,7 @@ import webrtcvad
 logger = logging.getLogger(__name__)
 
 
-class Frame(object):
+class Frame():
     """Represents a "frame" of audio data."""
 
     def __init__(self, bytes, timestamp, duration):
