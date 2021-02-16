@@ -681,7 +681,7 @@ def generic_abstractive(
     if not min_length:
         TO_SUMMARIZE_LENGTH = len(to_summarize.split())
         min_length = int(TO_SUMMARIZE_LENGTH * 0.1)
-        min_length = min(min_length, 512)
+        min_length = min(min_length, 512)  # If the length is too long the model will start to repeat
     if not max_length:
         max_length = int(TO_SUMMARIZE_LENGTH * 0.6)
     LECTURE_SUMMARIZED = summarizer(
