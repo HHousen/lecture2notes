@@ -2,7 +2,8 @@ try:
     from PIL import Image
 except ImportError:
     import Image
-import pytesseract, os
+import pytesseract
+import os
 import logging
 from tqdm import tqdm
 

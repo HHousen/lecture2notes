@@ -2,7 +2,10 @@
 
 import logging
 from datetime import datetime
-import collections, queue, os, os.path
+import collections
+import queue
+import os
+import os.path
 import deepspeech
 import numpy as np
 import pyaudio

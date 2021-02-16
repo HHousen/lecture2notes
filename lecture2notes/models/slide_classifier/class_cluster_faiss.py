@@ -1,4 +1,6 @@
-import os, faiss, numpy
+import os
+import faiss
+import numpy
 import matplotlib as mpl
 
 if os.environ.get("DISPLAY", "") == "":

@@ -1,4 +1,6 @@
-import shutil, sys, os
+import shutil
+import sys
+import os
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
