@@ -133,7 +133,8 @@ class GradCAM(_BaseWrapper):
                 self.handlers.append(module.register_forward_hook(save_fmaps(name)))
                 self.handlers.append(module.register_backward_hook(save_grads(name)))
 
-    def _find(self, pool, target_layer):
+    @staticmethod
+    def _find(pool, target_layer):
         if target_layer in pool.keys():
             return pool[target_layer]
         raise ValueError("Invalid layer name: {}".format(target_layer))

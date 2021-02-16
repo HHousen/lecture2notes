@@ -453,7 +453,8 @@ class SlideClassifier(pl.LightningModule):
             return [optimizer], [scheduler_dict]
         return optimizer
 
-    def calculate_stats(self, output, target):
+    @staticmethod
+    def calculate_stats(output, target):
         """Used for the training, validation, and testing steps to calculate various statistics.
 
         Args:
@@ -530,7 +531,8 @@ class SlideClassifier(pl.LightningModule):
         )
         return output
 
-    def validation_epoch_end(self, outputs, log_prefix="val"):
+    @staticmethod
+    def validation_epoch_end(outputs, log_prefix="val"):
         """Compute average statistics after a validation epoch completes."""
         # Get the average loss and accuracy metrics over all evaluation runs
         avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
