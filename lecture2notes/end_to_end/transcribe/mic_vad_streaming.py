@@ -35,7 +35,7 @@ class Audio():
             return (None, pyaudio.paContinue)
 
         if callback is None:
-            callback = lambda in_data: self.buffer_queue.put(in_data)
+            callback = self.buffer_queue.put
         self.buffer_queue = queue.Queue()
         self.device = device
         self.input_rate = input_rate
