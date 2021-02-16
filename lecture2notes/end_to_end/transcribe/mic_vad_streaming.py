@@ -14,7 +14,7 @@ from scipy import signal
 logging.basicConfig(level=20)
 
 
-class Audio(object):
+class Audio():
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
 
     FORMAT = pyaudio.paInt16
