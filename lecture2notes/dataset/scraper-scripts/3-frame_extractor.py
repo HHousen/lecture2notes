@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 from pathlib import Path
 from tqdm import tqdm
 from shared_functions import get_sec, get_length, get_extract_every_x_seconds

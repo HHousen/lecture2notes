@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import shutil
 import logging
 from .helpers import make_dir_if_not_exist
 from PIL import Image
