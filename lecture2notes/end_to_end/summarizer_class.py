@@ -104,6 +104,8 @@ class LectureSummarizer():
         if self.params.auto_id:
             unique_id = gen_unique_id(self.params.video_path, 12)
             self.root_process_folder = self.root_process_folder / unique_id
+        if self.params.custom_id:
+            self.root_process_folder = self.root_process_folder / self.params.custom_id
         return self.root_process_folder
 
     @time_this

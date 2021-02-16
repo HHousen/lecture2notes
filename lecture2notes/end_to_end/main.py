@@ -41,6 +41,12 @@ if __name__ == "__main__":
         help="automatically create a subdirectory in `process_dir` with a unique id for the video and change `process_dir` to this new directory",
     )
     PARSER.add_argument(
+        "--custom_id",
+        type=str,
+        default=None,
+        help="same as `--auto_id` but will create a subdirectory using this value instead of a random id"
+    )
+    PARSER.add_argument(
         "-rm",
         "--remove",
         action="store_true",
