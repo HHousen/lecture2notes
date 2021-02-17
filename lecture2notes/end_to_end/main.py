@@ -101,7 +101,7 @@ if __name__ == "__main__":
         "--combination_algo",
         default="keyword_based",
         choices=["only_asr", "concat", "full_sents", "keyword_based"],
-        help="which extractive summarization approach to use. more information in documentation.",
+        help="which combination algorithm to use. more information in documentation.",
     )
     PARSER.add_argument(
         "-sm",
