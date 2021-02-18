@@ -4,6 +4,8 @@ import json
 import os
 import spacy
 import math
+import requests
+from functools import partial
 from time import time
 from tqdm import tqdm
 from collections import namedtuple, OrderedDict
@@ -35,7 +37,6 @@ from sumy.utils import get_stop_words
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
-sys.path.insert(1, os.path.join(os.getcwd(), "../models/summarizer"))
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,14 @@ def compute_ranks(sigma, v_matrix):
 
 def get_best_sentences(sentences, count, rating, *args, **kwargs):
     # Inspired by https://github.com/miso-belica/sumy/blob/master/sumy/summarizers/lsa.py
-    SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order", "rating",))
+    SentenceInfo = namedtuple(
+        "SentenceInfo",
+        (
+            "sentence",
+            "order",
+            "rating",
+        ),
+    )
     rate = rating
     if isinstance(rating, list):
         assert not args and not kwargs
@@ -217,8 +225,8 @@ def extract_features_bow(
     n_features=10000,
     lsa_num_components=False,
 ):
-    """Extract features using a bag of words statistical word-frequency approach. 
-    
+    """Extract features using a bag of words statistical word-frequency approach.
+
     Arguments:
         data (list): List of sentences to extract features from
         return_lsa_svd (bool, optional): Return the features and ``lsa_svd``. See "Returns"
@@ -227,7 +235,7 @@ def extract_features_bow(
             A HashingVectorizer should only be used with large datasets. Large to the
             degree that you'll probably never pass enough data through this function
             to warrent the usage of a HashingVectorizer. HashingVectorizers use very
-            little memory and are thus scalable to large datasets because there is no 
+            little memory and are thus scalable to large datasets because there is no
             need to store a vocabulary dictionary in memory.
             More information can be found in the `HashingVectorizer scikit-learn documentation <https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.HashingVectorizer.html>`_.
         use_idf (bool, optional): Option to use inverse document-frequency. Defaults to True. In the case of ``use_hasing``
@@ -242,7 +250,7 @@ def extract_features_bow(
             of rarer yet more interesting terms. In order to re-weight the count features
             into floating point values suitable for usage by a classifier it is very common
             to use the tf–idf transform."
-        n_features (int, optional): Specifies the number of features/words to use in the vocabulary (which are 
+        n_features (int, optional): Specifies the number of features/words to use in the vocabulary (which are
             the rows of the document-term matrix). In the case of the TfidfVectorizer
             the ``n_features`` acts as a maximum since the max_df and min_df parameters
             choose words to add to the vocabulary (to use as features) that occur within
@@ -250,7 +258,7 @@ def extract_features_bow(
             if ``use_hasing`` is set to True. Defaults to 10000.
         lsa_num_components (int, optional): If set then preprocess the data using latent semantic analysis to
             reduce the dimensionality to ``lsa_num_components`` components. Defaults to False.
-    
+
     Returns:
         [list or tuple]: list of features extracted and optionally the u, sigma, and v of the svd calculation on the document-term matrix. only returns if ``return_lsa_svd`` set to True.
     """
@@ -381,14 +389,15 @@ def cluster(
     title_generation=False,
     num_topics=10,
     minibatch=False,
+    hf_inference_api=False,
     feature_extraction="neural_sbert",
     **kwargs
 ):
     """Summarize ``text`` to ``coverage_percentage`` length of the original document by extracting features
     from the text, clustering based on those features, and finally summarizing each cluster.
-    See the `scikit-learn documentation on clustering text <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html>`_ 
+    See the `scikit-learn documentation on clustering text <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html>`_
     for more information since several sections of this function were borrowed from that example.
-    
+
     Notes:
         * ``**kwargs`` is passed to the feature extraction function, which is either :meth:`~summarization_approaches.extract_features_bow` or :meth:`summarization_approaches.extract_features_neural` depending on the ``feature_extraction`` argument.
 
@@ -399,11 +408,11 @@ def cluster(
             this argument is available. If specified, it will sort the final cluster
             summaries by the specified string. Options are ``["order", "rating"]``. Defaults to None.
         cluster_summarizer (str, optional): Which summarization method to use to summarize each individual cluster.
-            "Extractive" uses the same approach as :meth:`~summarization_approaches.keyword_based_ext` 
+            "Extractive" uses the same approach as :meth:`~summarization_approaches.keyword_based_ext`
             but instead of using keywords from another document, the keywords are
             calculated in the ``TfidfVectorizer`` or ``HashingVectorizer``. Each keyword
             is a feature in the document-term matrix, thus the number of words to use
-            is specified by the `n_features` parameter. Options are ``["extractive", "abstractive"].`` 
+            is specified by the `n_features` parameter. Options are ``["extractive", "abstractive"].``
             Defaults to "extractive".
         title_generation (bool, optional): Option to generate titles for each cluster. Can not be used if
             ``final_sort_by`` is set. Generates titles by summarizing the text using
@@ -418,11 +427,13 @@ def cluster(
         minibatch (bool, optional): Two clustering algorithms are used: ordinary k-means and its more scalable
             cousin minibatch k-means. Setting this to True will use minibatch k-means
             with a batch size set to the number of clusters set in ``num_topics``. Defaults to False.
+        hf_inference_api (bool, optional): Use the huggingface inference API for abstractive summarization.
+            Defaults to False.
         feature_extraction (str, optional): Specify how features should be extracted from the text.
-            
+
             * ``neural_hf``: uses a huggingface/transformers pipeline with the roberta model by default
-            * ``neural_sbert``: special bert and roberta models fine-tuned to extract sentence embeddings 
-                
+            * ``neural_sbert``: special bert and roberta models fine-tuned to extract sentence embeddings
+
                 * GitHub: https://github.com/UKPLab/sentence-transformers
                 * Paper: https://arxiv.org/abs/1908.10084
 
@@ -434,12 +445,12 @@ def cluster(
                     word frequencies throughout the input text. The :meth:`~summarization_approaches.extract_features_bow`
                     function contains more details on recommended parameters that you can
                     pass to this function because of ``**kwargs``.
-            
+
             Options are ``["neural_hf", "neural_sbert", "spacy", "bow"]`` Default is "neural_sbert".
 
     Raises:
         Exception: If incorrect parameters are passed.
-    
+
     Returns:
         [str]: The summarized text as a normal string. Line breaks will be included if ``title_generation`` is true.
     """
@@ -550,12 +561,25 @@ def cluster(
     ]  # initialize array with `num_topics` empty arrays inside
 
     if cluster_summarizer == "extractive":
-        SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order", "rating",))
+        SentenceInfo = namedtuple(
+            "SentenceInfo",
+            (
+                "sentence",
+                "order",
+                "rating",
+            ),
+        )
         infos = (
             SentenceInfo(*t) for t in zip(NLP_SENTENCES, NLP_SENTENCES_LEN_RANGE, ranks)
         )
     else:
-        SentenceInfo = namedtuple("SentenceInfo", ("sentence", "order",))
+        SentenceInfo = namedtuple(
+            "SentenceInfo",
+            (
+                "sentence",
+                "order",
+            ),
+        )
         infos = (SentenceInfo(*t) for t in zip(NLP_SENTENCES, NLP_SENTENCES_LEN_RANGE))
     logger.debug("Created sentence info tuples")
 
@@ -610,6 +634,7 @@ def cluster(
                 cluster_unsummarized_sentences,
                 summarizer_content,
                 min_length=ABS_MIN_LENGTH,
+                hf_inference_api=hf_inference_api,
             )
 
         if title_generation:
@@ -624,6 +649,7 @@ def cluster(
                 summarizer_title,
                 min_length=1,
                 max_length=10,
+                hf_inference_api=hf_inference_api,
             )
             titles.append(title)
 
@@ -651,9 +677,7 @@ def initialize_abstractive_model(sum_model, use_hf_pipeline=True, *args, **kwarg
     if use_hf_pipeline:
         if sum_model == "bart":
             sum_model = "sshleifer/distilbart-cnn-12-6"
-        SUMMARIZER = pipeline(
-            "summarization", model=sum_model, tokenizer="facebook/bart-large-cnn"
-        )
+        SUMMARIZER = pipeline("summarization", model=sum_model)
     else:
         if sum_model == "bart":
             import bart_sum
@@ -670,25 +694,63 @@ def initialize_abstractive_model(sum_model, use_hf_pipeline=True, *args, **kwarg
     return SUMMARIZER
 
 
-def generic_abstractive(
-    to_summarize, summarizer=None, min_length=None, max_length=None, *args, **kwargs
+def generic_abstractive_hf_api(
+    to_summarize, summarizer="facebook/bart-large-cnn", *args, **kwargs
 ):
-    if isinstance(summarizer, str):
-        summarizer = initialize_abstractive_model(summarizer, *args, **kwargs)
-    if not summarizer:
-        summarizer = initialize_abstractive_model("bart")
+    api_url = "https://api-inference.huggingface.co/models/" + summarizer
+
+    data = {"inputs": to_summarize}
+    try:
+        response = requests.request("POST", api_url, data=json.dumps(data))
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == "503":  # Model not yet loaded on inference API
+            data["options"] = {"wait_for_model": True}  # Wait for model to load
+            logger.debug(
+                "Waiting for huggingface inferene API to load model '%s'", summarizer
+            )
+            response = requests.request("POST", api_url, data=json.dumps(data))
+        else:
+            logger.error("Unknown error returned from huggingface inference API")
+            raise e
+
+    response_json = json.loads(response.content.decode("utf-8"))
+
+    return response_json
+
+
+def generic_abstractive(
+    to_summarize,
+    hf_inference_api=False,
+    summarizer=None,
+    min_length=None,
+    max_length=None,
+    *args,
+    **kwargs
+):
+    if hf_inference_api:
+        if summarizer is None:
+            summarizer = "facebook/bart-large-cnn"
+        summarizer = partial(generic_abstractive_hf_api, summarizer=summarizer)
+    else:
+        if summarizer is None:
+            summarizer = "sshleifer/distilbart-cnn-12-6"
+        if isinstance(summarizer, str):
+            summarizer = initialize_abstractive_model(summarizer, *args, **kwargs)
 
     if not min_length:
         TO_SUMMARIZE_LENGTH = len(to_summarize.split())
         min_length = int(TO_SUMMARIZE_LENGTH * 0.1)
-        min_length = min(min_length, 512)  # If the length is too long the model will start to repeat
+        min_length = min(
+            min_length, 512
+        )  # If the length is too long the model will start to repeat
     if not max_length:
         max_length = int(TO_SUMMARIZE_LENGTH * 0.6)
     LECTURE_SUMMARIZED = summarizer(
         to_summarize, min_length=min_length, max_length=max_length
-    )
+    )  # length options have no effect when using the HF API
 
-    if type(LECTURE_SUMMARIZED) is list:  # hf pipeline was used
+    if type(LECTURE_SUMMARIZED) is list:  # hf pipeline or api was used
         return LECTURE_SUMMARIZED[0]["summary_text"]
 
     return LECTURE_SUMMARIZED
@@ -756,11 +818,11 @@ def structured_joined_sum(
     *args,
     **kwargs
 ):
-    """Summarize slides by combining the Slide Structure Analysis (SSA) and transcript json 
-    to create a per slide summary of the transcript. The content from the beginning of one 
-    slide to the start of the next to the nearest ``ending_char`` is considered the transcript 
-    that belongs to that slide. The summarized transcript content is organized in a dictionary 
-    where the slide titles are keys. This dictionary can be returned as json or written to a 
+    """Summarize slides by combining the Slide Structure Analysis (SSA) and transcript json
+    to create a per slide summary of the transcript. The content from the beginning of one
+    slide to the start of the next to the nearest ``ending_char`` is considered the transcript
+    that belongs to that slide. The summarized transcript content is organized in a dictionary
+    where the slide titles are keys. This dictionary can be returned as json or written to a
     json file.
 
     Args:
@@ -769,29 +831,29 @@ def structured_joined_sum(
         frame_every_x (int, optional): How often frames were extracted from the video that the SSA
             was conducted on. This is used to convert frame numbers to time (seconds). Defaults to 1.
         ending_char (str, optional): The character that the transcript belonging to each slide will
-            be extended to. For instance, if the next slide appears in the middle of a word, the 
-            transcript content will continue to be added to the previous slide until the 
-            ``ending_char`` is reached. It is recommended to use  periods or a special end of 
-            sentence token if present. These can be generated with 
-            :meth:`transcribe.transcribe_main.segment_sentences` Defaults to ``" "`` (nearest 
+            be extended to. For instance, if the next slide appears in the middle of a word, the
+            transcript content will continue to be added to the previous slide until the
+            ``ending_char`` is reached. It is recommended to use  periods or a special end of
+            sentence token if present. These can be generated with
+            :meth:`transcribe.transcribe_main.segment_sentences` Defaults to ``" "`` (nearest
             complete word).
-        to_json (bool or str, optional): If the output dictionary should be returned as a JSON string. 
-            This can also be set to a path as a string and the JSON data will be dumped to the file 
+        to_json (bool or str, optional): If the output dictionary should be returned as a JSON string.
+            This can also be set to a path as a string and the JSON data will be dumped to the file
             at that path. Defaults to False.
-        summarization_method (str, optional): The method to use to summarize each slide's 
-            transcript content. Options include "abstractive", "extractive", or "none". Defaults 
+        summarization_method (str, optional): The method to use to summarize each slide's
+            transcript content. Options include "abstractive", "extractive", or "none". Defaults
             to "abstractive".
         max_summarize_len (int, optional): Text longer than this many tokens will be summarized.
             Defaults to 50.
         ``*args`` and ``**kwargs`` are passed to the summarization function, which is either
-            :meth:`~summarization_approaches.generic_abstractive` or 
-            :meth:`~summarization_approaches.generic_extractive_sumy` depending on 
+            :meth:`~summarization_approaches.generic_abstractive` or
+            :meth:`~summarization_approaches.generic_extractive_sumy` depending on
             ``summarization_method``.
 
     Returns:
-        dict or str: A dictionary containing the slide titles as keys and the summarized transcript 
-        content for each slide as values. A string will be returned when ``to_json`` is set. If 
-        ``to_json`` is ``True`` (boolean) the JSON data formatted as a string will be returned. 
+        dict or str: A dictionary containing the slide titles as keys and the summarized transcript
+        content for each slide as values. A string will be returned when ``to_json`` is set. If
+        ``to_json`` is ``True`` (boolean) the JSON data formatted as a string will be returned.
         If ``to_json`` is a path (string), then the JSON data will be dumped to the file specified
         and the path to the file will be returned.
     """
@@ -820,9 +882,9 @@ def structured_joined_sum(
                 current_time = current_time_to_be_set
         except KeyError:  # no `start` so use the previous value
             pass
-        
+
         try:
-            add_space = not transcript_json[transcript_json_idx+1]["word"] == "."
+            add_space = not transcript_json[transcript_json_idx + 1]["word"] == "."
         except IndexError:
             add_space = False
 
@@ -908,7 +970,7 @@ def structured_joined_sum(
                 pass
 
             try:
-                add_space = not transcript_json[transcript_json_idx+1]["word"] == "."
+                add_space = not transcript_json[transcript_json_idx + 1]["word"] == "."
             except IndexError:
                 add_space = False
 

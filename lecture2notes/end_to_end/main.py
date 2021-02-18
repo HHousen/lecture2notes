@@ -182,6 +182,11 @@ if __name__ == "__main__":
         help="path containing the model files for Vosk/DeepSpeech if `--transcription_method` is set to one of those models. See the documentation for details.",
     )
     PARSER.add_argument(
+        "--abs_hf_api",
+        action="store_true",
+        help="use the huggingface inference API for all abstractive summarization tasks"
+    )
+    PARSER.add_argument(
         "--tensorboard",
         default="",
         type=str,

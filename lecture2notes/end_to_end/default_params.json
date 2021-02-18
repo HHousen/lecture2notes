@@ -22,5 +22,6 @@
     "spell_check": ["ocr"],
     "video_id": null,
     "transcribe_model_dir": "./vosk-models/vosk-model-en-us-small-0.3/",
+    "abs_hf_api": false,
     "tensorboard": ""
 }
