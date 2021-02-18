@@ -597,9 +597,9 @@ def cluster(
     titles = []
 
     if cluster_summarizer == "abstractive":
-        summarizer_content = initialize_abstractive_model("bart")
+        summarizer_content = None if hf_inference_api else initialize_abstractive_model("bart")
     if title_generation:
-        summarizer_title = initialize_abstractive_model("facebook/bart-large-xsum")
+        summarizer_title = "facebook/bart-large-xsum" if hf_inference_api else initialize_abstractive_model("facebook/bart-large-xsum")
 
     for idx, cluster in tqdm(
         enumerate(sentence_clusters),
@@ -731,6 +731,8 @@ def generic_abstractive(
     if hf_inference_api:
         if summarizer is None:
             summarizer = "facebook/bart-large-cnn"
+        if type(summarizer) is not str:
+            logger.error("The `summarizer` passed to `generic_abstractive()` is not a string but `hf_inference_api` is enabled. This will cause an error with the huggingface inference API.")
         summarizer = partial(generic_abstractive_hf_api, summarizer=summarizer)
     else:
         if summarizer is None:
@@ -815,6 +817,7 @@ def structured_joined_sum(
     to_json=False,
     summarization_method="abstractive",
     max_summarize_len=50,
+    hf_inference_api=False,
     *args,
     **kwargs
 ):
@@ -845,6 +848,8 @@ def structured_joined_sum(
             to "abstractive".
         max_summarize_len (int, optional): Text longer than this many tokens will be summarized.
             Defaults to 50.
+        hf_inference_api (bool, optional): Use the huggingface inference API for abstractive
+            summarization. Defaults to False.
         ``*args`` and ``**kwargs`` are passed to the summarization function, which is either
             :meth:`~summarization_approaches.generic_abstractive` or
             :meth:`~summarization_approaches.generic_extractive_sumy` depending on
@@ -998,14 +1003,14 @@ def structured_joined_sum(
 
     if summarization_method not in ("none", None):
         if summarization_method == "abstractive":
-            summarizer = initialize_abstractive_model("bart")
+            summarizer = None if hf_inference_api else initialize_abstractive_model("bart")
 
         for title, content in tqdm(final_dict.items(), desc="Summarizing Slides"):
             content = content["transcript"]
             if len(content.split(" ")) > max_summarize_len:
                 if summarization_method == "abstractive":
                     final_dict[title]["transcript"] = generic_abstractive(
-                        content, summarizer, *args, **kwargs
+                        content, summarizer, hf_inference_api=hf_inference_api, *args, **kwargs
                     )
                 else:
                     final_dict[title]["transcript"] = generic_extractive_sumy(
