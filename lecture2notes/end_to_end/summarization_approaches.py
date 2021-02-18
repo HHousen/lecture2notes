@@ -721,10 +721,10 @@ def generic_abstractive_hf_api(
 
 def generic_abstractive(
     to_summarize,
-    hf_inference_api=False,
     summarizer=None,
     min_length=None,
     max_length=None,
+    hf_inference_api=False,
     *args,
     **kwargs
 ):
