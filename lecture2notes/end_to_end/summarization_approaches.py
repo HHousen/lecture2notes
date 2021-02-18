@@ -704,7 +704,7 @@ def generic_abstractive_hf_api(
         response = requests.request("POST", api_url, data=json.dumps(data))
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == "503":  # Model not yet loaded on inference API
+        if e.response.status_code == 503:  # Model not yet loaded on inference API
             data["options"] = {"wait_for_model": True}  # Wait for model to load
             logger.debug(
                 "Waiting for huggingface inferene API to load model '%s'", summarizer
