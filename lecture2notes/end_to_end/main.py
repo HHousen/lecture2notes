@@ -184,7 +184,12 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "--abs_hf_api",
         action="store_true",
-        help="use the huggingface inference API for all abstractive summarization tasks"
+        help="use the huggingface inference API for abstractive summarization tasks"
+    )
+    PARSER.add_argument(
+        "--abs_hf_api_overall",
+        action="store_true",
+        help="use the huggingface inference API for final overall abstractive summarization task"
     )
     PARSER.add_argument(
         "--tensorboard",

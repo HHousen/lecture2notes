@@ -634,7 +634,7 @@ class LectureSummarizer:
             lecture_summarized = generic_abstractive(
                 summarized_ext,
                 self.params.summarization_abs,
-                hf_inference_api=self.params.abs_hf_api,
+                hf_inference_api=self.params.abs_hf_api_overall,
             )
         else:  # if no abstractive summarization method was specified
             lecture_summarized = summarized_ext
