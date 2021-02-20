@@ -562,6 +562,9 @@ class LectureSummarizer:
                     frame_every_x=self.extract_every_x_seconds,
                     ending_char=".",
                     to_json=lecture_summarized_structured_output_file,
+                    summarization_method=self.params.structured_joined_summarization_method,
+                    abs_summarizer=self.params.structured_joined_abs_summarizer,
+                    ext_summarizer=self.params.structured_joined_ext_summarizer,
                     hf_inference_api=self.params.abs_hf_api,
                 )
                 self.final_data["structured_summary"] = structured_summary

@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wildcard-import,wrong-import-position
 
+
 def main(ARGS):
     summarizer = LectureSummarizer(ARGS)
     summarizer.run_all()
@@ -44,7 +45,7 @@ if __name__ == "__main__":
         "--custom_id",
         type=str,
         default=None,
-        help="same as `--auto_id` but will create a subdirectory using this value instead of a random id"
+        help="same as `--auto_id` but will create a subdirectory using this value instead of a random id",
     )
     PARSER.add_argument(
         "-rm",
@@ -68,7 +69,7 @@ if __name__ == "__main__":
         "--slide_classifier_model_path",
         type=str,
         default="./lecture2notes/end_to_end/model_best.ckpt",
-        help="path to the slide classification model checkpoint"
+        help="path to the slide classification model checkpoint",
     )
     PARSER.add_argument(
         "--east_path",
@@ -131,7 +132,21 @@ if __name__ == "__main__":
         "-sa",
         "--summarization_abs",
         default="allenai/led-large-16384-arxiv",
-        choices=["none", "bart", "presumm", "allenai/led-large-16384-arxiv"],
+        choices=[
+            "none",
+            "presumm",
+            "sshleifer/distilbart-cnn-12-6",
+            "patrickvonplaten/bert2bert_cnn_daily_mail",
+            "facebook/bart-large-cnn",
+            "allenai/led-large-16384-arxiv",
+            "patrickvonplaten/led-large-16384-pubmed",
+            "google/pegasus-billsum",
+            "google/pegasus-cnn_dailymail",
+            "google/pegasus-pubmed",
+            "google/pegasus-arxiv",
+            "google/pegasus-wikihow",
+            "google/pegasus-big_patent",
+        ],
         help="which abstractive summarization approach/model to use. more information in documentation.",
     )
     PARSER.add_argument(
@@ -142,6 +157,44 @@ if __name__ == "__main__":
         help="""An additional summarization algorithm that creates a structured summary with 
                 figures, slide content (with bolded area), and summarized transcript content 
                 from the SSA (Slide Structure Analysis) and transcript JSON data.""",
+    )
+    PARSER.add_argument(
+        "--structured_joined_summarization_method",
+        default="abstractive",
+        choices=["none", "abstractive", "extractive"],
+        help="The summarization method to use during `structured_joined` summarization."
+    )
+    PARSER.add_argument(
+        "--structured_joined_abs_summarizer"
+        default="facebook/bart-large-cnn",
+        choices=[
+            "presumm",
+            "sshleifer/distilbart-cnn-12-6",
+            "patrickvonplaten/bert2bert_cnn_daily_mail",
+            "facebook/bart-large-cnn",
+            "allenai/led-large-16384-arxiv",
+            "patrickvonplaten/led-large-16384-pubmed",
+            "google/pegasus-billsum",
+            "google/pegasus-cnn_dailymail",
+            "google/pegasus-pubmed",
+            "google/pegasus-arxiv",
+            "google/pegasus-wikihow",
+            "google/pegasus-big_patent",
+        ],
+        help="The abstractive summarizer to use during `structured_joined` summarization (to create summaries of each slide) if `structured_joined_summarization_method` is 'abstractive'."
+    )
+    PARSER.add_argument(
+        "--structured_joined_ext_summarizer",
+        default="text_rank",
+        choices=[
+            "lsa",
+            "luhn",
+            "lex_rank",
+            "text_rank",
+            "edmundson",
+            "random",
+        ],
+        help="The extractive summarizer to use during `structured_joined` summarization (to create summaries of each slide) if `--structured_joined_summarization_method` is 'extractive'."
     )
     PARSER.add_argument(
         "-tm",
@@ -158,7 +211,7 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "--transcribe_segment_sentences",
         action="store_false",
-        help="Disable DeepSegment automatic sentence boundary detection. Specifying this option will output transcripts without punctuation."
+        help="Disable DeepSegment automatic sentence boundary detection. Specifying this option will output transcripts without punctuation.",
     )
     PARSER.add_argument(
         "-sc",
@@ -184,12 +237,12 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "--abs_hf_api",
         action="store_true",
-        help="use the huggingface inference API for abstractive summarization tasks"
+        help="use the huggingface inference API for abstractive summarization tasks",
     )
     PARSER.add_argument(
         "--abs_hf_api_overall",
         action="store_true",
-        help="use the huggingface inference API for final overall abstractive summarization task"
+        help="use the huggingface inference API for final overall abstractive summarization task",
     )
     PARSER.add_argument(
         "--tensorboard",
@@ -229,7 +282,9 @@ if __name__ == "__main__":
     ARGS = PARSER.parse_args()
 
     # Perform argument checks
-    if (ARGS.transcription_method == "deepspeech" or ARGS.transcription_method == "vosk") and ARGS.transcribe_model_dir is None:
+    if (
+        ARGS.transcription_method == "deepspeech" or ARGS.transcription_method == "vosk"
+    ) and ARGS.transcribe_model_dir is None:
         PARSER.error(
             "DeepSpeech and Vosk methods requires --transcribe_model_dir to be set to the directory containing the deepspeech/vosk models. See the documentation for details."
         )

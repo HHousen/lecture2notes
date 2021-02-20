@@ -817,6 +817,8 @@ def structured_joined_sum(
     to_json=False,
     summarization_method="abstractive",
     max_summarize_len=50,
+    abs_summarizer="sshleifer/distilbart-cnn-12-6",
+    ext_summarizer="text_rank",
     hf_inference_api=False,
     *args,
     **kwargs
@@ -848,6 +850,8 @@ def structured_joined_sum(
             to "abstractive".
         max_summarize_len (int, optional): Text longer than this many tokens will be summarized.
             Defaults to 50.
+        abs_summarizer (str, optional): The abstractive summarization model to use if
+            `summarization_method` is "abstractive". Defaults to "sshleifer/distilbart-cnn-12-6".
         hf_inference_api (bool, optional): Use the huggingface inference API for abstractive
             summarization. Defaults to False.
         ``*args`` and ``**kwargs`` are passed to the summarization function, which is either
@@ -1002,19 +1006,19 @@ def structured_joined_sum(
             final_dict[title]["figure_paths"] = slide["figure_paths"]
 
     if summarization_method not in ("none", None):
-        if summarization_method == "abstractive":
-            summarizer = None if hf_inference_api else initialize_abstractive_model("bart")
+        if summarization_method == "abstractive" and not hf_inference_api:
+            abs_summarizer = initialize_abstractive_model(abs_summarizer)
 
         for title, content in tqdm(final_dict.items(), desc="Summarizing Slides"):
             content = content["transcript"]
             if len(content.split(" ")) > max_summarize_len:
                 if summarization_method == "abstractive":
                     final_dict[title]["transcript"] = generic_abstractive(
-                        content, summarizer, hf_inference_api=hf_inference_api, *args, **kwargs
+                        content, abs_summarizer, hf_inference_api=hf_inference_api, *args, **kwargs
                     )
                 else:
                     final_dict[title]["transcript"] = generic_extractive_sumy(
-                        content, *args, **kwargs
+                        content, algorithm=ext_summarizer, *args, **kwargs
                     )
             else:
                 final_dict[title]["transcript"] = content
