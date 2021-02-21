@@ -43,12 +43,16 @@ def frame_number_from_filename(filename):
     return int(re.search("(?<=\_)[0-9]+(?=\_|.)", filename).group(0))
 
 
-def frame_number_filename_mapping(path):
+def frame_number_filename_mapping(path, filenames_only=True):
     figures = os.listdir(path)
     figure_mapping = {}
 
     for figure_filename in figures:
-        figure_path = os.path.join(path, figure_filename)
+        if filenames_only:
+            figure_path = figure_filename
+        else:
+            figure_path = os.path.join(path, figure_path)
+        
         frame_number = frame_number_from_filename(figure_filename)
         try:
             figure_mapping[frame_number].append(figure_path)
