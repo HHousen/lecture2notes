@@ -309,12 +309,14 @@ def analyze_structure(
     return to_return
 
 
-def all_in_folder(path, **kwargs):
+def all_in_folder(path, do_rename=True, **kwargs):
     """Perform structure analysis and OCR on every file in folder using 
     :meth:`slide_structure_analysis.analyze_structure`.
 
     Args:
         path (str): Directory containing images to process.
+        do_rename (str, optional): Rename files to just their frame number. Defaults
+            to True.
         ``**kwargs`` is passed to :meth:`slide_structure_analysis.analyze_structure`.
 
     Returns:
@@ -333,6 +335,13 @@ def all_in_folder(path, **kwargs):
         if os.path.isfile(current_path):
             image = cv2.imread(current_path)
             frame_number = frame_number_from_filename(current_path)
+
+            if do_rename:
+                item_directory = os.path.dirname(item)
+                file_extension = os.path.splitext(item)[1]
+                new_path = os.path.join(path, item_directory, frame_number + file_extension)
+                os.rename(current_path, new_path)
+
             frame_number = int(frame_number)
             analyze_structure_outputs = analyze_structure(
                 image, to_json=True, extra_json={"frame_number": frame_number}, **kwargs
