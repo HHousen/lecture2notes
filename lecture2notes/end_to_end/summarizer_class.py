@@ -27,6 +27,7 @@ from .slide_classifier import classify_frames
 # Step black border removal imports
 from . import imghash
 from . import border_removal
+from .helpers import frame_number_from_filename
 
 # Step perspective crop imports
 from . import sift_matcher
@@ -196,6 +197,19 @@ class LectureSummarizer:
             "slides_noborder_dir",
             self.frames_sorted_dir / "slides_noborder",
         )
+
+        # Save first 'slide' frame number
+        first_frame_num_file_path = getattr(
+            self.params,
+            "first_frame_num_file_path",
+            self.root_process_folder / "first-frame-num.txt",
+        )
+        first_slide_frame_filename = sorted(os.listdir(slides_dir))[0]
+        self.first_slide_frame_num = frame_number_from_filename(
+            first_slide_frame_filename
+        )
+        with open(first_frame_num_file_path, "a") as first_frame_num_file:
+            first_frame_num_file.write(self.first_slide_frame_num)
 
         if os.path.exists(slides_dir):
             os.makedirs(slides_noborder_dir, exist_ok=True)
@@ -556,11 +570,24 @@ class LectureSummarizer:
             ss_start_time = timer()
 
             if self.params.summarization_structured == "structured_joined":
+                # Get the frame number of the first 'slide'
+                if hasattr(self, "first_slide_frame_num"):
+                    first_slide_frame_num = self.first_slide_frame_num
+                else:
+                    first_frame_num_file_path = getattr(
+                        self.params,
+                        "first_frame_num_file_path",
+                        self.root_process_folder / "first-frame-num.txt",
+                    )
+                    with open(first_frame_num_file_path, "r") as first_frame_num_file:
+                        first_slide_frame_num = first_frame_num_file.read()
+
                 structured_summary = structured_joined_sum(
                     self.ocr_json_output_file,
                     self.transcript_json_output_file,
                     frame_every_x=self.extract_every_x_seconds,
                     ending_char=".",
+                    first_slide_frame_num=int(first_slide_frame_num),
                     to_json=lecture_summarized_structured_output_file,
                     summarization_method=self.params.structured_joined_summarization_method,
                     abs_summarizer=self.params.structured_joined_abs_summarizer,

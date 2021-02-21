@@ -597,9 +597,15 @@ def cluster(
     titles = []
 
     if cluster_summarizer == "abstractive":
-        summarizer_content = None if hf_inference_api else initialize_abstractive_model("bart")
+        summarizer_content = (
+            None if hf_inference_api else initialize_abstractive_model("bart")
+        )
     if title_generation:
-        summarizer_title = "facebook/bart-large-xsum" if hf_inference_api else initialize_abstractive_model("facebook/bart-large-xsum")
+        summarizer_title = (
+            "facebook/bart-large-xsum"
+            if hf_inference_api
+            else initialize_abstractive_model("facebook/bart-large-xsum")
+        )
 
     for idx, cluster in tqdm(
         enumerate(sentence_clusters),
@@ -732,7 +738,9 @@ def generic_abstractive(
         if summarizer is None:
             summarizer = "facebook/bart-large-cnn"
         if type(summarizer) is not str:
-            logger.error("The `summarizer` passed to `generic_abstractive()` is not a string but `hf_inference_api` is enabled. This will cause an error with the huggingface inference API.")
+            logger.error(
+                "The `summarizer` passed to `generic_abstractive()` is not a string but `hf_inference_api` is enabled. This will cause an error with the huggingface inference API."
+            )
         summarizer = partial(generic_abstractive_hf_api, summarizer=summarizer)
     else:
         if summarizer is None:
@@ -814,6 +822,7 @@ def structured_joined_sum(
     transcript_json_path,
     frame_every_x=1,
     ending_char=".",
+    first_slide_frame_num=0,
     to_json=False,
     summarization_method="abstractive",
     max_summarize_len=50,
@@ -842,6 +851,8 @@ def structured_joined_sum(
             sentence token if present. These can be generated with
             :meth:`transcribe.transcribe_main.segment_sentences` Defaults to ``" "`` (nearest
             complete word).
+        first_slide_frame_num (int, optional): The frame number of the first slide. Used to create a
+            'preface' (aka an introduction) if the first slide is not immediately shown. Defaults to 0.
         to_json (bool or str, optional): If the output dictionary should be returned as a JSON string.
             This can also be set to a path as a string and the JSON data will be dumped to the file
             at that path. Defaults to False.
@@ -872,6 +883,8 @@ def structured_joined_sum(
         "none",
     ], "Invalid summarization method"
 
+    first_slide_frame_num = int(first_slide_frame_num)
+
     with open(ssa_path, "r") as ssa_file, open(
         transcript_json_path, "r"
     ) as transcript_json_file:
@@ -881,38 +894,42 @@ def structured_joined_sum(
     transcript_json_idx = 0
     current_time = 0
 
-    first_slide_timestamp_seconds = ssa[0]["frame_number"] * frame_every_x
-    transcript_before_slides = ""
-    while True:
-        current_letter_obj = transcript_json[transcript_json_idx]
-        try:
-            current_time_to_be_set = current_letter_obj["start"]
-            if current_time_to_be_set != 0:
-                current_time = current_time_to_be_set
-        except KeyError:  # no `start` so use the previous value
-            pass
+    if first_slide_frame_num == 0:
+        # Don't create a 'preface' if the first slide is shown immediately
+        final_dict = OrderedDict()
+    else:
+        first_slide_timestamp_seconds = first_slide_frame_num * frame_every_x
+        transcript_before_slides = ""
+        while True:
+            current_letter_obj = transcript_json[transcript_json_idx]
+            try:
+                current_time_to_be_set = current_letter_obj["start"]
+                if current_time_to_be_set != 0:
+                    current_time = current_time_to_be_set
+            except KeyError:  # no `start` so use the previous value
+                pass
 
-        try:
-            add_space = not transcript_json[transcript_json_idx + 1]["word"] == "."
-        except IndexError:
-            add_space = False
+            try:
+                add_space = not transcript_json[transcript_json_idx + 1]["word"] == "."
+            except IndexError:
+                add_space = False
 
-        to_add = current_letter_obj["word"]
-        if add_space:
-            to_add += " "
-        transcript_before_slides += to_add
-        transcript_json_idx += 1
+            to_add = current_letter_obj["word"]
+            if add_space:
+                to_add += " "
+            transcript_before_slides += to_add
+            transcript_json_idx += 1
 
-        if (
-            current_time >= first_slide_timestamp_seconds
-            and current_letter_obj["word"] == ending_char
-        ):
-            break
+            if (
+                current_time >= first_slide_timestamp_seconds
+                and current_letter_obj["word"] == ending_char
+            ):
+                break
 
-    transcript_before_slides = transcript_before_slides.strip()
-    final_dict = OrderedDict({"Preface": {"transcript": transcript_before_slides}})
+        transcript_before_slides = transcript_before_slides.strip()
+        final_dict = OrderedDict({"Preface": {"transcript": transcript_before_slides}})
 
-    go_to_end = False
+    no_conclusion = False
     for idx, slide in tqdm(
         enumerate(ssa), total=len(ssa), desc="Grouping Slides and Transcript"
     ):
@@ -957,16 +974,15 @@ def structured_joined_sum(
         if not title:
             title = "Slide {}".format(idx + 1)
 
-        try:
-            ssa[idx + 1]
-            next_slide_timestamp_seconds = ssa[idx + 1]["frame_number"] * frame_every_x
-        except IndexError:  # Last item
-            go_to_end = True
+        current_slide_timestamp_seconds = ssa[idx]["frame_number"] * frame_every_x
 
         coresponding_transcript_text = ""
         while True:
             # If `transcript_json` out of items break the loop
             if transcript_json_idx == len(transcript_json):
+                no_conclusion = (
+                    True  # already reached end so don't created 'conclusion'
+                )
                 break
 
             current_letter_obj = transcript_json[transcript_json_idx]
@@ -990,12 +1006,11 @@ def structured_joined_sum(
             coresponding_transcript_text += to_add
             transcript_json_idx += 1
 
-            # If `go_to_end` enabled then never break using this statement.
             # If the current time is past the next slide time advance to the next slide.
             # However, jump forward a few letter if necessary in order to end the current
             # transcript-slide segment with `endding_char`.
-            if (not go_to_end) and (
-                current_time >= next_slide_timestamp_seconds
+            if (
+                current_time >= current_slide_timestamp_seconds
                 and current_letter_obj["word"] == ending_char
             ):
                 break
@@ -1006,6 +1021,37 @@ def structured_joined_sum(
         if "figure_paths" in slide.keys():
             final_dict[title]["figure_paths"] = slide["figure_paths"]
 
+    # Add 'conclusion' (transcript after last slide) as long as the end of the transcript
+    # has not already been reached.
+    if not no_conclusion:
+        coresponding_transcript_text = ""
+        while True:
+            # If `transcript_json` out of items break the loop
+            if transcript_json_idx >= len(transcript_json):
+                break
+
+            current_letter_obj = transcript_json[transcript_json_idx]
+
+            try:
+                current_time_to_be_set = current_letter_obj["start"]
+                if current_time_to_be_set != 0:
+                    current_time = current_time_to_be_set
+            except KeyError:  # no `start` so use the previous value
+                pass
+
+            try:
+                add_space = not transcript_json[transcript_json_idx + 1]["word"] == "."
+            except IndexError:
+                add_space = False
+
+            to_add = current_letter_obj["word"]
+            if add_space:
+                to_add += " "
+
+            coresponding_transcript_text += to_add
+            transcript_json_idx += 1
+        final_dict["Conclusion"] = {"transcript": coresponding_transcript_text}
+
     if summarization_method not in ("none", None):
         if summarization_method == "abstractive" and not hf_inference_api:
             abs_summarizer = initialize_abstractive_model(abs_summarizer)
@@ -1015,7 +1061,11 @@ def structured_joined_sum(
             if len(content.split(" ")) > max_summarize_len:
                 if summarization_method == "abstractive":
                     final_dict[title]["transcript"] = generic_abstractive(
-                        content, abs_summarizer, hf_inference_api=hf_inference_api, *args, **kwargs
+                        content,
+                        abs_summarizer,
+                        hf_inference_api=hf_inference_api,
+                        *args,
+                        **kwargs
                     )
                 else:
                     final_dict[title]["transcript"] = generic_extractive_sumy(
@@ -1035,4 +1085,4 @@ def structured_joined_sum(
     return final_dict
 
 
-# structured_joined_sum("process/slide-ssa.json", "process/audio.json", to_json="process/summarized.json")
+# structured_joined_sum("process/slide-ssa.json", "process/audio.json", to_json="process/summarized.json", first_slide_frame_num=0, summarization_method="none", hf_inference_api=True)
