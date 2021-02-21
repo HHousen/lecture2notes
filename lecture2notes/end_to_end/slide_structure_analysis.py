@@ -339,7 +339,7 @@ def all_in_folder(path, do_rename=True, **kwargs):
             if do_rename:
                 item_directory = os.path.dirname(item)
                 file_extension = os.path.splitext(item)[1]
-                new_path = os.path.join(path, item_directory, frame_number + file_extension)
+                new_path = os.path.join(path, item_directory, str(frame_number) + file_extension)
                 os.rename(current_path, new_path)
 
             frame_number = int(frame_number)
