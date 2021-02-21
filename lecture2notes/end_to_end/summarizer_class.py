@@ -209,7 +209,7 @@ class LectureSummarizer:
             first_slide_frame_filename
         )
         with open(first_frame_num_file_path, "a") as first_frame_num_file:
-            first_frame_num_file.write(self.first_slide_frame_num)
+            first_frame_num_file.write(str(self.first_slide_frame_num))
 
         if os.path.exists(slides_dir):
             os.makedirs(slides_noborder_dir, exist_ok=True)
