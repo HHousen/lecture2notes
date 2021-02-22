@@ -946,12 +946,17 @@ def structured_joined_sum(
 
             # If the line is not footer text and is not a title
             if slide["category"][line_idx] not in (-1, 2):
+                current_line_is_bold = slide["category"][line_idx] == 1
                 # If the line is bold then add "**" on either side
-                if slide["category"][line_idx] == 1:
+                if current_line_is_bold:
                     line = "**" + line + "**"
                 try:
-                    # If the previously added line was bold (it ended in "**")
-                    if all_slide_content[current_par_num][-2:] == "**":
+                    # If the previously added line was bold (it ended in "**") and current
+                    # line is bold
+                    if (
+                        all_slide_content[current_par_num][-2:] == "**"
+                        and current_line_is_bold
+                    ):
                         # Remove the first "**" from the line to be added
                         line = line[2:]
                         # Remove the last "**" from the previously added line
