@@ -165,7 +165,7 @@ if __name__ == "__main__":
         help="The summarization method to use during `structured_joined` summarization."
     )
     PARSER.add_argument(
-        "--structured_joined_abs_summarizer"
+        "--structured_joined_abs_summarizer",
         default="facebook/bart-large-cnn",
         choices=[
             "presumm",
@@ -200,13 +200,14 @@ if __name__ == "__main__":
         "-tm",
         "--transcription_method",
         default="vosk",
-        choices=["sphinx", "google", "youtube", "deepspeech", "vosk"],
+        choices=["sphinx", "google", "youtube", "deepspeech", "vosk", "wav2vec"],
         help="""specify the program that should be used for transcription. 
                         CMU Sphinx: use pocketsphinx
                         Google Speech Recognition: probably will require chunking (online, free, max 1 minute chunks)
                         YouTube: download a video transcript from YouTube based on `--video_id`
                         DeepSpeech: Use the deepspeech library (fast with good GPU)
-                        Vosk: Use the vosk library (extremely small low-resource model with great accuracy, this is the default)""",
+                        Vosk: Use the vosk library (extremely small low-resource model with great accuracy, this is the default)
+                        Wav2Vec: State-of-the-art speech-to-text model through the `huggingface/transformers` library.""",
     )
     PARSER.add_argument(
         "--transcribe_segment_sentences",

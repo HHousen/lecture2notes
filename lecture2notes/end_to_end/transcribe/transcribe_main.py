@@ -5,6 +5,9 @@ import wave
 import sox
 import contextlib
 import logging
+import torch
+import itertools
+from transformers import Wav2Vec2Tokenizer, Wav2Vec2ForCTC
 from pathlib import Path
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -57,6 +60,8 @@ def transcribe_audio(audio_path, method="sphinx", **kwargs):
         return transcribe_audio_vosk(audio_path, **kwargs)
     if method == "deepspeech":
         return transcribe_audio_deepspeech(audio_path, **kwargs)
+    if method == "wav2vec":
+        return transcribe_audio_wav2vec(audio_path, **kwargs)
     return transcribe_audio_generic(audio_path, method, **kwargs), None
 
 
@@ -159,6 +164,55 @@ def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=F
     results_text = [x["word"] if type(x) is dict else x for x in results]
 
     return " ".join(results_text), results_json
+
+def load_wav2vec_model(model="facebook/wav2vec2-base-960h", tokenizer="facebook/wav2vec2-base-960h", **kwargs):
+    tokenizer = Wav2Vec2Tokenizer.from_pretrained(tokenizer)
+    model = Wav2Vec2ForCTC.from_pretrained(model)
+    return model, tokenizer
+
+def transcribe_audio_wav2vec(audio_path_or_chunks, model=None, chunks=False, desired_sample_rate=16000):
+    if model is None:
+        model = ["facebook/wav2vec2-base-960h", "facebook/wav2vec2-base-960h"]
+    if isinstance(model, str):
+        model = [model] * 2
+    if isinstance(model[0], str):
+        model, tokenizer = load_wav2vec_model(model[0], model[1])
+    else:
+        model, tokenizer = model[0], model[1]
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    if chunks:
+        audio = audio_path_or_chunks
+    else:
+        pcm_data, sample_rate, duration = read_wave(
+            audio_path_or_chunks, desired_sample_rate, force=False
+        )
+        if type(pcm_data) is bytes:
+            pcm_data = np.frombuffer(pcm_data, dtype=np.float64)
+        chunk_len = 15  # 20 seconds
+        num_chunks = int(duration / chunk_len)
+        pcm_data = np.array_split(pcm_data, num_chunks)
+        audio = pcm_data
+    
+    # tokenize speech
+    final_transcript = []
+    for data in tqdm(audio, desc="Wav2Vec Transcribing"):
+        data = data.astype('float64')
+        input_values = tokenizer(data, return_tensors="pt", padding="longest", truncation="longest_first").input_values
+        # input_values = input_values.type(torch.long)
+        # retrieve logits
+        input_values = input_values.to(device)
+        logits = model(input_values).logits
+
+        # take argmax and decode
+        predicted_ids = torch.argmax(logits, dim=-1)
+        transcription = tokenizer.batch_decode(predicted_ids)
+
+        combined_transcript = " ".join(transcription).strip()
+        final_transcript.append(combined_transcript.lower())
+    return " ".join(final_transcript).strip(), None
 
 def read_wave(path, desired_sample_rate=None, force=False):
     """Reads a ".wav" file and converts to ``desired_sample_rate`` with one channel.
@@ -280,7 +334,7 @@ def segment_sentences(text, text_json=None, do_capitalization=True):
         
         return final_text, json.dumps(text_json)
 
-    return final_text
+    return final_text, None
 
 
 def metadata_to_string(metadata):
@@ -379,6 +433,8 @@ def load_model(method, *args, **kwargs):
         return load_deepspeech_model(*args, **kwargs)
     if method == "vosk":
         return load_vosk_model(*args, **kwargs)
+    if method == "wav2vec":
+        return load_wav2vec_model(*args, **kwargs)
     logger.error("There is no method with name '%s'", method)
 
 
@@ -545,7 +601,6 @@ def chunk_by_speech(
 
     return segments, sample_rate, audio_length
 
-
 def process_segments(
     segments, model, audio_length="unknown", method="deepspeech", do_segment_sentences=True
 ):
@@ -570,7 +625,10 @@ def process_segments(
         model = load_deepspeech_model(model)
     elif model == "vosk":
         model = load_vosk_model(model)
+    elif model == "wav2vec":
+        model = load_wav2vec_model()
 
+    create_json = True
     full_transcript = ""
     full_transcript_json = []
     start_time = timer()
@@ -595,9 +653,21 @@ def process_segments(
         full_transcript, full_transcript_json = transcribe_audio_vosk(
             segments, model, chunks=True
         )
+    elif method == "wav2vec":
+        create_json = False
+        for i, segment in tqdm(enumerate(segments), desc="Processing Segments"):
+            audio = np.frombuffer(segment)
+            transcript = transcribe_audio_wav2vec(
+                audio, model, chunks=True
+            )
 
-    # Convert `full_transcript_json` to json string
-    full_transcript_json = json.dumps(full_transcript_json)
+            full_transcript += transcript + " "
+    
+    if create_json:
+        # Convert `full_transcript_json` to json string
+        full_transcript_json = json.dumps(full_transcript_json)
+    else:
+        full_transcript_json = None
 
     total_time = timer() - start_time
     logger.info(

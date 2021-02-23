@@ -12,8 +12,7 @@ from timeit import default_timer as timer
 
 import jiwer
 
-sys.path.insert(1, os.path.join(sys.path[0], "../End-To-End"))
-from transcribe import transcribe_main as transcribe
+from ..end_to_end.transcribe import transcribe_main as transcribe
 
 logger = logging.getLogger(__name__)
 

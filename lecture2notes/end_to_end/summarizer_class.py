@@ -476,7 +476,7 @@ class LectureSummarizer:
                 elif self.params.chunk == "speech":
                     stt_model = transcribe.load_model(
                         self.params.transcription_method,
-                        self.params.transcribe_model_dir,
+                        model_dir=self.params.transcribe_model_dir,
                     )
 
                     # Only DeepSpeech has a `sampleRate()` method but `stt_model` could contain

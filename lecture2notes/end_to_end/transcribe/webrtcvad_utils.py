@@ -126,7 +126,7 @@ def vad_segment_generator(wavFile, aggressiveness, desired_sample_rate=None):
             
             ``audio_length``: Duration of the input audio file
     """
-    from transcribe.transcribe_main import read_wave
+    from .transcribe_main import read_wave
 
     logging.debug("Caught the wav file @: %s" % (wavFile))
     audio, sample_rate, audio_length = read_wave(wavFile, desired_sample_rate)
