@@ -191,7 +191,7 @@ def transcribe_audio_wav2vec(audio_path_or_chunks, model=None, chunks=False, des
         )
         if type(pcm_data) is bytes:
             pcm_data = np.frombuffer(pcm_data, dtype=np.float64)
-        chunk_len = 15  # 20 seconds
+        chunk_len = 15  # 15 seconds
         num_chunks = int(duration / chunk_len)
         pcm_data = np.array_split(pcm_data, num_chunks)
         audio = pcm_data

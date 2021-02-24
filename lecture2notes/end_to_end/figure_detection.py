@@ -3,6 +3,8 @@ from tqdm import tqdm
 import logging
 import numpy as np
 import cv2
+import math
+from pythonRLSA import rlsa
 from PIL import Image, ImageStat
 from imutils import auto_canny
 from skimage.measure.entropy import shannon_entropy
@@ -90,6 +92,7 @@ def detect_figures(
     do_text_check=True,
     entropy_check=2.5,
     do_remove_subfigures=True,
+    do_rlsa=False,
 ):
     """Detect figures located in a slide.
 
@@ -132,6 +135,8 @@ def detect_figures(
             If an overlapping figure is detected, the smaller figure will be deleted. This 
             is useful to have enabled when using `large_box_detection` since 
             `large_box_detection` will commonly mistakenly detect subfigures. Defaults to True.
+        do_rlsa (bool, optional): Use RLSA (Run Length Smoothing Algorithm) instead of dilation.
+            Does not apply to `large_box_detection`. Defaults to False.
 
     Returns:
         tuple: (figures, output_paths) A list of figures extracted from the input slide image 
@@ -139,15 +144,15 @@ def detect_figures(
     """
     image = cv2.imread(image_path)
 
-    image = cv2.copyMakeBorder(
-        image,
-        20,
-        20,
-        20,
-        20,
-        cv2.BORDER_CONSTANT,
-        value=[0, 0, 0],
-    )
+    # image = cv2.copyMakeBorder(
+    #     image,
+    #     20,
+    #     20,
+    #     20,
+    #     20,
+    #     cv2.BORDER_CONSTANT,
+    #     value=[0, 0, 0],
+    # )
 
     image_height = image.shape[0]
     image_width = image.shape[1]
@@ -185,6 +190,13 @@ def detect_figures(
 
     # cv2.imwrite("canny_dilated_large.png", canny_dilated_large)
     # cv2.imwrite("canny_dilated_small.png", canny_dilated_small)
+
+    if do_rlsa:
+        x, y = canny.shape
+        value = max(math.ceil(x/70),math.ceil(y/70))+20 # heuristic
+        rlsa_result = ~rlsa.rlsa(~canny, True, True, value) # rlsa application
+        canny_dilated_large = rlsa_result
+        # cv2.imwrite('rlsah.png', rlsa_result)
 
     contours_large = cv2.findContours(
         canny_dilated_large, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -393,4 +405,4 @@ def add_figures_to_ssa(ssa, figures_path):
 # import matplotlib.pyplot as plt
 # all_in_folder("delete/")
 # detect_figures("delete/img_01054_noborder.jpg")
-# detect_figures("delete/img_00601_noborder.jpg")
+# detect_figures("g-yPqNmrgYw-img_146.jpg", east="lecture2notes/end_to_end/frozen_east_text_detection.pb")
