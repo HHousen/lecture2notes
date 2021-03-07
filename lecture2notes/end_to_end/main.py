@@ -162,7 +162,7 @@ if __name__ == "__main__":
         "--structured_joined_summarization_method",
         default="abstractive",
         choices=["none", "abstractive", "extractive"],
-        help="The summarization method to use during `structured_joined` summarization."
+        help="The summarization method to use during `structured_joined` summarization.",
     )
     PARSER.add_argument(
         "--structured_joined_abs_summarizer",
@@ -181,7 +181,7 @@ if __name__ == "__main__":
             "google/pegasus-wikihow",
             "google/pegasus-big_patent",
         ],
-        help="The abstractive summarizer to use during `structured_joined` summarization (to create summaries of each slide) if `structured_joined_summarization_method` is 'abstractive'."
+        help="The abstractive summarizer to use during `structured_joined` summarization (to create summaries of each slide) if `structured_joined_summarization_method` is 'abstractive'.",
     )
     PARSER.add_argument(
         "--structured_joined_ext_summarizer",
@@ -194,7 +194,7 @@ if __name__ == "__main__":
             "edmundson",
             "random",
         ],
-        help="The extractive summarizer to use during `structured_joined` summarization (to create summaries of each slide) if `--structured_joined_summarization_method` is 'extractive'."
+        help="The extractive summarizer to use during `structured_joined` summarization (to create summaries of each slide) if `--structured_joined_summarization_method` is 'extractive'.",
     )
     PARSER.add_argument(
         "-tm",
@@ -213,6 +213,12 @@ if __name__ == "__main__":
         "--transcribe_segment_sentences",
         action="store_false",
         help="Disable DeepSegment automatic sentence boundary detection. Specifying this option will output transcripts without punctuation.",
+    )
+    PARSER.add_argument(
+        "--custom_transcript_check",
+        type=str,
+        default=None,
+        help="Check if a transcript file (follwed by an extension of vtt, srt, or sbv) with the specified name is in the processing folder and use it instead of running speech-to-text.",
     )
     PARSER.add_argument(
         "-sc",

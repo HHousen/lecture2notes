@@ -768,23 +768,29 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
 
 def caption_file_to_string(transcript_path, remove_speakers=False):
     """
-    Converts a .srt or .vtt file saved at ``transcript_path`` to a python string. 
+    Converts a .srt, .vtt, or .sbv file saved at ``transcript_path`` to a python string. 
     Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
     """
     transcript_path = Path(transcript_path)
     assert transcript_path.is_file()
     if transcript_path.suffix == ".srt":
         subtitles = webvtt.from_srt(transcript_path)
-    else:
+    elif transcript_path.suffix == ".sbv":
+        subtitles = webvtt.from_sbv(transcript_path)
+    elif transcript_path.suffix == ".vtt":
         subtitles = webvtt.read(transcript_path)
+    else:
+        return None, None
 
     transcript = ""
+    transcript_json = []
     for subtitle in subtitles:
         content = subtitle.text.replace("\n", " ")  # replace newlines with space
         if remove_speakers:
             content = content.split(": ", 1)[-1]  # remove everything before ": "
         transcript += content + " "  # add space after each subtitle block in srt file
-    return transcript
+        transcript_json.append({"end": subtitle.end_in_seconds, "start": subtitle.start_in_seconds, "word": content})
+    return transcript, json.dumps(transcript_json)
 
 
 def get_youtube_transcript(video_id, output_path, use_youtube_dl=True):

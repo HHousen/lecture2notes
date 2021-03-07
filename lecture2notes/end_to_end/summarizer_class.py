@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import logging
 from argparse import Namespace
 from shutil import rmtree
@@ -439,82 +440,94 @@ class LectureSummarizer:
         transcript_json = None
 
         yt_transcription_failed = False
+        custom_transcription_failed = False
 
-        if self.params.transcription_method == "youtube":
-            yt_output_file = self.root_process_folder / "audio.vtt"
-            try:
-                transcript_path = transcribe.get_youtube_transcript(
-                    self.params.video_id, yt_output_file
-                )
-                transcript = transcribe.caption_file_to_string(transcript_path)
-            except:
-                yt_transcription_failed = True
-                self.params.transcription_method = self.transcription_method_default
-                logger.error(
-                    "Error detected in grabbing transcript from YouTube. Falling back to "
-                    + self.transcription_method_default
-                    + " transcription."
-                )
-
-        if self.params.transcription_method != "youtube" or yt_transcription_failed:
-            transcribe.extract_audio(extract_from_video, audio_path)
-            try:
-                if self.params.chunk == "silence":
-                    chunk_dir = self.root_process_folder / "chunks"
-                    transcribe.chunk_by_silence(audio_path, chunk_dir)
-                    transcript, transcript_json = transcribe.process_chunks(
-                        chunk_dir,
-                        model_dir=self.params.transcribe_model_dir,
-                        method=self.params.transcription_method,
+        if self.params.custom_transcript_check:
+            identified_files = glob.glob(str(self.root_process_folder / self.params.custom_transcript_check) + ".*")
+            if identified_files:
+                transcript_path = identified_files[0]
+                transcript, transcript_json = transcribe.caption_file_to_string(transcript_path)
+                if transcript is None:
+                    custom_transcription_failed = True
+            else:
+                custom_transcription_failed = True
+        
+        if (not self.params.custom_transcript_check) or (self.params.custom_transcript_check and custom_transcription_failed):
+            if self.params.transcription_method == "youtube":
+                yt_output_file = self.root_process_folder / "audio.vtt"
+                try:
+                    transcript_path = transcribe.get_youtube_transcript(
+                        self.params.video_id, yt_output_file
+                    )
+                    transcript, transcript_json = transcribe.caption_file_to_string(transcript_path)
+                except:
+                    yt_transcription_failed = True
+                    self.params.transcription_method = self.transcription_method_default
+                    logger.error(
+                        "Error detected in grabbing transcript from YouTube. Falling back to "
+                        + self.transcription_method_default
+                        + " transcription."
                     )
 
-                    if self.params.transcribe_segment_sentences:
-                        transcript, transcript_json = transcribe.segment_sentences(
-                            transcript, transcript_json
+            if self.params.transcription_method != "youtube" or yt_transcription_failed:
+                transcribe.extract_audio(extract_from_video, audio_path)
+                try:
+                    if self.params.chunk == "silence":
+                        chunk_dir = self.root_process_folder / "chunks"
+                        transcribe.chunk_by_silence(audio_path, chunk_dir)
+                        transcript, transcript_json = transcribe.process_chunks(
+                            chunk_dir,
+                            model_dir=self.params.transcribe_model_dir,
+                            method=self.params.transcription_method,
                         )
 
-                elif self.params.chunk == "speech":
-                    stt_model = transcribe.load_model(
-                        self.params.transcription_method,
-                        model_dir=self.params.transcribe_model_dir,
-                    )
+                        if self.params.transcribe_segment_sentences:
+                            transcript, transcript_json = transcribe.segment_sentences(
+                                transcript, transcript_json
+                            )
 
-                    # Only DeepSpeech has a `sampleRate()` method but `stt_model` could contain
-                    # a DeepSpeech or Vosk model
-                    try:
-                        desired_sample_rate = stt_model.sampleRate()
-                    except AttributeError:
-                        # default sample rate to convert to is 16000
-                        desired_sample_rate = 16000
-
-                    segments, _, audio_length = transcribe.chunk_by_speech(
-                        audio_path, desired_sample_rate=desired_sample_rate
-                    )
-                    transcript, transcript_json = transcribe.process_segments(
-                        segments,
-                        stt_model,
-                        method=self.params.transcription_method,
-                        audio_length=audio_length,
-                        do_segment_sentences=self.params.transcribe_segment_sentences,
-                    )
-
-                else:  # if not chunking
-                    transcript, transcript_json = transcribe.transcribe_audio(
-                        audio_path,
-                        method=self.params.transcription_method,
-                        model=self.params.transcribe_model_dir,
-                    )
-
-                    if self.params.transcribe_segment_sentences:
-                        transcript, transcript_json = transcribe.segment_sentences(
-                            transcript, transcript_json
+                    elif self.params.chunk == "speech":
+                        stt_model = transcribe.load_model(
+                            self.params.transcription_method,
+                            model_dir=self.params.transcribe_model_dir,
                         )
 
-            except Exception as e:
-                logger.error(
-                    "Audio transcription failed. Retry by running this script with the skip_to parameter set to 6."
-                )
-                raise
+                        # Only DeepSpeech has a `sampleRate()` method but `stt_model` could contain
+                        # a DeepSpeech or Vosk model
+                        try:
+                            desired_sample_rate = stt_model.sampleRate()
+                        except AttributeError:
+                            # default sample rate to convert to is 16000
+                            desired_sample_rate = 16000
+
+                        segments, _, audio_length = transcribe.chunk_by_speech(
+                            audio_path, desired_sample_rate=desired_sample_rate
+                        )
+                        transcript, transcript_json = transcribe.process_segments(
+                            segments,
+                            stt_model,
+                            method=self.params.transcription_method,
+                            audio_length=audio_length,
+                            do_segment_sentences=self.params.transcribe_segment_sentences,
+                        )
+
+                    else:  # if not chunking
+                        transcript, transcript_json = transcribe.transcribe_audio(
+                            audio_path,
+                            method=self.params.transcription_method,
+                            model=self.params.transcribe_model_dir,
+                        )
+
+                        if self.params.transcribe_segment_sentences:
+                            transcript, transcript_json = transcribe.segment_sentences(
+                                transcript, transcript_json
+                            )
+
+                except Exception as e:
+                    logger.error(
+                        "Audio transcription failed. Retry by running this script with the skip_to parameter set to 6."
+                    )
+                    raise
 
         if "transcript" in self.params.spell_check:
             transcript = self.spell_checker.check(transcript)

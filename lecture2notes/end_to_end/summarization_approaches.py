@@ -922,7 +922,7 @@ def structured_joined_sum(
 
             if (
                 current_time >= first_slide_timestamp_seconds
-                and current_letter_obj["word"] == ending_char
+                and current_letter_obj["word"].strip().endswith(ending_char)
             ):
                 break
 
@@ -1016,7 +1016,7 @@ def structured_joined_sum(
             # transcript-slide segment with `endding_char`.
             if (
                 current_time >= current_slide_timestamp_seconds
-                and current_letter_obj["word"] == ending_char
+                and current_letter_obj["word"].strip().endswith(ending_char)
             ):
                 break
 
