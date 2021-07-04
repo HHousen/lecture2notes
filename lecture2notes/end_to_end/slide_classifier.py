@@ -1,24 +1,27 @@
+import logging
 import os
 import shutil
-import logging
-from .helpers import make_dir_if_not_exist
+
 from PIL import Image
 from tqdm import tqdm
 
+from ..models.slide_classifier import inference  # pylint: disable=wrong-import-position
+from ..models.slide_classifier.custom_nnmodules import *  # noqa: F403,F401
+from .helpers import make_dir_if_not_exist
+
 logger = logging.getLogger(__name__)
 
-from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-from ..models.slide_classifier import inference  # pylint: disable=wrong-import-position
 
-
-def classify_frames(frames_dir, do_move=True, incorrect_threshold=0.60, model_path="model_best.ckpt"):
+def classify_frames(
+    frames_dir, do_move=True, incorrect_threshold=0.60, model_path="model_best.ckpt"
+):
     """Classifies images in a directory using the slide classifier model.
 
     Args:
         frames_dir (str): path to directory containing images to classify
-        do_move (bool, optional): move the images to their sorted folders instead 
+        do_move (bool, optional): move the images to their sorted folders instead
             of copying them. Defaults to True.
-        incorrect_threshold (float, optional): the certainty value that the model must 
+        incorrect_threshold (float, optional): the certainty value that the model must
             be below for a prediction to be marked "probably incorrect". Defaults to 0.60.
 
     Returns:

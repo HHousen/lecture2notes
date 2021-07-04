@@ -1,15 +1,16 @@
 # Based on: https://github.com/mozilla/DeepSpeech-examples/tree/r0.7/mic_vad_streaming
 
-import logging
-from datetime import datetime
 import collections
-import queue
+import logging
 import os
 import os.path
+import queue
+import wave
+from datetime import datetime
+
 import deepspeech
 import numpy as np
 import pyaudio
-import wave
 import webrtcvad
 from halo import Halo
 from scipy import signal
@@ -17,7 +18,7 @@ from scipy import signal
 logging.basicConfig(level=20)
 
 
-class Audio():
+class Audio:
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
 
     FORMAT = pyaudio.paInt16
@@ -127,12 +128,12 @@ class VADAudio(Audio):
 
     def vad_collector(self, padding_ms=300, ratio=0.75, frames=None):
         """Generator that yields series of consecutive audio frames comprising each utterance, separated by yielding a single None.
-            Determines voice activity by ratio of frames in padding_ms. Uses a buffer to include padding_ms prior to being triggered.
-            
-            .. code-block:: bash
-            
-                Example: (frame, ..., frame, None, frame, ..., frame, None, ...)
-                        |---utterance---|        |---utterance---|
+        Determines voice activity by ratio of frames in padding_ms. Uses a buffer to include padding_ms prior to being triggered.
+
+        .. code-block:: bash
+
+            Example: (frame, ..., frame, None, frame, ..., frame, None, ...)
+                    |---utterance---|        |---utterance---|
         """
         if frames is None:
             frames = self.frame_generator()

@@ -2,14 +2,15 @@
 # 1. https://github.com/wiseman/py-webrtcvad/blob/3b39545dbb026d998bf407f1cb86e0ed6192a5a6/example.py
 # 2. https://github.com/mozilla/DeepSpeech-examples/blob/r0.7/vad_transcriber/wavTranscriber.py
 
-import logging
 import collections
+import logging
+
 import webrtcvad
 
 logger = logging.getLogger(__name__)
 
 
-class Frame():
+class Frame:
     """Represents a "frame" of audio data."""
 
     def __init__(self, bytes, timestamp, duration):
@@ -116,14 +117,14 @@ def vad_segment_generator(wavFile, aggressiveness, desired_sample_rate=None):
 
     Args:
         waveFile (str): Path to input wav file to run VAD on.
-    
+
     Returns:
         [tuple]:
             ``segments``: a bytearray of multiple smaller audio frames
             (The longer audio split into multiple smaller one's)
-            
+
             ``sample_rate``: Sample rate of the input audio file
-            
+
             ``audio_length``: Duration of the input audio file
     """
     from .transcribe_main import read_wave

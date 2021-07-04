@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 # implement mish activation function
 def f_mish(input, inplace=False):
     """
@@ -41,4 +42,3 @@ class mish(nn.Module):
         Forward pass of the function.
         """
         return f_mish(input, inplace=self.inplace)
-

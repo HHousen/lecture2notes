@@ -1,7 +1,8 @@
 import os
 import sys
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 from tqdm import tqdm
 
 method = sys.argv[1]

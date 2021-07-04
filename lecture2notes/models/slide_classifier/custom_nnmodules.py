@@ -16,4 +16,3 @@ class AdaptiveConcatPool2d(nn.Module):
 
     def forward(self, x):
         return torch.cat([self.mp(x), self.ap(x)], 1)
-

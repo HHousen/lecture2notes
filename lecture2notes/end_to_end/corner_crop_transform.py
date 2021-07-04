@@ -3,14 +3,16 @@
 #       Blog Post: https://bretahajek.com/2017/01/scanning-documents-photos-opencv/
 # 2. https://stackoverflow.com/a/44454619
 
-import os
-import numpy as np
 import argparse
-from tqdm import tqdm
+import logging
+import os
+
 import cv2
 import imageio
+import numpy as np
 from pygifsicle import optimize
-import logging
+from tqdm import tqdm
+
 from .helpers import make_dir_if_not_exist
 
 logger = logging.getLogger(__name__)
@@ -95,7 +97,7 @@ def remove_contours(edges, contour_removal_threshold):
 def hough_lines_corners(
     img, edges_img, min_line_length, border_size=11, debug_output_imgs=None
 ):
-    """Uses ``cv2.HoughLinesP`` to find horizontal and vertical lines, finds the intersection 
+    """Uses ``cv2.HoughLinesP`` to find horizontal and vertical lines, finds the intersection
         points, and finally clusters those points using KMeans.
 
     Args:
@@ -150,7 +152,7 @@ def hough_lines_corners(
     nclusters = 4  # four corners for a rectangle
     centers = cluster_points(P, nclusters)
 
-    if debug_output_imgs != None:
+    if debug_output_imgs is not None:
         # Draw the segmented lines
         hough_img = img.copy()
         for line in h_lines:
@@ -199,7 +201,7 @@ def horizontal_vertical_edges_det(img, thresh_blurred, debug_output_imgs=None):
         img (image): the image as provided by ``cv2.imread``
         thresh_blurred (image): the image processed by thresholding. see :meth:`~corner_crop_transform.edges_det`.
         debug_output_imgs (dict, optional): modifies this dictionary by adding ``(image file name, image data)`` pairs. Defaults to None.
-    
+
     Returns:
         [image]: result image with a black background and white edges
     """
@@ -238,7 +240,7 @@ def horizontal_vertical_edges_det(img, thresh_blurred, debug_output_imgs=None):
     for c in cnts:
         result = cv2.drawContours(result, [c], -1, (255, 255, 255), 2)
 
-    if debug_output_imgs != None:
+    if debug_output_imgs is not None:
         cv2.imwrite("debug_imgs/horizontal_vertical_edges.jpg", result)
 
     return result
@@ -300,7 +302,7 @@ def edges_det(img, min_val, max_val, debug_output_imgs=None):
         edges, np.ones((dilation_amount, dilation_amount), dtype=np.uint8)
     )
 
-    if debug_output_imgs != None:
+    if debug_output_imgs is not None:
         debug_output_imgs.update(
             {
                 "1-edges_det_threshold.jpg": thresh_blurred,
@@ -314,7 +316,7 @@ def edges_det(img, min_val, max_val, debug_output_imgs=None):
 
 
 def four_corners_sort(pts):
-    """ Sort corners: top-left, bot-left, bot-right, top-right"""
+    """Sort corners: top-left, bot-left, bot-right, top-right"""
     diff = np.diff(pts, axis=1)
     summ = pts.sum(axis=1)
     return np.array(
@@ -328,7 +330,7 @@ def four_corners_sort(pts):
 
 
 def contour_offset(cnt, offset):
-    """ Offset contour because of 5px border """
+    """Offset contour because of 5px border"""
     cnt += offset
     cnt[cnt < 0] = 0
     return cnt
@@ -364,11 +366,11 @@ def find_page_contours(
         edges (image): edges extracted from ``img`` by :meth:`~corner_crop_transform.edges_det`.
         img (image): the image loaded by ``cv2.imread``.
         border_size (int, optional): the size of the borders added by :meth:`~corner_crop_transform.edges_det`. Defaults to 11.
-        min_area_mult (float, optional): the minimum percentage of the image area that a contour's 
+        min_area_mult (float, optional): the minimum percentage of the image area that a contour's
             area must be greater than to be considered as the slide. Defaults to 0.5.
 
     Returns:
-        [contour or NoneType]: ``contour`` is the set of coordinates of the corners sorted 
+        [contour or NoneType]: ``contour`` is the set of coordinates of the corners sorted
             by :meth:`~corner_crop_transform.four_corners_sort` or returns None when no contour
             meets the criteria.
     """
@@ -416,7 +418,7 @@ def find_page_contours(
     # Sort corners and offset them
     page_contour = four_corners_sort(page_contour)
 
-    if debug_output_imgs != None:
+    if debug_output_imgs is not None:
         page_contour_img = img.copy()
         page_contour_img = cv2.drawContours(
             page_contour_img, [page_contour], -1, (0, 255, 0), 3
@@ -428,7 +430,7 @@ def find_page_contours(
 
 
 def persp_transform(img, s_points):
-    """ Transform perspective of ``img`` from start points to target points. """
+    """Transform perspective of ``img`` from start points to target points."""
     # Euclidean distance - calculate maximum height and width
     height = max(
         np.linalg.norm(s_points[0] - s_points[1]),
@@ -478,11 +480,11 @@ def crop(
         img_path (str): path to the image to load
         output_path (str, optional): path to save the image. Defaults to ``[filename]_cropped.[ext]``.
         mode (str, optional): There are three modes available. Defaults to "automatic".
-            
+
             * ``contours``: uses :meth:`~corner_crop_transform.find_page_contours` to extract contours from an edge map of the image. is ineffective if there are any gaps or obstructions in the outline around the slide.
             * ``hough_lines``: uses :meth:`~corner_crop_transform.hough_lines_corners` to get corners by looking for horizontal and vertical lines, finding the intersection points, and clustering the intersection points.
             * ``automatic``: tries to use ``contours`` and falls back to ``hough_lines`` if ``contours`` reports a failure.
-        
+
         debug_output_imgs (bool or dict, optional): if dictionary, modifies the dictionary by adding ``(image file name, image data)`` pairs. if boolean and True, creates a dictionary in the same way as if a dictionary was passed. Defaults to False.
         save_debug_imgs (bool, optional): uses :meth:`~corner_crop_transform.write_debug_imgs` to save the debug_output_imgs to disk. Requires ``debug_output_imgs`` to not be False. Defaults to False.
         create_debug_gif (bool, optional): create a gif of the debug images. Requires ``debug_output_imgs`` to not be False. Defaults to False.
@@ -511,7 +513,7 @@ def crop(
 
     edges_morphed = cv2.morphologyEx(edges_no_words, cv2.MORPH_CLOSE, np.ones((5, 11)))
 
-    if debug_output_imgs != None:
+    if debug_output_imgs is not None:
         debug_output_imgs.update(
             {
                 "3-edges_no_words.jpg": edges_no_words,
@@ -569,7 +571,7 @@ def crop(
         ext = file_parse[1]
         output_path = filename + OUTPUT_PATH_MODIFIER + ext
 
-    if debug_output_imgs != None:
+    if debug_output_imgs is not None:
         debug_output_imgs.update({"9-img_cropped.jpg": img_cropped})
 
         if save_debug_imgs:

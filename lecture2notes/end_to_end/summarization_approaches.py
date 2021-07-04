@@ -1,42 +1,42 @@
-import logging
-import sys
 import json
-import os
-import spacy
+import logging
 import math
-import requests
+from collections import OrderedDict, namedtuple
 from functools import partial
-from time import time
-from tqdm import tqdm
-from collections import namedtuple, OrderedDict
 from operator import attrgetter
+from time import time
+
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
+import requests
+import spacy
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import KMeans, MiniBatchKMeans
 
 # Sklearn imports for cluster()
 from sklearn.decomposition import TruncatedSVD
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import (
+    HashingVectorizer,
+    TfidfTransformer,
+    TfidfVectorizer,
+)
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
-from sklearn.cluster import KMeans, MiniBatchKMeans
+from sumy.nlp.stemmers import Stemmer
+from sumy.nlp.tokenizers import Tokenizer
 
 # Sumy Imports for generic_extractive_sumy()
 from sumy.parsers.plaintext import PlaintextParser
-from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.edmundson import EdmundsonSummarizer
+from sumy.summarizers.lex_rank import LexRankSummarizer
 from sumy.summarizers.lsa import LsaSummarizer
 from sumy.summarizers.luhn import LuhnSummarizer
-from sumy.summarizers.lex_rank import LexRankSummarizer
-from sumy.summarizers.text_rank import TextRankSummarizer
-from sumy.summarizers.edmundson import EdmundsonSummarizer
 from sumy.summarizers.random import RandomSummarizer
-from sumy.nlp.stemmers import Stemmer
+from sumy.summarizers.text_rank import TextRankSummarizer
 from sumy.utils import get_stop_words
+from tqdm import tqdm
 
 # Import transformers and sentence_transformers for neural based feature extraction from text
 from transformers import pipeline
-from sentence_transformers import SentenceTransformer
-
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def get_complete_sentences(text, return_string=False):
 
 
 def full_sents(ocr_text, transcript_text, remove_newlines=True, cut_off=0.70):
-    OCR_NUM_TOKENS, complete_sentences = get_complete_sentences(ocr_test)
+    OCR_NUM_TOKENS, complete_sentences = get_complete_sentences(ocr_text)
 
     OCR_NLP_SENTENCES_LENGTHS = [len(sentence) for sentence in complete_sentences]
     OCR_NLP_SENTENCES_TOT_NUM_TOKENS = sum(OCR_NLP_SENTENCES_LENGTHS)
@@ -134,7 +134,7 @@ def get_best_sentences(sentences, count, rating, *args, **kwargs):
     rate = rating
     if isinstance(rating, list):
         assert not args and not kwargs
-        rate = lambda o: rating[o]
+        rate = lambda o: rating[o]  # noqa: E731
 
     infos = (
         SentenceInfo(s, o, rate(o, *args, **kwargs)) for o, s in enumerate(sentences)
@@ -334,9 +334,8 @@ def extract_features_neural_hf(
     squeeze=True,
     **kwargs
 ):
-    """ Extract features using a transformer model from the huggingface/transformers library """
+    """Extract features using a transformer model from the huggingface/transformers library"""
     nlp = pipeline("feature-extraction", model=model, tokenizer=tokenizer, **kwargs)
-    features = []
     vec = np.zeros((len(sentences), n_hidden))
     logger.debug(
         "Extracting features using the " + str(model) + " huggingface neural model"
@@ -354,7 +353,7 @@ def extract_features_neural_hf(
 
 
 def extract_features_neural_sbert(sentences, model="roberta-base-nli-mean-tokens"):
-    """ Extract features using Sentence-BERT (SBERT) or SRoBERTa from the sentence-transformers library """
+    """Extract features using Sentence-BERT (SBERT) or SRoBERTa from the sentence-transformers library"""
     if model == "roberta":
         model = "roberta-base-nli-mean-tokens"
     elif model == "bert":
@@ -494,7 +493,7 @@ def cluster(
         NLP_WORDS = [
             token.text
             for token in NLP_DOC
-            if token.is_stop != True and token.is_punct != True
+            if (not token.is_stop) and (not token.is_punct)
         ]
         NLP_WORDS_LEN = len(NLP_WORDS)
         ABS_MIN_LENGTH = int(coverage_percentage * NLP_WORDS_LEN / num_topics)
@@ -920,10 +919,9 @@ def structured_joined_sum(
             transcript_before_slides += to_add
             transcript_json_idx += 1
 
-            if (
-                current_time >= first_slide_timestamp_seconds
-                and current_letter_obj["word"].strip().endswith(ending_char)
-            ):
+            if current_time >= first_slide_timestamp_seconds and current_letter_obj[
+                "word"
+            ].strip().endswith(ending_char):
                 break
 
         transcript_before_slides = transcript_before_slides.strip()
@@ -1014,10 +1012,9 @@ def structured_joined_sum(
             # If the current time is past the next slide time advance to the next slide.
             # However, jump forward a few letter if necessary in order to end the current
             # transcript-slide segment with `endding_char`.
-            if (
-                current_time >= current_slide_timestamp_seconds
-                and current_letter_obj["word"].strip().endswith(ending_char)
-            ):
+            if current_time >= current_slide_timestamp_seconds and current_letter_obj[
+                "word"
+            ].strip().endswith(ending_char):
                 break
 
         final_dict[title] = {"transcript": coresponding_transcript_text.strip()}

@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 import shutil
+
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -15,12 +16,12 @@ def does_image_have_border(image, gamma=5):
 
     Args:
         image (np.array): An image loaded using ``cv2.imread()``.
-        gamma (int, optional): How far the pixel values can vary before they are 
-            considered not black. This is useful if the image contains 
+        gamma (int, optional): How far the pixel values can vary before they are
+            considered not black. This is useful if the image contains
             noise. Defaults to 5.
 
     Returns:
-        bool: If all pixel values on any or all sides of the image are 
+        bool: If all pixel values on any or all sides of the image are
         black +/- ``gamma``.
     """
     if gamma == 0:
@@ -43,8 +44,8 @@ def detect_solid_color(image, gamma=5):
 
     Args:
         image (np.array): An image loaded using ``cv2.imread()``.
-        gamma (int, optional): How far the pixel values can vary before they are 
-            considered a different color. This is useful if the image contains 
+        gamma (int, optional): How far the pixel values can vary before they are
+            considered a different color. This is useful if the image contains
             noise. Defaults to 5.
 
     Returns:
@@ -67,7 +68,7 @@ def remove_border(image_path, output_path=None):
 
     Args:
         image_path (str): Path to the image to have its borders removed.
-        output_path (str, optional): Path to save the borderless image. Defaults to 
+        output_path (str, optional): Path to save the borderless image. Defaults to
             ``[filename]_noborder.[ext]``
 
     Returns:
@@ -94,16 +95,16 @@ def remove_border(image_path, output_path=None):
         shutil.copyfile(image_path, output_path)
         return output_path
 
-    border_amount = 10
-    image_border = cv2.copyMakeBorder(
-        image,
-        border_amount,
-        border_amount,
-        border_amount,
-        border_amount,
-        cv2.BORDER_CONSTANT,
-        value=[0, 0, 0],
-    )
+    # border_amount = 10
+    # image_border = cv2.copyMakeBorder(
+    #     image,
+    #     border_amount,
+    #     border_amount,
+    #     border_amount,
+    #     border_amount,
+    #     cv2.BORDER_CONSTANT,
+    #     value=[0, 0, 0],
+    # )
 
     # cv2.imwrite("gray.png", gray)
     blur_amount = 3

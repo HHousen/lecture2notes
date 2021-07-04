@@ -1,10 +1,11 @@
+import hashlib
 import sys
 import urllib.request as urllib
-from bs4 import BeautifulSoup
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
-import hashlib
+from bs4 import BeautifulSoup
 
 date = sys.argv[1]
 page_link = sys.argv[2]

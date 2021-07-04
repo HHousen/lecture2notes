@@ -2,7 +2,7 @@
 
 > Research in progress. Code for the entirety of [Research Paper Name]. Converts a lecture presentation to detailed notes.
 
-Brief Summary: A 
+Brief Summary: A
 
 ### Notes
 
@@ -30,7 +30,7 @@ Certain functions in the End-To-End [transcribe](end_to_end/transcribe.py) file 
     to use certain similarity features (as discussed above) or to use spacy as a feature extractor in [end_to_end/summarization_approaches.py](end_to_end/summarization_approaches.py) with the default options (note: the default is *not* to use spacy for feature extraction but the large model *is* the default if spacy is manually chosen).
 5. **(Optional)** YouTube API
     1. Run `cp .env.example .env` to create a copy of the example `.env` file.
-    2. Add your YouTube API key (if you want to scraping YouTube with the [dataset/scraper-scripts](dataset/scraper-scripts)) to your `.env` file. 
+    2. Add your YouTube API key (if you want to scraping YouTube with the [dataset/scraper-scripts](dataset/scraper-scripts)) to your `.env` file.
     3. Place your `client_secret.json` in the [dataset/scraper-scripts](dataset/scraper-scripts) folder (if you want to download transcripts with the `scraper-scripts`) or in [End-To-End](End-To-End) (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes) if you want to download video transcripts with the YouTube API (the default is to use `youtube-dl` which needs no key).
 
 ## Components
@@ -43,7 +43,7 @@ Certain functions in the End-To-End [transcribe](end_to_end/transcribe.py) file 
 
 * **classifier-data**: Created by [scraper-scripts/5-compile_data.py](dataset/scraper-scripts/5-compile_data.py). Contains all extracted slides and extracted sorted frames from the slides and videos directories. This is the folder that should be given to the model for training.
 * **scraper-scripts**: Contains all of the scripts needed to obtain and manipulate the data.
-* **slides**: 
+* **slides**:
     * *pdfs* subdirectory: Used by [scraper-scripts/2-slides_downloader.py](dataset/scraper-scripts/2-slides_downloader.py) as the location to save downloaded slideshow pdfs.
     * *images* subdirectory: Used by [scraper-scripts/3-pdf2image.py](dataset/scraper-scripts/3-pdf2image.py) as the location to save slide images extracted from slideshows in *pdfs* subdirectory.
 * **videos**: Contains the following directory structure for each downloaded video:
@@ -100,7 +100,7 @@ Certain functions in the End-To-End [transcribe](end_to_end/transcribe.py) file 
         * If *video_id*: `python 3-frame_extractor.py VT2o4KCEbes 20 5` or to automatically extract a good number of frames: `python 3-frame_extractor.py 63hAHbkzJG4 auto 5`
         * If *auto*:  `python 3-frame_extractor.py auto`
     * Required Software: `ffmpeg` ([Github](https://github.com/FFmpeg/FFmpeg)/[Website](https://www.ffmpeg.org/))
-* **pdf2image**: Takes every page in all pdf files in `dataset/slides/pdfs`, converts them to png images, and saves them in `dataset/slides/images/pdf_file_name`. Requires `pdftoppm` package. 
+* **pdf2image**: Takes every page in all pdf files in `dataset/slides/pdfs`, converts them to png images, and saves them in `dataset/slides/images/pdf_file_name`. Requires `pdftoppm` package.
     * Command: `python 3-pdf2image.py`
     * Required Software: `poppler-utils (pdftoppm)` ([Man Page](https://linux.die.net/man/1/pdftoppm)/[Website](https://poppler.freedesktop.org/))
 * **auto_sort**: Goes through every extracted frame for all videos in the dataset that don’t have sorted frames and classifies them using `models/slide_classifier`. You need either a trained fastai or pytorch model to use this. This code works with both fastai and pytorch models. Creates a list of frames that need to be checked for correctness by humans in [to-be-sorted.csv](dataset/to-be-sorted.csv). This also requires certain files from `models/slide_classifier`.
@@ -174,7 +174,7 @@ Not completed yet.
     * `calculate_best_k()` function generates a graph (saved to `best_k_value.png` if using Agg matplotlib backend) that graphs the cost (squared error) as a function of the number of centroids (value of k) if the algorithm is `"kmeans"`.
 * **class_cluster_faiss**: An outdated version of [class_cluster_scikit.py](models/slide_classifier/class_cluster_scikit.py) that uses [facebookresearch/faiss](https://github.com/facebookresearch/faiss) (specifically the kmeans implementation documented [here](https://github.com/facebookresearch/faiss/wiki/Faiss-building-blocks:-clustering,-PCA,-quantization)) to provide a `Cluster` class. More details in the `class_cluster_scikit` entry of this section of the documentation.
 * **custom_nnmodules**: Provides a few custom (copied from [fastai](https://github.com/fastai/fastai)) nn.Modules.
-* **inference**: Sets up model and provides `get_prediction()`, which takes an image and returns a prediction and extracted features. 
+* **inference**: Sets up model and provides `get_prediction()`, which takes an image and returns a prediction and extracted features.
 * **lr_finder**: Slightly modified (allows usage of matplotlib Agg backend) code from [davidtvs/pytorch-lr-finder](https://github.com/davidtvs/pytorch-lr-finder)
 * **slide-classifier-fastai.ipynb**: Notebook to train simple fastai classifier on the dataset in `dataset/classifier-data`.
 * **slide-classifier-pytorch.py**: The main model code which is written completely in PyTorch and uses advanced features such as the AdamW optimizer and a modified ResNet that allows for more effective pretraining/feature extracting.
@@ -299,9 +299,9 @@ Run `python main.py <path_to_video>` to get a notes file.
     ```
 * **ocr**: Provides `all_in_folder()`, which performs OCR on every file in folder and returns results, and `write_to_file()`, which writes everything stored in `results` to file at path `save_file` (used to write results from `all_in_folder()` to `save_file`).
 * **slide_classifier**: Provides `classify_frames()` which automatically sorts images (the extracted frames) using the slide-classifier model.
-* **transcribe**: Implements transcription using four different methods from 3 libraries and other miscellaneous functions related to audio transcription. 
+* **transcribe**: Implements transcription using four different methods from 3 libraries and other miscellaneous functions related to audio transcription.
     * The `sphinx` and `google` methods use the [SpeechRecognition library](https://pypi.org/project/SpeechRecognition/) to access pockersphinx-python and Google Speech Recognition, respectively.
-    * The `youtube` method is implemented in `get_youtube_transcript()` which will download the transcript for a specific `video_id` from youtube using the `TranscriptDownloader` class implemented in `transcript_downloader`. 
+    * The `youtube` method is implemented in `get_youtube_transcript()` which will download the transcript for a specific `video_id` from youtube using the `TranscriptDownloader` class implemented in `transcript_downloader`.
     * Finally, the `deepspeech` method uses the [Mozilla DeepSpeech](https://github.com/mozilla/DeepSpeech) library, which achieves very good accuracy on the [LibriSpeech clean test corpus](https://www.openslr.org/12). In order to use this method in the [main](end_to_end/main.py) script you need to download the latest DeepSpeech model from their [releases page](https://github.com/mozilla/DeepSpeech/releases). Mozilla provides code to download and extract the model on the [project's documentation](https://deepspeech.readthedocs.io/en/v0.6.1/USING.html#getting-the-pre-trained-model). It is possible to manually specify the names of these files. However, if they are named as shown below then you only have to specify one directory and the script with "just work" (the directory name is not important but `deepspeech-models` is descriptive).
         ```
         deepspeech-models/
@@ -311,7 +311,7 @@ Run `python main.py <path_to_video>` to get a notes file.
         ```
     * This file also implements a chunking process to convert a long audio file into chunks. The audio file is split based on sections with silence. This will increase processing time but is necessary for the `google` method for long audio files since `google` will time out if the filesize is too large.
     * The `check_transcript()` function compares two transcripts (documents) and returns their similarity according to spacy's similarity metric. This function requires the `en_vectors_web_lg` spacy model which you can learn more about on [the spacy documentation](https://spacy.io/models/en-starters). This file needs to be downloaded in order for this function to work.
-* **mic_vad_streaming**: Uses Voice Activity Detection (VAD) from `webrtcvad` to detect words and then converts them to text in real time using `deepspeech`. This is a modified version of the example file from the [deepspeech examples repository](https://github.com/mozilla/DeepSpeech-examples/tree/r0.6/mic_vad_streaming). Importantly, the final output can be saved using the `--write_transcript` option and specify a text file path. 
+* **mic_vad_streaming**: Uses Voice Activity Detection (VAD) from `webrtcvad` to detect words and then converts them to text in real time using `deepspeech`. This is a modified version of the example file from the [deepspeech examples repository](https://github.com/mozilla/DeepSpeech-examples/tree/r0.6/mic_vad_streaming). Importantly, the final output can be saved using the `--write_transcript` option and specify a text file path.
     * To select the correct input device, the code below can be used. It will print a list of devices and associated parameters as detected by pyaudio.
     ```
     import pyaudio

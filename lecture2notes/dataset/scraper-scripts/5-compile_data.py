@@ -1,7 +1,8 @@
-import sys
 import os
-from pathlib import Path
+import sys
 from distutils.dir_util import copy_tree
+from pathlib import Path
+
 from tqdm import tqdm
 
 videos_dir = Path("../videos")

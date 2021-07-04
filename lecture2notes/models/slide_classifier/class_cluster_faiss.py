@@ -1,7 +1,8 @@
 import os
+
 import faiss
-import numpy
 import matplotlib as mpl
+import numpy
 
 if os.environ.get("DISPLAY", "") == "":
     print("=> Class Cluster: No display found. Using non-interactive Agg backend")

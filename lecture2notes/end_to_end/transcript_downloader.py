@@ -1,9 +1,11 @@
 import io
+import logging
 import os
 import subprocess
-import logging
-from .youtube_api import init_youtube
+
 from googleapiclient.http import MediaIoBaseDownload
+
+from .youtube_api import init_youtube
 
 logger = logging.getLogger(__name__)
 

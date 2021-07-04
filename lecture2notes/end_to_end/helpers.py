@@ -1,10 +1,10 @@
+import hashlib
+import logging
 import os
 import re
-import hashlib
 import shutil
-import logging
-from pathlib import Path
 from distutils.dir_util import copy_tree, remove_tree
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def gen_unique_id(input_data, k):
 
 
 def copy_all(list_path_files, output_dir, move=False):
-    """ Copy (or move) every path in `list_path_files` if list or all files in a path if path to output_dir """
+    """Copy (or move) every path in `list_path_files` if list or all files in a path if path to output_dir"""
     if type(list_path_files) is list:
         make_dir_if_not_exist(output_dir)
         for file_path in list_path_files:
@@ -40,7 +40,7 @@ def copy_all(list_path_files, output_dir, move=False):
 
 
 def frame_number_from_filename(filename):
-    return int(re.search("(?<=\_)[0-9]+(?=\_|.)", filename).group(0))
+    return int(re.search(r"(?<=\_)[0-9]+(?=\_|.)", filename).group(0))
 
 
 def frame_number_filename_mapping(path, filenames_only=True):
@@ -52,7 +52,7 @@ def frame_number_filename_mapping(path, filenames_only=True):
             figure_path = figure_filename
         else:
             figure_path = os.path.join(path, figure_path)
-        
+
         frame_number = frame_number_from_filename(figure_filename)
         try:
             figure_mapping[frame_number].append(figure_path)

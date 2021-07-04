@@ -1,8 +1,9 @@
 import os
 import sys
 from pathlib import Path
+
+from shared_functions import get_extract_every_x_seconds, get_length, get_sec
 from tqdm import tqdm
-from shared_functions import get_sec, get_length, get_extract_every_x_seconds
 
 
 def command(input_video_path, extract_every_x_seconds, quality, output_path, video_id):

@@ -1,38 +1,31 @@
 import argparse
-import os
 import logging
-from collections import OrderedDict
+import os
 import sys
 from argparse import Namespace
+from collections import OrderedDict
 
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
-import torch.distributed as dist
 import torch.optim
-import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
-
+import torchvision.transforms as transforms
 from efficientnet_pytorch import EfficientNet
 from efficientnet_pytorch.utils import MemoryEfficientSwish
-
+from pytorch_lightning import Trainer, loggers, seed_everything
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from sklearn.metrics import (
     accuracy_score,
-    precision_recall_fscore_support,
     classification_report,
+    precision_recall_fscore_support,
 )
 
-import pytorch_lightning as pl
-from pytorch_lightning import loggers, Trainer, seed_everything
-from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-
-
-from .custom_nnmodules import *  # pylint: disable=wildcard-import
+from .custom_nnmodules import *  # noqa: F403
 from .slide_classifier_helpers import convert_relu_to_mish, plot_confusion_matrix
 
 logger = logging.getLogger(__name__)
@@ -72,8 +65,8 @@ class SlideClassifier(pl.LightningModule):
 
     def forward(self, *args, **kwargs):
         """
-        Passes ``*args`` and ``**kwargs`` to ``self.classification_model`` since 
-        :class:`~slide_classifier_pytorch.SlideClassifier` is a wrapper for the 
+        Passes ``*args`` and ``**kwargs`` to ``self.classification_model`` since
+        :class:`~slide_classifier_pytorch.SlideClassifier` is a wrapper for the
         classification model.
         """
         return self.classification_model(*args, **kwargs)
@@ -142,7 +135,7 @@ class SlideClassifier(pl.LightningModule):
                 model_ft = nn.Sequential(*list(model_ft.children())[:-2])
                 head = nn.Sequential(
                     *[
-                        AdaptiveConcatPool2d(1),
+                        AdaptiveConcatPool2d(1),  # noqa: F405
                         nn.Flatten(),
                         nn.BatchNorm1d(1024),
                         nn.Dropout(0.25),
@@ -167,7 +160,7 @@ class SlideClassifier(pl.LightningModule):
             bn_mom = model_ft._bn1.momentum  # pylint: disable=protected-access
 
             if self.hparams.feature_extract == "advanced":
-                model_ft._avg_pooling = AdaptiveConcatPool2d(1)
+                model_ft._avg_pooling = AdaptiveConcatPool2d(1)  # noqa: F405
                 model_ft._fc = nn.Sequential(
                     nn.Flatten(),
                     nn.Linear(num_ftrs * 2, 512),
@@ -253,37 +246,35 @@ class SlideClassifier(pl.LightningModule):
         If ``hparams.use_random_split`` is True then the dataset will be randomly split 80% for training and 20% for testing.
         If ``hparams.use_random_split`` is True then the dataset folder should contain a folder for each class. If it is False then there should be a folder for each split (named "train" and "val") where each split folder contains a folder for each class.
         `ImageFolder Documentation <https://pytorch.org/docs/stable/torchvision/datasets.html#imagefolder>`_
-        
+
         This function will also run :meth:~`slide_classifier_pytorch.SlideClassifier.initialize_model` with ``len(self.hparams.classes))`` as the ``num_classes`` argument if the classification model as not already been initialized in the ``__init__`` function.
         """
         normalize = transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         )
-        my_transforms = transforms.Compose([
-            transforms.Resize(self.hparams.input_size),
-            transforms.CenterCrop(self.hparams.input_size),
-            transforms.ToTensor(),
-            normalize,
-        ])
+        my_transforms = transforms.Compose(
+            [
+                transforms.Resize(self.hparams.input_size),
+                transforms.CenterCrop(self.hparams.input_size),
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
 
         if self.hparams.use_random_split or self.hparams.no_validation_split:
             # Random split dataset
             if type(self.hparams.data_path) is list:
                 datasets_to_add = []
                 for data_path in self.hparams.data_path:
-                    dataset = datasets.ImageFolder(
-                        data_path,
-                        my_transforms
-                    )
+                    dataset = datasets.ImageFolder(data_path, my_transforms)
                     datasets_to_add.append(dataset)
-                
+
                 full_dataset = torch.utils.data.ConcatDataset(datasets_to_add)
             else:
                 full_dataset = datasets.ImageFolder(
-                    self.hparams.data_path,
-                    my_transforms
+                    self.hparams.data_path, my_transforms
                 )
-            
+
             if self.hparams.no_validation_split:
                 train_dataset = full_dataset
                 val_dataset = full_dataset
@@ -298,34 +289,24 @@ class SlideClassifier(pl.LightningModule):
         elif self.hparams.cv_split:
             if "," in self.hparams.data_path:
                 self.hparams.data_path = self.hparams.data_path.split(",")
-            
+
             datasets_to_add = []
             for data_path in self.hparams.data_path:
-                dataset = datasets.ImageFolder(
-                    data_path,
-                    my_transforms
-                )
+                dataset = datasets.ImageFolder(data_path, my_transforms)
                 datasets_to_add.append(dataset)
-            
+
             train_dataset = torch.utils.data.ConcatDataset(datasets_to_add)
-            
+
             val_dataset = datasets.ImageFolder(
-                self.hparams.val_data_split_path,
-                my_transforms
+                self.hparams.val_data_split_path, my_transforms
             )
 
             classes = datasets_to_add[0].classes
         else:
             traindir = os.path.join(self.hparams.data_path, "train")
             valdir = os.path.join(self.hparams.data_path, "val")
-            train_dataset = datasets.ImageFolder(
-                traindir,
-                my_transforms
-            )
-            val_dataset = datasets.ImageFolder(
-                valdir,
-                my_transforms
-            )
+            train_dataset = datasets.ImageFolder(traindir, my_transforms)
+            val_dataset = datasets.ImageFolder(valdir, my_transforms)
             classes = train_dataset.classes
 
         self.hparams.classes = classes
@@ -504,7 +485,13 @@ class SlideClassifier(pl.LightningModule):
             "train/recall": recall,
             "train/f_score": f_score,
         }
-        output = OrderedDict({"loss": loss, "progress_bar": tqdm_dict, "log": log,})
+        output = OrderedDict(
+            {
+                "loss": loss,
+                "progress_bar": tqdm_dict,
+                "log": log,
+            }
+        )
         return output
 
     def validation_step(self, batch, batch_idx):
@@ -597,9 +584,19 @@ class SlideClassifier(pl.LightningModule):
         targets = torch.cat([x["target"] for x in outputs], 0).cpu().numpy()
 
         save_path = os.path.join(self.logger.experiment.dir, "confusion_matrix.png")
-        plot_confusion_matrix(predictions, targets, self.hparams.classes, save_path=save_path)
-        save_path_normalized = os.path.join(self.logger.experiment.dir, "confusion_matrix_normalized.png")
-        plot_confusion_matrix(predictions, targets, self.hparams.classes, normalize=True, save_path=save_path_normalized)
+        plot_confusion_matrix(
+            predictions, targets, self.hparams.classes, save_path=save_path
+        )
+        save_path_normalized = os.path.join(
+            self.logger.experiment.dir, "confusion_matrix_normalized.png"
+        )
+        plot_confusion_matrix(
+            predictions,
+            targets,
+            self.hparams.classes,
+            normalize=True,
+            save_path=save_path_normalized,
+        )
 
         report = classification_report(
             targets, predictions, target_names=self.hparams.classes
@@ -693,14 +690,16 @@ class SlideClassifier(pl.LightningModule):
             (default: False, don't use any scheduler)""",
         )
         parser.add_argument(
-            "--pretrained", action="store_true", help="use pre-trained model",
+            "--pretrained",
+            action="store_true",
+            help="use pre-trained model",
         )
         parser.add_argument(
             "--num_classes",
             type=int,
             default=None,
-            help="""The number of classes in the dataset. This value does not need to be specified 
-            since it will be automatically determined once the data is loaded. Thus, this value needs 
+            help="""The number of classes in the dataset. This value does not need to be specified
+            since it will be automatically determined once the data is loaded. Thus, this value needs
             to be set when the data is not loaded (such as when `--do_lr_find` is True)""",
         )
         parser.add_argument(
@@ -740,7 +739,7 @@ class SlideClassifier(pl.LightningModule):
             "--val_data_split_path",
             default=None,
             type=str,
-            help="The location of the validation dataset when `--cv_split` is used."
+            help="The location of the validation dataset when `--cv_split` is used.",
         )
 
         return parser
@@ -752,7 +751,9 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--default_root_dir", type=str, help="Default path for logs and weights",
+        "--default_root_dir",
+        type=str,
+        help="Default path for logs and weights",
     )
     parser.add_argument(
         "--min_epochs",
@@ -781,7 +782,7 @@ if __name__ == "__main__":
     # 1e-4 for whole model # 3e-4 is the best learning rate for Adam, hands down
     parser.add_argument(
         "--learning_rate",
-        default=0.006918309709189364,  #4e-3,
+        default=0.006918309709189364,  # 4e-3,
         type=float,
         metavar="LR",
         help="initial learning rate",
@@ -884,9 +885,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--do_lr_find",
         action="store_true",
-        help="""Attempt to find the optimal learning rate using the learning rate finder 
-        from PyTorch Lightning. Setting this option will find the optimal learning rate and 
-        then display the graph and suggested learning rate. `--num_classes` must be set to 
+        help="""Attempt to find the optimal learning rate using the learning rate finder
+        from PyTorch Lightning. Setting this option will find the optimal learning rate and
+        then display the graph and suggested learning rate. `--num_classes` must be set to
         use the learning rate finder.""",
     )
     parser.add_argument(
@@ -950,7 +951,9 @@ if __name__ == "__main__":
         args.logger = wandb_logger
 
     args.checkpoint_callback = ModelCheckpoint(
-        save_top_k=-1, period=1, verbose=True,
+        save_top_k=-1,
+        period=1,
+        verbose=True,
     )
 
     trainer = Trainer.from_argparse_args(args)

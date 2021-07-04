@@ -1,11 +1,12 @@
 # The purpose of this file is to find the best threshold value for the `min_match_count`
 # value of `end_to_end/sift_matcher.match_features()`. The `yes` and `no` variables
 
-from sklearn import svm
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 # `pip install mlxtend`
 from mlxtend.plotting import plot_decision_regions
+from sklearn import svm
 
 no = [52, 43, 42, 45, 62, 39, 40, 37, 22, 25, 32, 91, 32, 63, 11, 25, 11, 15, 21, 29]
 yes = [

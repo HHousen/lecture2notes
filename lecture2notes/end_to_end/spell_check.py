@@ -1,7 +1,8 @@
 import logging
+
 import pkg_resources
-from tqdm import tqdm
 from symspellpy.symspellpy import SymSpell
+from tqdm import tqdm
 
 
 class SpellChecker:

@@ -40,7 +40,7 @@ dependencies:
   # - fairseq # for Semsim model import in DocSum BartSumSummarizer
   - pre-commit
   - pip
-  - pip: 
+  - pip:
     - deepspeech-gpu
     - webrtcvad
     - halo

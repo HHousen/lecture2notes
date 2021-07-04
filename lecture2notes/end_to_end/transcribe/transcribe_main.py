@@ -1,30 +1,26 @@
-import os
+import contextlib
 import glob
 import json
-import wave
-import sox
-import contextlib
 import logging
-import torch
-import itertools
-from transformers import Wav2Vec2Tokenizer, Wav2Vec2ForCTC
+import os
+import wave
 from pathlib import Path
+from timeit import default_timer as timer
+
+import numpy as np
+import sox
+import spacy
 import speech_recognition as sr
+import torch
+import webvtt
 from pydub import AudioSegment
-from vosk import Model, KaldiRecognizer
 from pydub.silence import split_on_silence
 from tqdm import tqdm
-from timeit import default_timer as timer
-from ..transcript_downloader import TranscriptDownloader
-import webvtt
-from . import webrtcvad_utils
-import spacy
-import numpy as np
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Tokenizer
+from vosk import KaldiRecognizer, Model
 
-try:
-    from shhlex import quote
-except ImportError:
-    from pipes import quote
+from ..transcript_downloader import TranscriptDownloader
+from . import webrtcvad_utils
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +41,7 @@ def extract_audio(video_path, output_path):
 
 
 def transcribe_audio(audio_path, method="sphinx", **kwargs):
-    """Transcribe audio using DeepSpeech, Vosk, or a method offered by 
+    """Transcribe audio using DeepSpeech, Vosk, or a method offered by
     :meth:`~transcribe.transcribe_main.transcribe_audio_generic`.
 
     Args:
@@ -97,9 +93,10 @@ def transcribe_audio_generic(audio_path, method="sphinx", **kwargs):
     except sr.UnknownValueError:
         logger.error("Could not understand audio")
     except sr.RequestError as e:
-        logger.error("Error; {0}".format(e))
+        logger.error("Error; {}".format(e))
 
     return transcript
+
 
 def load_vosk_model(model_dir):
     if type(model_dir) is Model:
@@ -107,7 +104,15 @@ def load_vosk_model(model_dir):
     model = Model(model_dir)
     return model
 
-def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=False, desired_sample_rate=16000, chunk_size=2000, **kwargs):
+
+def transcribe_audio_vosk(
+    audio_path_or_chunks,
+    model="../vosk_models",
+    chunks=False,
+    desired_sample_rate=16000,
+    chunk_size=2000,
+    **kwargs,
+):
     """Transcribe audio using a ``vosk`` model.
 
     Args:
@@ -128,7 +133,7 @@ def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=F
         )
         if type(pcm_data) is bytes:
             pcm_data = np.frombuffer(pcm_data)
-        pcm_data = np.array_split(pcm_data, pcm_data.shape[0]/chunk_size)
+        pcm_data = np.array_split(pcm_data, pcm_data.shape[0] / chunk_size)
         audio = pcm_data
 
     model = load_vosk_model(model)
@@ -139,7 +144,7 @@ def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=F
         # if data.size == 0:
         #     break
         if type(data) is np.ndarray:
-            data = data.tobytes() 
+            data = data.tobytes()
         if rec.AcceptWaveform(data):
             result = rec.Result()
             result = json.loads(result)
@@ -153,7 +158,7 @@ def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=F
         #         if partial_result["partial"] != "":
         #             input(partial_result["partial"])
         #             results.append(partial_result["partial"])
-    
+
     final_result = rec.FinalResult()
     if final_result is not None:
         final_result = json.loads(final_result)
@@ -165,12 +170,20 @@ def transcribe_audio_vosk(audio_path_or_chunks, model="../vosk_models", chunks=F
 
     return " ".join(results_text), results_json
 
-def load_wav2vec_model(model="facebook/wav2vec2-base-960h", tokenizer="facebook/wav2vec2-base-960h", **kwargs):
+
+def load_wav2vec_model(
+    model="facebook/wav2vec2-base-960h",
+    tokenizer="facebook/wav2vec2-base-960h",
+    **kwargs,
+):
     tokenizer = Wav2Vec2Tokenizer.from_pretrained(tokenizer)
     model = Wav2Vec2ForCTC.from_pretrained(model)
     return model, tokenizer
 
-def transcribe_audio_wav2vec(audio_path_or_chunks, model=None, chunks=False, desired_sample_rate=16000):
+
+def transcribe_audio_wav2vec(
+    audio_path_or_chunks, model=None, chunks=False, desired_sample_rate=16000
+):
     if model is None:
         model = ["facebook/wav2vec2-base-960h", "facebook/wav2vec2-base-960h"]
     if isinstance(model, str):
@@ -179,7 +192,7 @@ def transcribe_audio_wav2vec(audio_path_or_chunks, model=None, chunks=False, des
         model, tokenizer = load_wav2vec_model(model[0], model[1])
     else:
         model, tokenizer = model[0], model[1]
-    
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -195,12 +208,14 @@ def transcribe_audio_wav2vec(audio_path_or_chunks, model=None, chunks=False, des
         num_chunks = int(duration / chunk_len)
         pcm_data = np.array_split(pcm_data, num_chunks)
         audio = pcm_data
-    
+
     # tokenize speech
     final_transcript = []
     for data in tqdm(audio, desc="Wav2Vec Transcribing"):
-        data = data.astype('float64')
-        input_values = tokenizer(data, return_tensors="pt", padding="longest", truncation="longest_first").input_values
+        data = data.astype("float64")
+        input_values = tokenizer(
+            data, return_tensors="pt", padding="longest", truncation="longest_first"
+        ).input_values
         # input_values = input_values.type(torch.long)
         # retrieve logits
         input_values = input_values.to(device)
@@ -213,6 +228,7 @@ def transcribe_audio_wav2vec(audio_path_or_chunks, model=None, chunks=False, des
         combined_transcript = " ".join(transcription).strip()
         final_transcript.append(combined_transcript.lower())
     return " ".join(final_transcript).strip(), None
+
 
 def read_wave(path, desired_sample_rate=None, force=False):
     """Reads a ".wav" file and converts to ``desired_sample_rate`` with one channel.
@@ -280,7 +296,7 @@ def segment_sentences(text, text_json=None, do_capitalization=True):
 
     Arguments:
         text (str): The string to segment by sentence.
-        text_json (str or dict, optional): If the detected sentence boundaries should 
+        text_json (str or dict, optional): If the detected sentence boundaries should
             be applied to the JSON format of a transcript. Defaults to None.
         do_capitalization (bool, optiona): If the first letter of each detected sentence
             should be capitalized. Defaults to True.
@@ -314,9 +330,9 @@ def segment_sentences(text, text_json=None, do_capitalization=True):
     if text_json is not None:
         if type(text_json) is str:
             text_json = json.loads(text_json)
-        
+
         boundaries = [len(sentence.split(" ")) for sentence in segmented_text]
-        
+
         if do_capitalization:
             text_json[0]["word"] = text_json[0]["word"].title()
 
@@ -325,25 +341,27 @@ def segment_sentences(text, text_json=None, do_capitalization=True):
                 boundary += boundaries[idx - 1] + 1
                 boundaries[idx] = boundary
             text_json.insert(boundary, {"start": 0, "end": 0, "word": "."})
-            
+
             if do_capitalization:
                 try:
-                    text_json[boundary+1]["word"] = text_json[boundary+1]["word"].title()
+                    text_json[boundary + 1]["word"] = text_json[boundary + 1][
+                        "word"
+                    ].title()
                 except IndexError:
                     pass
-        
+
         return final_text, json.dumps(text_json)
 
     return final_text, None
 
 
 def metadata_to_string(metadata):
-    """ Helper function to convert metadata tokens from deepspeech to a string. """
+    """Helper function to convert metadata tokens from deepspeech to a string."""
     return "".join(token.text for token in metadata.tokens)
 
 
 def metadata_to_json(candidate_transcript):
-    """ Helper function to convert metadata tokens from deepspeech to a dictionary. """
+    """Helper function to convert metadata tokens from deepspeech to a dictionary."""
     json_result = {
         "confidence": candidate_transcript.confidence,
         "tokens": [
@@ -371,7 +389,7 @@ def convert_samplerate(audio_path, desired_sample_rate):
         desired_sample_rate (int): sample rate in hertz to convert the wave file to
 
     Returns:
-        tuple: (desired_sample_rate, output) where ``desired_sample_rate`` is the new 
+        tuple: (desired_sample_rate, output) where ``desired_sample_rate`` is the new
             sample rate and ``output`` is the newly resampled pcm data
     """
     tfm = sox.Transformer()
@@ -428,6 +446,7 @@ def load_deepspeech_model(model_dir, beam_width=500, lm_alpha=None, lm_beta=None
 
     return model
 
+
 def load_model(method, *args, **kwargs):
     if method == "deepspeech":
         return load_deepspeech_model(*args, **kwargs)
@@ -449,13 +468,13 @@ def transcribe_audio_deepspeech(
             is used.
         model (deepspeech model or str): a deepspeech model object or a path to a folder
             containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`)
-        raw_audio_data (bool, optional): must be True if ``audio_path_or_data`` is 
+        raw_audio_data (bool, optional): must be True if ``audio_path_or_data`` is
             raw pcm data. Defaults to False.
-        json_num_transcripts (str, optional): Specify this value to generate multiple transcipts 
+        json_num_transcripts (str, optional): Specify this value to generate multiple transcipts
             in json format.
 
     Returns:
-        tuple: (transcript_text, transcript_json) the transcribed audio file in string format 
+        tuple: (transcript_text, transcript_json) the transcribed audio file in string format
         and the transcript in json
     """
     if isinstance(model, str):
@@ -515,24 +534,35 @@ def convert_deepspeech_json(transcript_json):
     final_transcript_json = []
     current_word = ""
     start_time = 0
+    looking_for_word_end = None
     for char_details in transcript_json:
         at_word_end = char_details["text"] == " " or char_details["text"] == "."
         if at_word_end and looking_for_word_end:
             end_time = char_details["start_time"]
-            final_transcript_json.append({"start": start_time, "end": end_time, "word": current_word})
+            final_transcript_json.append(
+                {"start": start_time, "end": end_time, "word": current_word}
+            )
             current_word = ""
             looking_for_word_end = False
-        
+
         elif char_details["text"] != " ":
             start_time = char_details["start_time"]
             looking_for_word_end = True
             current_word += char_details["text"]
-        
+
         if char_details["text"] == ".":
-            final_transcript_json.append({"start": char_details["start_time"], "end": char_details["start_time"], "word": char_details["text"]})
-    
+            final_transcript_json.append(
+                {
+                    "start": char_details["start_time"],
+                    "end": char_details["start_time"],
+                    "word": char_details["text"],
+                }
+            )
+
     end_time = transcript_json[-1]["start_time"]
-    final_transcript_json.append({"start": start_time, "end": end_time, "word": current_word})
+    final_transcript_json.append(
+        {"start": start_time, "end": end_time, "word": current_word}
+    )
 
     return final_transcript_json
 
@@ -543,7 +573,7 @@ def write_to_file(
     transcript_json=None,
     transcript_json_save_path=None,
 ):
-    """ Write ``transcript`` to ``transcript_save_file`` and ``transcript_json`` to ``transcript_json_save_path``."""
+    """Write ``transcript`` to ``transcript_save_file`` and ``transcript_json`` to ``transcript_json_save_path``."""
     with open(transcript_save_file, "w+") as file_results:
         logger.info("Writing text transcript to file " + str(transcript_save_file))
         file_results.write(transcript)
@@ -560,20 +590,20 @@ def chunk_by_speech(
     audio_path, output_path=None, aggressiveness=1, desired_sample_rate=None
 ):
     """
-    Uses the python interface to the WebRTC Voice Activity Detector (VAD) API to 
-    create chunks of audio that contain voice. The VAD that Google developed for 
-    the WebRTC project is reportedly one of the best available, being fast, modern 
+    Uses the python interface to the WebRTC Voice Activity Detector (VAD) API to
+    create chunks of audio that contain voice. The VAD that Google developed for
+    the WebRTC project is reportedly one of the best available, being fast, modern
     and free.
 
     Args:
         audio_path (str): path to the audio file to process
         output_path (str, optional): path to save the chunk files. if not specified then no wave
             files will be written to disk and the raw pcm data will be returned. Defaults to None.
-        aggressiveness (int, optional): determines how aggressive filtering out non-speech is. must 
+        aggressiveness (int, optional): determines how aggressive filtering out non-speech is. must
             be an interger between 0 and 3. Defaults to 1.
         desired_sample_rate (int, optional): the sample rate of the returned segments. the default is
             the same rate of the input audio file. Defaults to None.
-    
+
     Returns:
         tuple: (segments, sample_rate, audio_length). See :meth:`~transcribe.webrtcvad_utils.vad_segment_generator`.
     """
@@ -601,8 +631,13 @@ def chunk_by_speech(
 
     return segments, sample_rate, audio_length
 
+
 def process_segments(
-    segments, model, audio_length="unknown", method="deepspeech", do_segment_sentences=True
+    segments,
+    model,
+    audio_length="unknown",
+    method="deepspeech",
+    do_segment_sentences=True,
 ):
     """Transcribe a list of byte strings containing pcm data
 
@@ -612,13 +647,13 @@ def process_segments(
             containing the model files (see :meth:`~transcribe.transcribe_main.load_deepspeech_model`).
         audio_length (str, optional): the length of the audio file if known (used for logging statements)
             Default is "unknown".
-        method (str, optional): The model to use to perform speech-to-text. Supports 'deepspeech' and 
+        method (str, optional): The model to use to perform speech-to-text. Supports 'deepspeech' and
             'vosk'. Defaults to "deepspeech".
-        do_segment_sentences (bool, optional): Find sentence boundaries using 
+        do_segment_sentences (bool, optional): Find sentence boundaries using
             :meth:`~transcribe.transcribe_main.segment_sentences`. Defaults to True.
 
     Returns:
-        tuple: (full_transcript, full_transcript_json) The combined transcript of all the items in 
+        tuple: (full_transcript, full_transcript_json) The combined transcript of all the items in
         ``segments`` as a string and as dictionary/json.
     """
     if method == "deepspeech" and isinstance(model, str):
@@ -657,12 +692,10 @@ def process_segments(
         create_json = False
         for i, segment in tqdm(enumerate(segments), desc="Processing Segments"):
             audio = np.frombuffer(segment)
-            transcript = transcribe_audio_wav2vec(
-                audio, model, chunks=True
-            )
+            transcript = transcribe_audio_wav2vec(audio, model, chunks=True)
 
             full_transcript += transcript + " "
-    
+
     if create_json:
         # Convert `full_transcript_json` to json string
         full_transcript_json = json.dumps(full_transcript_json)
@@ -695,7 +728,7 @@ def chunk_by_silence(
     Arguments:
         audio_path (str): path to a wave file
         output_path (str): path to a folder where wave file chunks will be saved
-        silence_thresh_offset (int, optional): a value subtracted from the mean dB volume of 
+        silence_thresh_offset (int, optional): a value subtracted from the mean dB volume of
             the file. Default is 5.
         min_silence_len (int, optional): the length in milliseconds in which there must be no sound
             in order to be marked as a splitting point. Default is 2000.
@@ -736,7 +769,7 @@ def chunk_by_silence(
 
 def process_chunks(chunk_dir, method="sphinx", model_dir=None):
     """
-    Performs transcription on every noise activity chunk (audio file) created by 
+    Performs transcription on every noise activity chunk (audio file) created by
     :meth:`~transcribe.transcribe_main.chunk_by_silence` in a directory.
     """
     chunks = os.listdir(chunk_dir)
@@ -768,7 +801,7 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
 
 def caption_file_to_string(transcript_path, remove_speakers=False):
     """
-    Converts a .srt, .vtt, or .sbv file saved at ``transcript_path`` to a python string. 
+    Converts a .srt, .vtt, or .sbv file saved at ``transcript_path`` to a python string.
     Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
     """
     transcript_path = Path(transcript_path)
@@ -789,7 +822,13 @@ def caption_file_to_string(transcript_path, remove_speakers=False):
         if remove_speakers:
             content = content.split(": ", 1)[-1]  # remove everything before ": "
         transcript += content + " "  # add space after each subtitle block in srt file
-        transcript_json.append({"end": subtitle.end_in_seconds, "start": subtitle.start_in_seconds, "word": content})
+        transcript_json.append(
+            {
+                "end": subtitle.end_in_seconds,
+                "start": subtitle.start_in_seconds,
+                "word": content,
+            }
+        )
     return transcript, json.dumps(transcript_json)
 
 

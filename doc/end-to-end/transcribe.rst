@@ -5,7 +5,7 @@ API Documentation: :ref:`e2e_api_transcribe`
 
 The ``transcribe`` module contains the features necessary to convert a wave file to text.
 
-There are 4 methods, which rely on 3 libraries, of transcribing audio implemented in this module. Additionally, 2 chunking algorithms are supported. 
+There are 4 methods, which rely on 3 libraries, of transcribing audio implemented in this module. Additionally, 2 chunking algorithms are supported.
 
 Chunking
 --------
@@ -26,7 +26,7 @@ The recommended method is DeepSpeech since it works offline (``google`` does not
 
 Additionally, it is recommended to combine DeepSpeech with ``--chunk`` set to ``speech`` (``speech`` is better than ``silence``) since this will give a progress indicator and probably increase speed. If DeepSpeech is run without chunking then the process will seem to hang, especially on longer audio files. Simple tests indicate that chunking can improve speed by up to 60%, but also can cause a 12% increase in WER (12% worse).
 
-1. **YouTube:** (:meth:`transcribe.transcribe_main.get_youtube_transcript`) This method only works if the lecture to be summarized is a YouTube video that contains manually added captions. 
+1. **YouTube:** (:meth:`transcribe.transcribe_main.get_youtube_transcript`) This method only works if the lecture to be summarized is a YouTube video that contains manually added captions.
 
     .. figure:: ../_static/captions_vs_no-captions.jpg
         :alt: Image showing two YouTube video thumbnails, one with the CC icon and one without.
@@ -34,32 +34,32 @@ Additionally, it is recommended to combine DeepSpeech with ``--chunk`` set to ``
         You can tell if a video contains manual captions if it contains the CC icon as shown above.
 
     This method downloads the transcript for the specified language directly from YouTube using either the YouTube API (:meth:`~transcript_downloader.TranscriptDownloader.get_transcript_api`) or ``youtube-dl`` (:meth:`~transcript_downloader.TranscriptDownloader.get_transcript_ytdl`). Both methods are part of the :class:`~transcript_downloader.TranscriptDownloader` class.
-    
+
     The :meth:`~transcript_downloader.TranscriptDownloader.download` function provides easy access to both of these download options.
-    
+
     .. note:: The YouTube API requires an API key. You can find more information about how to obtain a key for free from `Google Developers <https://developers.google.com/youtube/registering_an_application>`_.
 
-    .. important:: Using ``youtube-dl`` is recommended over the YouTube API because it does not require an API key and is significantly more reliable than the YouTube API. 
-    
+    .. important:: Using ``youtube-dl`` is recommended over the YouTube API because it does not require an API key and is significantly more reliable than the YouTube API.
+
 
 2. **General:** Sphinx and Google
 
-    The ``sphinx`` and ``google`` methods use the `SpeechRecognition library <https://pypi.org/project/SpeechRecognition/>`_ to access ``pockersphinx-python`` and Google Speech Recognition, respectively. These methods are grouped together in the :meth:`~transcribe_main.transcribe_audio` function because the SpeechRecognition library simplifies the differences to one line. The ``method`` argument allows the switching between both methods. 
+    The ``sphinx`` and ``google`` methods use the `SpeechRecognition library <https://pypi.org/project/SpeechRecognition/>`_ to access ``pockersphinx-python`` and Google Speech Recognition, respectively. These methods are grouped together in the :meth:`~transcribe_main.transcribe_audio` function because the SpeechRecognition library simplifies the differences to one line. The ``method`` argument allows the switching between both methods.
 
     .. note:: The ``google`` method uses "Google Speech Recognition" (free) and not the `Google Cloud Speech API <https://cloud.google.com/speech/>`_ (paid). It is my understanding that "Google Speech Recognition" is deprecated and could disappear anytime.
-    
+
 
 3. **DeepSpeech:**
 
-    The ``deepspeech`` method uses the `Mozilla DeepSpeech <https://github.com/mozilla/DeepSpeech>`_ library, which achieves very good accuracy on the `LibriSpeech clean test corpus <https://www.openslr.org/12>`_ (the current model accuracy can be found on the `latest release page <https://github.com/mozilla/DeepSpeech/releases/latest>`_. 
-    
+    The ``deepspeech`` method uses the `Mozilla DeepSpeech <https://github.com/mozilla/DeepSpeech>`_ library, which achieves very good accuracy on the `LibriSpeech clean test corpus <https://www.openslr.org/12>`_ (the current model accuracy can be found on the `latest release page <https://github.com/mozilla/DeepSpeech/releases/latest>`_.
+
     The DeepSpeech architecture was created by *Baidu* in 2014. Project DeepSpeech was created by *Mozilla* (the creators of the popular Firefox web browser) to provide the open source community with an updated Speech-To-Text engine.
-    
+
     In order to use this method in the ``end_to_end/main.py`` script you  the latest DeepSpeech model needs to be downloaded from the `releases page <https://github.com/mozilla/DeepSpeech/releases>`_. Mozilla provides code to download and extract the model on the `project's documentation <https://deepspeech.readthedocs.io/en/latest/USING.html#getting-the-pre-trained-model>`_. You can rename these files as long as the extensions remain the same. When using the ``end_to_end/main.py`` script you only have to specify the directory containing both files (the directory name is not important but `deepspeech-models` is descriptive). See :ref:`install` for more details about downloading the deepspeech models.
-    
+
     Example Folder Structure:
     .. code-block:: bash
-    
+
         deepspeech-models/
         ├── deepspeech-0.7.1-models.pbmm
         ├── deepspeech-0.7.1-models.scorer
@@ -73,18 +73,18 @@ Script Descriptions
 * **webrtcvad_utils**: Implements functions to filter out non-voiced sections from audio files. The primary function is :meth:`~webrtcvad_utils.vad_segment_generator`, which accepts an audio path and returns segments of audio with voice.
 * **mic_vad_streaming**: Streams from microphone to DeepSpeech, using Voice Activity Detection (VAD) provided by ``webrtcvad``. This is essentially the `example file <https://github.com/mozilla/DeepSpeech-examples/blob/r0.7/mic_vad_streaming/mic_vad_streaming.py>`_ from `mozilla/DeepSpeech-examples <https://github.com/mozilla/DeepSpeech-examples>`_.
     * To select the correct input device, the code below can be used. It will print a list of devices and associated parameters as detected by ``pyaudio``.
-    
+
     .. code-block:: bash
-    
+
         import pyaudio
         p = pyaudio.PyAudio()
         for i in range(p.get_device_count()):
             print(p.get_device_info_by_index(i))
-    
+
     * Output of ``python mic_vad_streaming.py --help``
 
     .. code-block:: bash
-    
+
         usage: mic_vad_streaming.py [-h] [-v VAD_AGGRESSIVENESS] [--nospinner]
                                     [-w SAVEWAV] [-f FILE] -m MODEL [-s SCORER]
                                     [-d DEVICE] [-r RATE]

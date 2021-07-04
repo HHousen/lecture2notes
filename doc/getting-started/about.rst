@@ -4,7 +4,7 @@ About
 Overview
 --------
 
-Lecture2Notes is a project that summarizes lectures videos. At a high level, it parses both the visual and auditory components of the video, extracts text from each, combines them, and then summarizes the combined text using automatic summarization algorithms. These pages document the code for the entirety of [Research Paper Name].
+Lecture2Notes is a project that summarizes lectures videos. At a high level, it parses both the visual and auditory components of the video, extracts text from each, combines them, and then summarizes the combined text using automatic summarization algorithms. These pages document the code for the entirety of .
 
 The project is broken into four main components: the slide classifier (including the dataset), the summarization models (neural, non-neural, extractive, and abstractive), the end-to-end-process (one command to convert to notes), and finally the website that enables users to process their own videos.
 
@@ -32,7 +32,7 @@ Components
 ----------
 
 1. Slide Classifier
-    * **Overview:** The slide classifier is a computer vision machine learning model that classifies images into 9 categories as listed on :ref:`its documentation page <sc_overview>`. 
+    * **Overview:** The slide classifier is a computer vision machine learning model that classifies images into 9 categories as listed on :ref:`its documentation page <sc_overview>`.
     * **Key Info:** Most importantly are the ``slide`` and ``presenter_slide`` categories which refer to slides from a screen capture and slides as recorded by a video camera, respectively. When a video camera is pointed at the slides, the frame will usually include the presenter, which is the reasoning behind the name choices. Frames from the ``slide`` class are processed differently than those from the ``presenter_slide`` class. Namely, those from ``presenter_slide`` are automatically perspective cropped while those from ``slide`` are not.
     * **Dataset:** The dataset was collected using the scraper scripts in ``dataset/scraper-scripts``. To learn about how to collect the dataset visit :ref:`dataset_general_walkthrough`. You can view information about each script in :ref:`ss_home`.
 2. Summarization Models
@@ -48,7 +48,7 @@ Components
 4. Website
     * Coming soon...
 
-The directory structure of the project should be relatively easy to follow. There is essentially a subfolder in the project root for each major component discussed above (and the documentation). 
+The directory structure of the project should be relatively easy to follow. There is essentially a subfolder in the project root for each major component discussed above (and the documentation).
 
 .. note::
     The slide classifier dataset is located in ``Dataset`` and the model is located in ``models/slide_classifier``. This separation was made to disconnect the data collection code from the model training code, since they are two distinct stages of the process that require little interaction (the only interaction is the copying of the final dataset).

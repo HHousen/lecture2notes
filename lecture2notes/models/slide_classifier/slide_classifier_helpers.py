@@ -1,7 +1,7 @@
-from torch import nn
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
+from torch import nn
 
 
 def convert_relu_to_mish(model):
@@ -76,4 +76,3 @@ def plot_confusion_matrix(
         plt.show()
 
     return ax
-

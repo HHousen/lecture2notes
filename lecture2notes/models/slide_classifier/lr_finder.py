@@ -1,21 +1,23 @@
 # https://github.com/davidtvs/pytorch-lr-finder
 # Modified to work outside of IPython due to addition of mpl.use('Agg') if no DISPLAY found
 
-from __future__ import print_function, with_statement, division
+from __future__ import division, print_function
+
 import copy
 import os
-import torch
+
 import matplotlib as mpl
+import torch
 
 if os.environ.get("DISPLAY", "") == "":
     print("=> LR Finder: No display found. Using non-interactive Agg backend")
     mpl.use("Agg")
-from tqdm.autonotebook import tqdm
-from torch.optim.lr_scheduler import _LRScheduler
 import matplotlib.pyplot as plt
+from torch.optim.lr_scheduler import _LRScheduler
+from tqdm.autonotebook import tqdm
 
 
-class LRFinder():
+class LRFinder:
     """Learning rate range test.
 
     The learning rate range test increases the learning rate in a pre-training run
@@ -296,7 +298,7 @@ class ExponentialLR(_LRScheduler):
         return [base_lr * (self.end_lr / base_lr) ** r for base_lr in self.base_lrs]
 
 
-class StateCacher():
+class StateCacher:
     def __init__(self, in_memory, cache_dir=None):
         self.in_memory = in_memory
         self.cache_dir = cache_dir
@@ -328,9 +330,7 @@ class StateCacher():
         fn = self.cached.get(key)
         if not os.path.exists(fn):
             raise RuntimeError(
-                "Failed to load state in {}. File does not exist anymore.".format(
-                    fn
-                )
+                "Failed to load state in {}. File does not exist anymore.".format(fn)
             )
         state_dict = torch.load(fn, map_location=lambda storage, location: storage)
         return state_dict

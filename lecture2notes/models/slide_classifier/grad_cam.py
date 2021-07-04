@@ -1,22 +1,22 @@
 # Grad-CAM implementation based on https://github.com/kazuto1011/grad-cam-pytorch
 # by Kazuto Nakashima (http://kazuto1011.github.io) which was created on 2017-05-26
 
-from collections.abc import Sequence
 import argparse
-
 import os
+from collections.abc import Sequence
+
 import cv2
-from PIL import Image
+import matplotlib.cm as cm
 import numpy as np
 import torch
 import torch.nn as nn
+from PIL import Image
 from torch.nn import functional as F
-import matplotlib.cm as cm
 from torchvision import transforms
 from tqdm import tqdm
 
 
-class _BaseWrapper():
+class _BaseWrapper:
     def __init__(self, model):
         super(_BaseWrapper, self).__init__()
         self.device = next(model.parameters()).device
@@ -448,8 +448,8 @@ if __name__ == "__main__":
         "--topk",
         type=int,
         default=3,
-        help="""The top N predictions to save. 
-    The default is 3, which means each input image will be classified and the heatmaps for the 
+        help="""The top N predictions to save.
+    The default is 3, which means each input image will be classified and the heatmaps for the
     top 3 classes will be saved to disk.""",
     )
     parser.add_argument(

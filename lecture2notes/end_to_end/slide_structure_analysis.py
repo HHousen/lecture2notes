@@ -1,17 +1,17 @@
-import os
-import cv2
 import json
 import logging
-import pytesseract
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
+import os
 from functools import partial
-from tqdm import tqdm
+
+import cv2
+import numpy as np
+import pandas as pd
+import pytesseract
+from skimage import img_as_float
 
 # https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_peak_local_max.html
 from skimage.feature import peak_local_max
-from skimage import img_as_float
+from tqdm import tqdm
 
 from .helpers import frame_number_from_filename
 
@@ -23,9 +23,9 @@ def stroke_width(image):
     """
     Determine the average stroke length in an image.
     Inspired by: https://stackoverflow.com/a/61914060.
-    
+
     Other Links:
-        
+
         * `cv2.distanceTransform Documentation <https://docs.opencv.org/3.4/d7/d1b/group__imgproc__misc.html#ga25c259e7e2fa2ac70de4606ea800f12f>`_
         * `OpenCV Distance Transform Tutorial <https://docs.opencv.org/3.4/d2/dbd/tutorial_distance_transform.html>`_
         * `Sckit-Image "Finding local maxima" <https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_peak_local_max.html>`_
@@ -60,12 +60,12 @@ def identify_title(
 ):
     if enabled_checks is None:
         enabled_checks = [
-                "in_upper_third",
-                "in_top_left",
-                "large_stroke_width",
-                "large_height",
-                "meets_character_limit",
-            ]
+            "in_upper_third",
+            "in_top_left",
+            "large_stroke_width",
+            "large_height",
+            "meets_character_limit",
+        ]
     image_height, image_width = image.shape[:2]
     # Critera to be classified as a title:
     # it is in the upper third of the image,
@@ -143,28 +143,28 @@ def analyze_structure(
     Args:
         image (np.array): Image to be processed as loaded with ``cv2.imread()``.
         to_json (str or bool, optional): Path to write json output or a boolean to return
-            json data as a string. The default return value is a pd.DataFrame. Defaults to 
+            json data as a string. The default return value is a pd.DataFrame. Defaults to
             None.
         return_unstructured_text (bool, optiona): If the raw recognized text should be
             returned in addition to the other return values.
         gamma (float, optional): The percentage greater than or less than the average
-            **stroke width** that a text line must meet to be classified as bold/subtitle or 
+            **stroke width** that a text line must meet to be classified as bold/subtitle or
             small text repsectively. Defaults to 0.1.
         beta (float, optional): The percentage greater than or less than the average
-            **height** that a text line must meet to be classified as bold/subtitle or 
-            small text repsectively. This is greater than ``gamma`` because height is on a 
+            **height** that a text line must meet to be classified as bold/subtitle or
+            small text repsectively. This is greater than ``gamma`` because height is on a
             larger scale than gamma. Defaults to 0.2.
-        orient (str, optional): The format of the output json data if ``to_json`` is set. The 
-            acceptable values can be found on the 
-            `pandas.DataFrame.to_json documentation <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_json.html>`_. 
+        orient (str, optional): The format of the output json data if ``to_json`` is set. The
+            acceptable values can be found on the
+            `pandas.DataFrame.to_json documentation <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_json.html>`_.
             Defaults to "index".
         extra_json (dict, optional): Additional keys and values to add to the json output if
             ``to_json`` is enabled. Defaults to None.
 
     Returns:
-        pd.DataFrame or str or tuple or ``None``: The default is to return a pd.DataFrame. However, 
-        setting ``to_json`` to a string will instead write json data to ``to_json`` and return 
-        the path to the data. Setting ``to_json`` to ``True`` will return the json data 
+        pd.DataFrame or str or tuple or ``None``: The default is to return a pd.DataFrame. However,
+        setting ``to_json`` to a string will instead write json data to ``to_json`` and return
+        the path to the data. Setting ``to_json`` to ``True`` will return the json data
         as a string. Setting ``return_unstructured_text`` returns the previously described data
         and the raw recognized text as a tuple. Will return ``None`` is no text is detected.
     """
@@ -181,13 +181,13 @@ def analyze_structure(
 
     def add_line_info(row):
         """
-        Adds the global line number (``line_num``) independent of page/block/paragraph 
+        Adds the global line number (``line_num``) independent of page/block/paragraph
         to each row.
         Inspired by https://stackoverflow.com/a/53118102.
         """
         global prev_line_num
         if row["word_num"] == 1:
-            current_line_num = prev_line_num
+            current_line_num = prev_line_num  # noqa: F841
             prev_line_num += 1
         return prev_line_num
 
@@ -310,7 +310,7 @@ def analyze_structure(
 
 
 def all_in_folder(path, do_rename=True, **kwargs):
-    """Perform structure analysis and OCR on every file in folder using 
+    """Perform structure analysis and OCR on every file in folder using
     :meth:`slide_structure_analysis.analyze_structure`.
 
     Args:
@@ -339,7 +339,9 @@ def all_in_folder(path, do_rename=True, **kwargs):
             if do_rename:
                 item_directory = os.path.dirname(item)
                 file_extension = os.path.splitext(item)[1]
-                new_path = os.path.join(path, item_directory, str(frame_number) + file_extension)
+                new_path = os.path.join(
+                    path, item_directory, str(frame_number) + file_extension
+                )
                 os.rename(current_path, new_path)
 
             frame_number = int(frame_number)
@@ -355,8 +357,8 @@ def all_in_folder(path, do_rename=True, **kwargs):
 
 
 def write_to_file(raw_texts, json_texts, raw_save_file, json_save_file):
-    """Write the raw text in ``raw_texts`` to ``raw_save_file`` and the json data 
-    in ``json_texts`` to ``json_save_file``. Used to  write results from 
+    """Write the raw text in ``raw_texts`` to ``raw_save_file`` and the json data
+    in ``json_texts`` to ``json_save_file``. Used to  write results from
     :meth:`slide_structure_analysis.all_in_folder` to disk.
 
     Args:

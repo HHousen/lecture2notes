@@ -1,16 +1,15 @@
-import os
-import sys
 import argparse
 import logging
+import os
+import sys
 from pathlib import Path
+
 import pandas as pd
-from tqdm import tqdm
 from shared_functions import download_video, download_video_yt
+from tqdm import tqdm
 
 sys.path.insert(1, os.path.join(sys.path[0], "../../End-To-End"))
-from transcript_downloader import (
-    TranscriptDownloader,
-)  # pylint: disable=import-error,wrong-import-position
+from transcript_downloader import TranscriptDownloader  # noqa: E402
 
 PARSER = argparse.ArgumentParser(description="Video Downloader")
 
@@ -87,7 +86,7 @@ if ARGS.method == "csv":
 
     else:
         not_downloaded_df = df.loc[
-            df["downloaded"] == False
+            df["downloaded"] == False  # noqa: E712
         ]  # pylint: disable=singleton-comparison
         for index, row in tqdm(
             not_downloaded_df.iterrows(),

@@ -41,7 +41,7 @@ Script Descriptions
 
 * **class_cluster_faiss.py**: An outdated version of **class_cluster_scikit** that uses `facebookresearch/faiss <https://github.com/facebookresearch/faiss>`_ (specifically the kmeans implementation `documented here <https://github.com/facebookresearch/faiss/wiki/Faiss-building-blocks:-clustering,-PCA,-quantization>`_) to provide a ``Cluster`` class. More details in the ``class_cluster_scikit`` entry above.
 * **custom_nnmodules.py**: Provides a few custom (copied from `fastai <https://github.com/fastai/fastai>`_) nn.Modules.
-* **inference.py**: Sets up model and provides ``get_prediction()``, which takes an image and returns a prediction and extracted features. 
+* **inference.py**: Sets up model and provides ``get_prediction()``, which takes an image and returns a prediction and extracted features.
 * **lr_finder.py**: Slightly modified (allows usage of matplotlib Agg backend) code from `davidtvs/pytorch-lr-finder <https://github.com/davidtvs/pytorch-lr-finder>`_ to find the best learning rate.
 * **mish.py**: Code for the mish activation function.
 * **slide-classifier-fastai.ipynb**: Notebook to train simple fastai classifier on the dataset in ``dataset/classifier-data``. It is outdated and not supported and only remains in the repository as an example.
@@ -78,7 +78,7 @@ The commands and individual results in table form for each model trained. Scroll
     .. code-block:: bash
 
         python slide_classifier_pytorch.py ../../dataset/classifier-data-train-val/ --do_test --do_train --max_epochs 10 --seed 42 --pretrained --arch efficientnet-b0 --use_scheduler onecycle --optimizer ranger --ranger_k 3 --momentum 0.95 --optimizer_eps 1e-5
-    
+
     Results:
 
     +--------------------------+-----------+--------+----------+---------+

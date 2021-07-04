@@ -1,14 +1,16 @@
-import os
-import sys
 import itertools
 import logging
-import numpy as np
+import os
+import sys
+
 import cv2
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+import numpy as np
 from imutils import auto_canny
+from tqdm import tqdm
+
 from .corner_crop_transform import persp_transform
-from .figure_detection import convert_coords_to_corners, area_of_overlapping_rectangles
+from .figure_detection import area_of_overlapping_rectangles, convert_coords_to_corners
 from .helpers import frame_number_from_filename
 
 logger = logging.getLogger(__name__)
@@ -18,8 +20,8 @@ OUTPUT_PATH_MODIFIER = "_cropped"
 
 def sift_flann_match(query_image, train_image, algorithm="orb", num_features=1000):
     """Locate ``query_image`` within ``train_image`` using ``algorithm`` for feature
-    detection/description and `FLANN (Fast Library for Approximate Nearest Neighbors) <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_matcher/py_matcher.html#flann-based-matcher>`_ 
-    for matching. You can read more about matching in the 
+    detection/description and `FLANN (Fast Library for Approximate Nearest Neighbors) <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_matcher/py_matcher.html#flann-based-matcher>`_
+    for matching. You can read more about matching in the
     `OpenCV "Feature Matching" documentation <https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html>`_
     or about homography on the `OpenCV Python Tutorial "Feature Matching + Homography to find Objects" <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_feature_homography/py_feature_homography.html>`_
 
@@ -27,21 +29,21 @@ def sift_flann_match(query_image, train_image, algorithm="orb", num_features=100
         query_image (np.array): Image to find. Loading using ``cv2.imread()``.
         train_image (np.array): Image to search. Loading using ``cv2.imread()``.
         algorithm (str, optional): The feature detection/description algorithm. Can be one
-            of `ORB <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html>`_, 
+            of `ORB <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html>`_,
             (`ORB Class Reference <https://docs.opencv.org/3.4/db/d95/classcv_1_1ORB.html>`_)
-            `SIFT <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_sift_intro/py_sift_intro.html>`_, 
+            `SIFT <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_sift_intro/py_sift_intro.html>`_,
             (`SIFT Class Reference <https://docs.opencv.org/3.4.9/d5/d3c/classcv_1_1xfeatures2d_1_1SIFT.html>`_)
-            or `FAST <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_fast/py_fast.html>`_. 
+            or `FAST <https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_fast/py_fast.html>`_.
             (`FAST Class Reference <https://docs.opencv.org/3.4/df/d74/classcv_1_1FastFeatureDetector.html>`_)
             Defaults to "orb".
-        num_features (int, optional): The maximum number of features to retain when using `ORB` 
-            and `SIFT`. Does not take effect when using the `FAST` detection  algorithm. Setting 
-            to 0 for `SIFT` is a good starting point. The default for `ORB` is 500, but it was 
+        num_features (int, optional): The maximum number of features to retain when using `ORB`
+            and `SIFT`. Does not take effect when using the `FAST` detection  algorithm. Setting
+            to 0 for `SIFT` is a good starting point. The default for `ORB` is 500, but it was
             increased to 1000 to improve accuracy. Defaults to 1000.
 
     Returns:
-        tuple: (good, kp1, kp2, img1, img2) The good matches as per Lowe's ratio test, the 
-        key points from image 1, the key points from image 2, modified image 1, and modified 
+        tuple: (good, kp1, kp2, img1, img2) The good matches as per Lowe's ratio test, the
+        key points from image 1, the key points from image 2, modified image 1, and modified
         image 2.
     """
     algorithm = algorithm.lower()
@@ -99,13 +101,13 @@ def sift_flann_match(query_image, train_image, algorithm="orb", num_features=100
 
 def ransac_transform(sift_matches, kp1, kp2, img1, img2, draw_matches=False):
     """Use data from :meth:`~sift_matcher.sift_flann_match` to find the coordinates
-    of ``img1`` in ``img2``. ``sift_matches``, ``kp1``, ``kp2``, ``img1``, and ``img2`` 
-    are all the outputs of meth:`~sift_matcher.sift_flann_match`. If ``draw_matches`` 
+    of ``img1`` in ``img2``. ``sift_matches``, ``kp1``, ``kp2``, ``img1``, and ``img2``
+    are all the outputs of meth:`~sift_matcher.sift_flann_match`. If ``draw_matches``
     is enabled then the features matches will be drawn and shown on the screen.
 
     Returns:
-        np.array: The corner coordinates of the quadrilateral representing ``img1`` 
-        within ``img2``. 
+        np.array: The corner coordinates of the quadrilateral representing ``img1``
+        within ``img2``.
     """
     src_pts = np.float32([kp1[m.queryIdx].pt for m in sift_matches]).reshape(-1, 1, 2)
     dst_pts = np.float32([kp2[m.trainIdx].pt for m in sift_matches]).reshape(-1, 1, 2)
@@ -134,9 +136,9 @@ def ransac_transform(sift_matches, kp1, kp2, img1, img2, draw_matches=False):
 
 
 def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=False):
-    """Detects camera movement between two frames by tracking features in the borders 
-    of the image. Only the borders are used because the center of the image probably 
-    contains a slide. Thus, tracking features of the slide is not robust since those 
+    """Detects camera movement between two frames by tracking features in the borders
+    of the image. Only the borders are used because the center of the image probably
+    contains a slide. Thus, tracking features of the slide is not robust since those
     features will disappear when the slide changes.
 
     Args:
@@ -145,16 +147,16 @@ def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=
         gamma (int, optional): The threshold pixel movement value. If the camera moves
             more than this value, then there is assumed to be camera movement between
             the two frames. Defaults to 10.
-        border_ratios (tuple, optional): The ratios of the height and width respectively 
-            of the first frame to be searched for features. Only the borders are searched 
-            for features. these values specify how much of the image should be counted as 
+        border_ratios (tuple, optional): The ratios of the height and width respectively
+            of the first frame to be searched for features. Only the borders are searched
+            for features. these values specify how much of the image should be counted as
             a border. Defaults to (10, 19).
-        bottom (bool, optional): Whether to find features in the bottom border. This is not 
-            recommended because 'presenter_slide' images may have the peoples' heads at the 
+        bottom (bool, optional): Whether to find features in the bottom border. This is not
+            recommended because 'presenter_slide' images may have the peoples' heads at the
             bottom, which will move and do not represent camera motion. Defaults to False.
 
     Returns:
-        tuple: (total_movement > gamma, total_movement) If there is camera movement between 
+        tuple: (total_movement > gamma, total_movement) If there is camera movement between
         the two frames and the total movement between the frames.
     """
     # params for ShiTomasi corner detection
@@ -185,12 +187,12 @@ def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=
     p0 = cv2.goodFeaturesToTrack(old_gray, mask=feature_mask, **feature_params)
 
     # Create a mask image for drawing purposes
-    mask = np.zeros_like(old_frame)
+    mask = np.zeros_like(old_frame)  # noqa: F841
 
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Calculate optical flow. Source: https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_video/py_lucas_kanade/py_lucas_kanade.html
-    p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
+    p1, st, _ = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
 
     # Select good points
     good_new = p1[st == 1]
@@ -221,7 +223,7 @@ def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=
 
 
 def does_camera_move_all_in_folder(folder_path):
-    """Runs :meth:`~sift_matcher.does_camera_move` on all the files in a folder and 
+    """Runs :meth:`~sift_matcher.does_camera_move` on all the files in a folder and
     calculates statistics about camera movement within those files.
 
     Args:
@@ -231,7 +233,7 @@ def does_camera_move_all_in_folder(folder_path):
         tuple: (movement_detection_percentage, average_move_value, max_move_value)
         A float representing the precentage of frames where movement was detected from
         the previous frame. The average of the ``total_movement`` values returned from
-        :meth:`~sift_matcher.does_camera_move`. The maximum of the the ``total_movement`` 
+        :meth:`~sift_matcher.does_camera_move`. The maximum of the the ``total_movement``
         values returned from :meth:`~sift_matcher.does_camera_move`.
     """
     images = [
@@ -268,24 +270,24 @@ def is_content_added(
 ):
     """Detect if ``second`` contains more content than ``first`` and how much more content
     it adds. This algorithm dilates both images and finds contours. It then computes the total
-    area of those contours. If ``gamma``% more than the area of the first image's contours is 
-    greater than the area of the second image's contours then it is assumed more content is 
-    added. 
+    area of those contours. If ``gamma``% more than the area of the first image's contours is
+    greater than the area of the second image's contours then it is assumed more content is
+    added.
 
     Args:
         first (np.array): Image loaded using ``cv2.imread()`` belonging to the 'slide' class
-        second (np.array): Image loaded using ``cv2.imread()`` belonging to the 
+        second (np.array): Image loaded using ``cv2.imread()`` belonging to the
             'presenter_slide' class
         first_area_modifier (float, optional): The maximum percent area of the ``first`` image
             that a contour can take up before it is excluded. Defaults to 0.70.
         second_area_modifier (float, optional): The maximum percent area of the ``second`` image
-            that a contour can take up before it is excluded. Images belonging to the 
-            'presenter_slide' class are more likely to have mistaken large contours. Defaults 
+            that a contour can take up before it is excluded. Images belonging to the
+            'presenter_slide' class are more likely to have mistaken large contours. Defaults
             to 0.40.
-        gamma (float, optional): The percentage increase in content area necessary for 
+        gamma (float, optional): The percentage increase in content area necessary for
             `second`` to be classified as having more content than ``first``. Defaults to 0.09.
-        dilation_amount (int, optional): How much the canny edge maps of each both images 
-            ``first`` and ``second`` should be dilated. This helps to combine multiple 
+        dilation_amount (int, optional): How much the canny edge maps of each both images
+            ``first`` and ``second`` should be dilated. This helps to combine multiple
             components of one object into a single contour. Defaults to 22.
 
     Returns:
@@ -312,11 +314,9 @@ def is_content_added(
         first_canny_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )[0]
     first_contour_area = sum(
-        [
-            cv2.contourArea(x)
-            for x in first_contours
-            if cv2.contourArea(x) < first_area_modifier * first_area
-        ]
+        cv2.contourArea(x)
+        for x in first_contours
+        if cv2.contourArea(x) < first_area_modifier * first_area
     )
     # first_contour_image = cv2.drawContours(first.copy(), first_contours, -1, (0, 255, 0), 3)
     # plt.imshow(first_contour_image, "gray"), plt.show()
@@ -340,11 +340,9 @@ def is_content_added(
         second_canny_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )[0]
     second_contour_area = sum(
-        [
-            cv2.contourArea(x)
-            for x in second_contours
-            if cv2.contourArea(x) < second_area_modifier * second_area
-        ]
+        cv2.contourArea(x)
+        for x in second_contours
+        if cv2.contourArea(x) < second_area_modifier * second_area
     )
     # second_contour_image = cv2.drawContours(
     #     second.copy(), second_contours, -1, (0, 255, 0), 3
@@ -373,40 +371,40 @@ def match_features(
     min_area_percent=0.37,
     do_motion_detection=True,
 ):
-    """Match features between images in `slide_path` and `presenter_slide_path`. 
+    """Match features between images in `slide_path` and `presenter_slide_path`.
     The images in `slide_path` are the queries to the matching algorithm and the
     images in `presenter_slide_path` are the train/searched images.
 
     Args:
-        slide_path (str): Path to the images classified as "slide" or any directory 
+        slide_path (str): Path to the images classified as "slide" or any directory
             containing query images.
-        presenter_slide_path (str): Path to the images classified as "presenter_slide" 
+        presenter_slide_path (str): Path to the images classified as "presenter_slide"
             or any directory containing train images.
         min_match_count (int, optional): The minimum number of matches returned by
             :meth:`~sift_matcher.sift_flann_match` required for the image pair to
             be considered as containing the same slide. Defaults to 33.
         min_area_percent (float, optional): Percentage of the area of the train image (images
-            belonging to the 'presenter_slide' category) that a matched slide must take up to 
-            be counted as a legitimate duplicate slide. This removes incorrect matches that 
+            belonging to the 'presenter_slide' category) that a matched slide must take up to
+            be counted as a legitimate duplicate slide. This removes incorrect matches that
             can result in crops to small portions of the train image. Defaults to 0.37.
-        do_motion_detection (bool, optional): Whether motion detection using 
-            :meth:`~sift_matcher.does_camera_move_all_in_folder` should be performed. 
-            If set to False then it is assumed that there is movement since assuming no 
-            movement leaves room for a lot of false positives. If no camera motion is detected 
-            and this option is enabled then all slides that are unique to the "presenter_slide" 
-            category (they have no matches in the "slide" category) will automatically be 
-            cropped to contain just the slide. They will be saved to the originating folder but 
-            with the string defined by the variable ``OUTPUT_PATH_MODIFIER`` in their filename. 
-            Even if :meth:`~sift_matcher.does_camera_move_all_in_folder` detects no movement it is 
-            still possible that movement is detected while running this function since a check is 
-            performed to make sure all slide bounding boxes found contain 80% overlapping area with 
+        do_motion_detection (bool, optional): Whether motion detection using
+            :meth:`~sift_matcher.does_camera_move_all_in_folder` should be performed.
+            If set to False then it is assumed that there is movement since assuming no
+            movement leaves room for a lot of false positives. If no camera motion is detected
+            and this option is enabled then all slides that are unique to the "presenter_slide"
+            category (they have no matches in the "slide" category) will automatically be
+            cropped to contain just the slide. They will be saved to the originating folder but
+            with the string defined by the variable ``OUTPUT_PATH_MODIFIER`` in their filename.
+            Even if :meth:`~sift_matcher.does_camera_move_all_in_folder` detects no movement it is
+            still possible that movement is detected while running this function since a check is
+            performed to make sure all slide bounding boxes found contain 80% overlapping area with
             all previously found bounding boxes. Defaults to True.
 
     Returns:
-        tuple: (non_unique_presenter_slides, transformed_image_paths) 
-        ``non_unique_presenter_slides``: The images in the  "presenter_slide" category that are 
-        not unique and should be deleted 
-        ``transformed_image_paths``: The paths to the cropped images if `do_motion_detection` 
+        tuple: (non_unique_presenter_slides, transformed_image_paths)
+        ``non_unique_presenter_slides``: The images in the  "presenter_slide" category that are
+        not unique and should be deleted
+        ``transformed_image_paths``: The paths to the cropped images if `do_motion_detection`
         was enabled and no motion was detected.
     """
     if do_motion_detection:
@@ -432,7 +430,7 @@ def match_features(
     # The regex selects the number between an underscore and an underscore
     # or a period. This will match filenames like "IJquEYhiq_U-img_050_noborder.jpg"
     # and "IJquEYhiq_U-img_140.jpg".
-    regex_sort = lambda o: frame_number_from_filename(o[0])
+    regex_sort = lambda o: frame_number_from_filename(o[0])  # noqa: E731
     images = sorted(images, key=regex_sort)
 
     non_unique_presenter_slides = []
@@ -456,9 +454,9 @@ def match_features(
                 logger.info(
                     "Removing %s from and adding %s to the current batch of non unique presenter slides",
                     frame_with_most_content,
-                    query_image_path,
+                    query_image_path,  # noqa: F821
                 )
-                non_unique_presenter_slides.append(query_image_path)
+                non_unique_presenter_slides.append(query_image_path)  # noqa: F821
                 current_batch_non_unique_presenter_slides.remove(
                     frame_with_most_content
                 )
@@ -511,8 +509,6 @@ def match_features(
             sift_outputs = sift_flann_match(query_image, train_image)
 
             sift_matches = sift_outputs[0]
-            kp1 = sift_outputs[1]
-            kp2 = sift_outputs[2]
             print("Matches " + str(len(sift_matches)))
             # ransac_transform(*sift_outputs, draw_matches=True)
             if len(sift_matches) > min_match_count:  # Images contain the same slide
@@ -610,7 +606,7 @@ def match_features(
             x for x in presenter_slide_images if x not in non_unique_presenter_slides
         ]
         for image in presenter_slide_images:
-            file_parse = os.path.splitext(str(image_path))
+            file_parse = os.path.splitext(str(image))
             filename = file_parse[0]
             ext = file_parse[1]
             output_path = filename + OUTPUT_PATH_MODIFIER + ext

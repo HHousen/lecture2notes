@@ -1,21 +1,23 @@
+import logging
 import os
 import shutil
-import logging
+from pathlib import Path
+
+from PIL import Image
+
 # import statistics
 from scipy import spatial
-from .helpers import make_dir_if_not_exist
-from pathlib import Path
-from PIL import Image
 from tqdm import tqdm
 
 from ..models.slide_classifier import inference
+from .helpers import make_dir_if_not_exist
 
 logger = logging.getLogger(__name__)
 
 
 class SegmentCluster:
     """Iterates through frames in order and splits based on large visual differences
-        (measured by the cosine difference between the feature vectors from the slide classifier)"""
+    (measured by the cosine difference between the feature vectors from the slide classifier)"""
 
     def __init__(self, slides_dir, model_path="model_best.ckpt"):
         self.slides_dir = Path(slides_dir)
@@ -36,7 +38,8 @@ class SegmentCluster:
         ):
             current_slide_path = os.path.join(self.slides_dir, slide)
             _, _, _, extracted_features = inference.get_prediction(
-                self.model, Image.open(current_slide_path),
+                self.model,
+                Image.open(current_slide_path),
             )
             all_features.append(extracted_features)
 

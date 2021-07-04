@@ -1,16 +1,17 @@
-import os
-from tqdm import tqdm
 import logging
-import numpy as np
-import cv2
 import math
-from pythonRLSA import rlsa
-from PIL import Image, ImageStat
-from imutils import auto_canny
-from skimage.measure.entropy import shannon_entropy
-from .text_detection import get_text_bounding_boxes, load_east
-from .helpers import frame_number_filename_mapping
+import os
 
+import cv2
+import numpy as np
+from imutils import auto_canny
+from PIL import Image, ImageStat
+from pythonRLSA import rlsa
+from skimage.measure.entropy import shannon_entropy
+from tqdm import tqdm
+
+from .helpers import frame_number_filename_mapping
+from .text_detection import get_text_bounding_boxes, load_east
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +36,11 @@ def detect_color_image(image, thumb_size=40, MSE_cutoff=22, adjust_color_bias=Tr
 
     Args:
         image (np.array): Input image
-        thumb_size (int, optional): Resize image to this size to speed up calculation. 
+        thumb_size (int, optional): Resize image to this size to speed up calculation.
             Defaults to 40.
-        MSE_cutoff (int, optional): A larger value requires more color for an image to be 
+        MSE_cutoff (int, optional): A larger value requires more color for an image to be
             labeled as "color". Defaults to 22.
-        adjust_color_bias (bool, optional): Mean color bias adjustment, which improves the 
+        adjust_color_bias (bool, optional): Mean color bias adjustment, which improves the
             prediction. Defaults to True.
 
     Returns:
@@ -84,7 +85,7 @@ def detect_figures(
     image_path,
     output_path=None,
     east="frozen_east_text_detection.pb",
-    text_area_overlap_threshold=0.32, #  0.15
+    text_area_overlap_threshold=0.32,  # 0.15
     figure_max_area_percentage=0.60,
     text_max_area_percentage=0.30,
     large_box_detection=True,
@@ -98,48 +99,48 @@ def detect_figures(
 
     Args:
         image_path (str): Path to the image to process.
-        output_path (str, optional): Path to save the figures. Defaults to 
+        output_path (str, optional): Path to save the figures. Defaults to
             ``[filename]_figure_[index].[ext]``.
-        east (str or cv2.dnn_Net, optional): Path to the EAST model file or the pre-trained 
-            EAST model loaded with :meth:`~text_detection.load_east`. ``do_text_check`` must 
+        east (str or cv2.dnn_Net, optional): Path to the EAST model file or the pre-trained
+            EAST model loaded with :meth:`~text_detection.load_east`. ``do_text_check`` must
             be true for this option to take effect. Defaults to "frozen_east_text_detection.pb".
-        text_area_overlap_threshold (float, optional): The percentage of the figure that 
-            can contain text. If the area of the text in the figure is greater than this 
-            value, the figure is discarded. ``do_text_check`` must be true for this option 
+        text_area_overlap_threshold (float, optional): The percentage of the figure that
+            can contain text. If the area of the text in the figure is greater than this
+            value, the figure is discarded. ``do_text_check`` must be true for this option
             to take effect. Defaults to 0.10.
-        figure_max_area_percentage (float, optional): The maximum percentage of the area of the 
-            original image that a figure can take up. If the figure uses more area than 
-            ``original_image_area*figure_max_area_percentage`` then the figure will be discarded. 
+        figure_max_area_percentage (float, optional): The maximum percentage of the area of the
+            original image that a figure can take up. If the figure uses more area than
+            ``original_image_area*figure_max_area_percentage`` then the figure will be discarded.
             Defaults to 0.70.
-        text_max_area_percentage (float, optional): The maximum percentage of the area of the 
-            original image that a block of text (as identified by the EAST model) can take up. 
-            If the text block uses more area than ``original_image_area*text_max_area_percentage`` 
-            then that text block will be ignored. ``do_text_check`` must be true for this option 
+        text_max_area_percentage (float, optional): The maximum percentage of the area of the
+            original image that a block of text (as identified by the EAST model) can take up.
+            If the text block uses more area than ``original_image_area*text_max_area_percentage``
+            then that text block will be ignored. ``do_text_check`` must be true for this option
             to take effect. Defaults to 0.30.
-        large_box_detection (bool, optional): Detect edges and classify large rectangles as 
-            figures. This will ignore `do_color_check` and 
+        large_box_detection (bool, optional): Detect edges and classify large rectangles as
+            figures. This will ignore `do_color_check` and
             `do_text_check`. This is useful for finding tables for example. Defaults to True.
-        do_color_check (bool, optional): Check that potential figures contain color. This 
-            helps to remove large quantities of black and white text form the potential 
+        do_color_check (bool, optional): Check that potential figures contain color. This
+            helps to remove large quantities of black and white text form the potential
             figure list. Defaults to True.
-        do_text_check (bool, optional): Check that only `text_area_overlap_threshold` of 
-            potential figures contains text. This is useful to remove blocks of text that 
-            are mistakenly classified as figures. Checking for text increases processing 
+        do_text_check (bool, optional): Check that only `text_area_overlap_threshold` of
+            potential figures contains text. This is useful to remove blocks of text that
+            are mistakenly classified as figures. Checking for text increases processing
             time so be careful if processing a large number of files. Defaults to True.
         entropy_check (float, optional): Check that the entropy of all potential figures is above
-            this value. Figures with a ``shannon_entropy`` lower than this value will be removed. 
-            Set to ``False`` to disable this check. The ``shannon_entropy`` implementation is from 
-            ``skimage.measure.entropy``. IMPORTANT: This check applies to both the regular tests 
+            this value. Figures with a ``shannon_entropy`` lower than this value will be removed.
+            Set to ``False`` to disable this check. The ``shannon_entropy`` implementation is from
+            ``skimage.measure.entropy``. IMPORTANT: This check applies to both the regular tests
             *and* ``large_box_detection``, which most check do not apply to. Defaults to 3.5.
-        do_remove_subfigures (bool, optional): Check that there are no overlapping figures. 
-            If an overlapping figure is detected, the smaller figure will be deleted. This 
-            is useful to have enabled when using `large_box_detection` since 
+        do_remove_subfigures (bool, optional): Check that there are no overlapping figures.
+            If an overlapping figure is detected, the smaller figure will be deleted. This
+            is useful to have enabled when using `large_box_detection` since
             `large_box_detection` will commonly mistakenly detect subfigures. Defaults to True.
         do_rlsa (bool, optional): Use RLSA (Run Length Smoothing Algorithm) instead of dilation.
             Does not apply to `large_box_detection`. Defaults to False.
 
     Returns:
-        tuple: (figures, output_paths) A list of figures extracted from the input slide image 
+        tuple: (figures, output_paths) A list of figures extracted from the input slide image
         and a list of paths to those figures on disk.
     """
     image = cv2.imread(image_path)
@@ -193,8 +194,8 @@ def detect_figures(
 
     if do_rlsa:
         x, y = canny.shape
-        value = max(math.ceil(x/70),math.ceil(y/70))+20 # heuristic
-        rlsa_result = ~rlsa.rlsa(~canny, True, True, value) # rlsa application
+        value = max(math.ceil(x / 70), math.ceil(y / 70)) + 20  # heuristic
+        rlsa_result = ~rlsa.rlsa(~canny, True, True, value)  # rlsa application
         canny_dilated_large = rlsa_result
         # cv2.imwrite('rlsah.png', rlsa_result)
 
@@ -240,7 +241,7 @@ def detect_figures(
     output_paths = []
 
     if large_box_detection:
-        none_tested = True
+        # none_tested = True
         for contour in contours_small:
             perimeter = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.1 * perimeter, True)
@@ -255,7 +256,7 @@ def detect_figures(
                 # min_area_small = cv2.contourArea(approx)
                 figure_contour = approx[:, 0]
 
-        # if not none_tested:
+                # if not none_tested:
                 bounding_box = cv2.boundingRect(figure_contour)
                 x, y, w, h = bounding_box
                 figure = original[
@@ -273,7 +274,12 @@ def detect_figures(
             roi_rectangle = convert_coords_to_corners(box)
             # cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
             # cv2.imwrite("rect.png", image)
-            if y + h >= image_height or x + w >= image_width or y <= image_height or x <= image_width:
+            if (
+                y + h >= image_height
+                or x + w >= image_width
+                or y <= image_height
+                or x <= image_width
+            ):
                 potential_figure = original[y : y + h, x : x + w]
             else:
                 potential_figure = original[
@@ -293,10 +299,8 @@ def detect_figures(
 
             if do_text_check:
                 total_area_overlapped = sum(
-                    [
-                        area_of_overlapping_rectangles(roi_rectangle, text_rectangle)
-                        for text_rectangle in text_bounding_boxes
-                    ]
+                    area_of_overlapping_rectangles(roi_rectangle, text_rectangle)
+                    for text_rectangle in text_bounding_boxes
                 )
                 logger.debug("Total area overlapped by text: %i", total_area_overlapped)
                 text_overlap_under_threshold = (

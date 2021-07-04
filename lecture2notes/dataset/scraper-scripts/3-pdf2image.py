@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from tqdm import tqdm
 
 pdf_dir = Path("../slides/pdfs/")

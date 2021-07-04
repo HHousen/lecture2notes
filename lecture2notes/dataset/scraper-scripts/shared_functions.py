@@ -1,7 +1,8 @@
+import logging
 import os
 import sys
-import logging
 import traceback
+
 import youtube_dl
 
 # from io import StringIO
@@ -34,7 +35,7 @@ def download_video_yt(video_id, output_dir_yt, resolution=None):
     while tries < 3:
         try:
             ydl.download([video_id])
-        except youtube_dl.utils.DownloadError as e:
+        except youtube_dl.utils.DownloadError:
             tries += 1
             logger.info("Try Number " + str(tries))
             if tries == 3:

@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 import imagehash
 from PIL import Image
 from tqdm import tqdm
@@ -11,7 +12,7 @@ def get_hash_func(hashmethod="phash"):
     """
     Returns a hash function from the ``imagehash`` library.
 
-    Hash Methods: 
+    Hash Methods:
         * ahash: Average hash
         * phash: Perceptual hash
         * dhash: Difference hash
@@ -27,7 +28,7 @@ def get_hash_func(hashmethod="phash"):
     elif hashmethod == "whash-haar":
         hashfunc = imagehash.whash
     elif hashmethod == "whash-db4":
-        hashfunc = lambda img: imagehash.whash(img, mode="db4")
+        hashfunc = lambda img: imagehash.whash(img, mode="db4")  # noqa: E731
 
     return hashfunc
 
@@ -37,7 +38,7 @@ def sort_by_duplicates(img_dir, hash_func="phash"):
 
     Args:
         img_dir (str): path to folder containing images to scan for duplicates
-        hash_func (str, optional): the hash function to use as given by 
+        hash_func (str, optional): the hash function to use as given by
             :meth:`~imghash.get_hash_func`. Defaults to "phash".
 
     Returns:
@@ -71,7 +72,7 @@ def remove_duplicates(img_dir, images):
 
     Args:
         img_dir (str): path to directory containing image files
-        images (dict): dictionary in format {image hash: image filenames} 
+        images (dict): dictionary in format {image hash: image filenames}
             provided by :meth:`~imghash.sort_by_duplicates`.
     """
     logger.info("Removing duplicate frames/slides from disk")

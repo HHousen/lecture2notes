@@ -1,15 +1,16 @@
+import logging
 import os
 import shutil
-import logging
-from tqdm import tqdm
-from .helpers import make_dir_if_not_exist
 
-from ..models.slide_classifier.class_cluster_scikit import (
-    Cluster,
-)  # pylint: disable=import-error,wrong-import-position
-from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wrong-import-position,wildcard-import
-from ..models.slide_classifier import inference
 from PIL import Image
+from tqdm import tqdm
+
+from ..models.slide_classifier import inference
+from ..models.slide_classifier.class_cluster_scikit import (  # pylint: disable=import-error,wrong-import-position
+    Cluster,
+)
+from ..models.slide_classifier.custom_nnmodules import *  # noqa: F403,F401
+from .helpers import make_dir_if_not_exist
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class ClusterFilesystem(Cluster):
         preference=None,
         damping=0.5,
         max_iter=200,
-        model_path="model_best.ckpt"
+        model_path="model_best.ckpt",
     ):
         self.slides_dir = slides_dir
         self.model = inference.load_model(model_path)

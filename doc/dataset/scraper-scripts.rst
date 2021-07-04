@@ -19,7 +19,7 @@ Takes a video page link, video download link, and video published date and then 
     .. code-block:: bash
 
         python 1-website_scraper.py <date> <page_link> <video_download_link> <description (optional)>
-    
+
     * ``<date>`` is the date the lecture was published
     * ``<page_link>`` is the link to the webpage where the video can be found
     * ``<video_download_link>`` is the direct link to the video
@@ -84,7 +84,7 @@ Takes a video id or channel id from YouTube, extracts important information usin
 * Examples
     * Add a single lecture video to the dataset:
         .. code-block:: bash
-        
+
             python 1-youtube_scraper.py video 63hAHbkzJG4
     * Get the transcript for a video file:
         .. code-block:: bash
@@ -131,7 +131,7 @@ The *Mass Data Collector* does the following for each video in ``dataset/mass-do
     2. Extracts frames
     3. Classifies the frames to obtain certainties and the percent incorrect (where certainty is below a threshold)
     4. Adds ``video_id``, ``average_certainty``, ``num_incorrect``, ``percent_incorrect``, and ``certainties`` to ``dataset/mass-download-results.csv``
-    5. Deletes video folder (``dataset/mass-download-temp/[video_id]``) 
+    5. Deletes video folder (``dataset/mass-download-temp/[video_id]``)
 
 The ``--top-k`` (or ``-k``) argument can be specified to the script add the top ``k`` most uncertain videos to the ``dataset/videos-dataset.csv``. This must be ran after the ``dataset/mass-download-results.csv`` file has been populated.
 
@@ -146,7 +146,7 @@ Examples:
     The below commands do the following:
 
     1. Scrape the `MIT OpenCourseWare <https://www.youtube.com/channel/UCEBb1b_L6zDS3xTUrIALZOw>`_ YouTube channel for the latest 100 videos that are longer than 20 minutes and save the data to ``../mass-download-list.csv``
-        
+
         * Optionally, only find videos in a date range. To do this you need to specify the ``--params`` argument like so: ``--params '{"publishedBefore": "2014-07-01T00:00:00Z", "publishedAfter": "2014-01-01T00:00:00Z"}'``. The full list of available parameters can be found in the `YouTube API Documentation for search.list <https://developers.google.com/youtube/v3/docs/search/list>`_ if  mode is ``channel`` and `YouTube API Documentation for videos.list <https://developers.google.com/youtube/v3/docs/videos/list>`_ if mode is ``video``.
 
     2. Run the *Mass Data Collector* to download each video at 480p and determine how certain the model is with its predictions on that video.
@@ -169,12 +169,12 @@ Examples:
     **Recommended** if you want to build the dataset at full 1080p resolution but do not want to "waste" compute resources on duplicate calculations.
 
     Specifying the ``--no_remove`` argument to ``2-mass_data_collector.py`` will make the script keep the processed videos instead of removing them. This means the videos can be copied to the ``dataset/videos`` folder, manually inspected and fixed, and then :ref:`ss_compile_data` can be used to copy them to the ``dataset/classifier-data`` folder.
-    
+
     It is recommended to not set the ``--resolution`` if using this method because some of the downloaded videos will eventually be added to the dataset. **The dataset is compiled at maximum resolution so that different models can be used that accept different resolutions.**
 
 3. Lower Disk Space Usage, Low Bandwidth, Duplicate Calculations, Small Dataset Filesize
     **Recommended** if you want to build the dataset for a specific model architecture and if you want the dataset to take up a relatively small amount of disk space.
-    
+
     If you want to train a ``resnet34``, for example, which expects 224x224 input images, then you can set the resolution to 240p when downloading videos since the frames will be scaled before being used for training anyway. However, if you ever want to train a model that expects larger input images, you will have to download and reprocess the entire dataset.
 
     The modified commands look like this:
@@ -187,7 +187,7 @@ Examples:
         python 2-video_downloader.py csv --resolution 240
         python 3-frame_extractor.py auto
         python 4-auto_sort.py
-    
+
     Notice that the resolution was changed to 240 for the second command and the resolution option was added to the fourth command.
 
     This option can be modified as described in the second method by adding the ``--no_remove`` argument to ``2-mass_data_collector.py``. This will increase disk usage but will prevent duplicate calculations and decrease overall bandwidth since videos will not have to be redownloaded.
@@ -324,7 +324,7 @@ There are three options:
 2. ``make_compiled`` performs the same task as ``make`` but reads from the ``dataset/classifier-data`` directory. This is useful if the dataset has been compiled and the ``dataset/videos`` folder has been cleared.
 3. ``sort``: sort each file in ``dataset/sort_file_map.csv``, moving the respective frame from ``video_id/frames`` to ``video_id/frames_sorted/category``.
 
-.. note:: This script appends to ``dataset/sort_file_map.csv``. It will not overwrite data. 
+.. note:: This script appends to ``dataset/sort_file_map.csv``. It will not overwrite data.
 
 * Command: ``python 4-sort_from_file.py <make/make_compiled/sort>``
 

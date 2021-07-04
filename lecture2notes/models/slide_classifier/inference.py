@@ -1,11 +1,12 @@
 import sys
+
 import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
-from .slide_classifier_pytorch import SlideClassifier
 
-from .custom_nnmodules import *
+from .custom_nnmodules import *  # noqa: F401,F403
+from .slide_classifier_pytorch import SlideClassifier
 
 
 def initialize_model(arch, num_classes):

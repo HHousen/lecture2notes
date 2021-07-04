@@ -1,16 +1,16 @@
+import argparse
+import logging
 import os
 import re
-import sys
 import shutil
-import logging
-import argparse
+import sys
 import traceback
-import youtube_dl
 from pathlib import Path
-from tqdm import tqdm
 from timeit import default_timer as timer
 
 import jiwer
+import youtube_dl
+from tqdm import tqdm
 
 from ..end_to_end.transcribe import transcribe_main as transcribe
 
@@ -42,13 +42,13 @@ PARSER.add_argument(
     "--method",
     type=str,
     default=None,
-    help="Method to use to transcribe. Any method allowed by `transcribe.transcribe_audio()` will work. Defaults to 'deepspeech'."
+    help="Method to use to transcribe. Any method allowed by `transcribe.transcribe_audio()` will work. Defaults to 'deepspeech'.",
 )
 PARSER.add_argument(
     "--audio_format",
     type=str,
     default="wav",
-    help="The format to convert downloaded audio to. Raw WAV is required for most recognizers."
+    help="The format to convert downloaded audio to. Raw WAV is required for most recognizers.",
 )
 PARSER.add_argument(
     "--suffix",
@@ -104,11 +104,11 @@ if ARGS.mode == "transcribe":
     model = None
     if ARGS.method == "deepspeech":
         model = transcribe.load_deepspeech_model(ARGS.model_dir)
-        desired_sample_rate = ds_model.sampleRate()
+        desired_sample_rate = model.sampleRate()
     elif ARGS.method == "vosk":
         model = transcribe.load_vosk_model(ARGS.model_dir)
         desired_sample_rate = 16000
-    
+
     for transcript in tqdm(transcripts, desc="Transcribing"):
         video_id = transcript.split(".")[0]
         transcript_ml_path = TRANSCRIPTS_DIR / (transcript[:-4] + ARGS.suffix + ".txt")
@@ -203,7 +203,9 @@ elif ARGS.mode == "calc":
             truth_transform=transformation,
             hypothesis_transform=transformation,
         )
-        measures["token_count_ground_truth"] = len(transformation(transcript_ground_truth))
+        measures["token_count_ground_truth"] = len(
+            transformation(transcript_ground_truth)
+        )
         measures["token_count_prediction"] = len(transformation(transcript_prediction))
 
         transcripts_tqdm.write(
@@ -222,14 +224,20 @@ elif ARGS.mode == "calc":
         errors.append(measures)
 
     num_errors = len(errors)
-    average_wer = sum([x["wer"] for x in errors]) / num_errors
-    average_mer = sum([x["mer"] for x in errors]) / num_errors
-    average_wil = sum([x["wil"] for x in errors]) / num_errors
-    average_token_count_ground_truth = sum([x["token_count_ground_truth"] for x in errors]) / num_errors
-    average_token_count_prediction = sum([x["token_count_prediction"] for x in errors]) / num_errors
+    average_wer = sum(x["wer"] for x in errors) / num_errors
+    average_mer = sum(x["mer"] for x in errors) / num_errors
+    average_wil = sum(x["wil"] for x in errors) / num_errors
+    average_token_count_ground_truth = (
+        sum(x["token_count_ground_truth"] for x in errors) / num_errors
+    )
+    average_token_count_prediction = (
+        sum(x["token_count_prediction"] for x in errors) / num_errors
+    )
 
     logger.info("Average WER: " + str(average_wer))
     logger.info("Average MER: " + str(average_mer))
     logger.info("Average WIL: " + str(average_wil))
-    logger.info("Average # Ground Truth Tokens: " + str(average_token_count_ground_truth))
+    logger.info(
+        "Average # Ground Truth Tokens: " + str(average_token_count_ground_truth)
+    )
     logger.info("Average # Prediction Tokens: " + str(average_token_count_prediction))

@@ -1,24 +1,24 @@
+import argparse
+import os
 import shutil
 import sys
-import os
-import pandas as pd
 from pathlib import Path
-from tqdm import tqdm
-import argparse
 
-from shared_functions import download_video
-from shared_functions import get_sec, get_length, get_extract_every_x_seconds
+import pandas as pd
+from shared_functions import (
+    download_video,
+    get_extract_every_x_seconds,
+    get_length,
+    get_sec,
+)
+from tqdm import tqdm
 
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], "../../End-To-End"))
 # Even hackier hack to allow imported scripts to import from "models/slide_classifier" directory
 sys.path.insert(1, os.path.join(sys.path[0], "../../models/slide_classifier"))
-from frames_extractor import (
-    extract_frames,
-)  # pylint: disable=import-error,wrong-import-position
-from slide_classifier import (
-    classify_frames,
-)  # pylint: disable=import-error,wrong-import-position
+from frames_extractor import extract_frames  # noqa: E402
+from slide_classifier import classify_frames  # noqa: E402
 
 parser = argparse.ArgumentParser(description="Mass Data Collector")
 parser.add_argument(
@@ -33,8 +33,8 @@ parser.add_argument(
     "-nr",
     "--no_remove",
     action="store_true",
-    help="""Don't remove the videos after they have been processed. This makes it 
-                    faster to manually look through the most uncertain videos since they don't have 
+    help="""Don't remove the videos after they have been processed. This makes it
+                    faster to manually look through the most uncertain videos since they don't have
                     to be redownloaded, but it will use more disk space.""",
 )
 parser.add_argument(
@@ -170,7 +170,9 @@ def add_top_k(k=10, remove=True):
         total=len(most_uncertain_k.index),
         desc="Processing Videos",
     ):
-        row_to_add = DOWNLOAD_DF.loc[DOWNLOAD_DF["video_id"] == row["video_id"]].squeeze()
+        row_to_add = DOWNLOAD_DF.loc[
+            DOWNLOAD_DF["video_id"] == row["video_id"]
+        ].squeeze()
         if not row_to_add.empty:
             row_to_add["downloaded"] = False
             VIDEOS_DATASET_DF.loc[len(VIDEOS_DATASET_DF.index)] = row_to_add

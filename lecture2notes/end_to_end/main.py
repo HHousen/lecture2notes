@@ -2,11 +2,11 @@
 
 import argparse
 import logging
+
+from ..models.slide_classifier.custom_nnmodules import *  # noqa: F403,F401
 from .summarizer_class import LectureSummarizer
 
 logger = logging.getLogger(__name__)
-
-from ..models.slide_classifier.custom_nnmodules import *  # pylint: disable=import-error,wildcard-import,wrong-import-position
 
 
 def main(ARGS):
@@ -154,8 +154,8 @@ if __name__ == "__main__":
         "--summarization_structured",
         default="structured_joined",
         choices=["structured_joined", "none"],
-        help="""An additional summarization algorithm that creates a structured summary with 
-                figures, slide content (with bolded area), and summarized transcript content 
+        help="""An additional summarization algorithm that creates a structured summary with
+                figures, slide content (with bolded area), and summarized transcript content
                 from the SSA (Slide Structure Analysis) and transcript JSON data.""",
     )
     PARSER.add_argument(
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         "--transcription_method",
         default="vosk",
         choices=["sphinx", "google", "youtube", "deepspeech", "vosk", "wav2vec"],
-        help="""specify the program that should be used for transcription. 
+        help="""specify the program that should be used for transcription.
                         CMU Sphinx: use pocketsphinx
                         Google Speech Recognition: probably will require chunking (online, free, max 1 minute chunks)
                         YouTube: download a video transcript from YouTube based on `--video_id`

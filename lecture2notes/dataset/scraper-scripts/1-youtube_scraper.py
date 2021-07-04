@@ -1,18 +1,15 @@
+import argparse
+import json
 import os
 import sys
 from pathlib import Path
-import argparse
-import json
-import pandas as pd
+
 import isodate
+import pandas as pd
 
 sys.path.insert(1, os.path.join(sys.path[0], "../../End-To-End"))
-from youtube_api import (
-    init_youtube,
-)  # pylint: disable=import-error,wrong-import-position
-from transcript_downloader import (
-    TranscriptDownloader,
-)  # pylint: disable=import-error,wrong-import-position
+from transcript_downloader import TranscriptDownloader  # noqa: E402
+from youtube_api import init_youtube  # noqa: E402
 
 PARSER = argparse.ArgumentParser(description="YouTube Scraper")
 PARSER.add_argument(
@@ -100,7 +97,7 @@ else:
 def get_youtube_results(
     youtube, page="", channel=None, video_id=None, parts="snippet", order="date"
 ):
-    """ Retrieves results from YouTube Data API """
+    """Retrieves results from YouTube Data API"""
     if video_id is not None:
         request = youtube.videos().list(part=parts, id=video_id)
     else:

@@ -1,10 +1,11 @@
 import os
-import sys
 import shutil
+import sys
 from pathlib import Path
-from termcolor import colored
+
 import pandas as pd
 from PIL import Image
+from termcolor import colored
 
 videos_dir = Path("../videos")
 sorted_videos_list = []
@@ -12,8 +13,8 @@ csv_path = Path("../to-be-sorted.csv")
 
 # Hack to import modules from different parent directory
 sys.path.insert(1, os.path.join(sys.path[0], "../../models/slide_classifier"))
-from custom_nnmodules import *  # pylint: disable=import-error,wildcard-import
-from inference import *  # pylint: disable=import-error,wildcard-import
+from custom_nnmodules import *  # noqa: F403,E402,F401
+from inference import get_prediction, load_model  # noqa: E402
 
 MODEL = load_model()
 

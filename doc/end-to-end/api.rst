@@ -11,88 +11,88 @@ Transcribe
 transcribe_main
 ^^^^^^^^^^^^^^^
 
-    .. automodule:: transcribe.transcribe_main
+    .. automodule:: lecture2notes.end_to_end.transcribe.transcribe_main
 
 webrtcvad_utils
 ^^^^^^^^^^^^^^^
 
-    .. automodule:: transcribe.webrtcvad_utils
+    .. automodule:: lecture2notes.end_to_end.transcribe.webrtcvad_utils
 
 mic_vad_streaming
 ^^^^^^^^^^^^^^^^^
 
-    .. automodule:: transcribe.mic_vad_streaming
+    .. automodule:: lecture2notes.end_to_end.transcribe.mic_vad_streaming
 
 Cluster
 -------
 
-    .. automodule:: cluster
+    .. automodule:: lecture2notes.end_to_end.cluster
 
 .. _e2e_api_corner_crop_transform:
 
 Corner Crop Transform
 ---------------------
 
-    .. automodule:: corner_crop_transform
+    .. automodule:: lecture2notes.end_to_end.corner_crop_transform
 
 Text Detection
 --------------
 
-    .. automodule:: text_detection
+    .. automodule:: lecture2notes.end_to_end.text_detection
 
 Figure Detection
 ----------------
 
-    .. automodule:: figure_detection
+    .. automodule:: lecture2notes.end_to_end.figure_detection
 
 Frames Extractor
 ----------------
 
-    .. automodule:: frames_extractor
+    .. automodule:: lecture2notes.end_to_end.frames_extractor
 
 .. _e2e_api_helpers:
 
 Helpers
 -------
 
-    .. automodule:: helpers
+    .. automodule:: lecture2notes.end_to_end.helpers
 
 Image Hash
 ----------
 
-    .. automodule:: imghash
+    .. automodule:: lecture2notes.end_to_end.imghash
 
 OCR
 ---
 
-    .. automodule:: ocr
+    .. automodule:: lecture2notes.end_to_end.ocr
 
 Segment Cluster
 ---------------
 
-    .. automodule:: segment_cluster
+    .. automodule:: lecture2notes.end_to_end.segment_cluster
 
 Slide Classifier
 ----------------
 
-    .. automodule:: slide_classifier
+    .. automodule:: lecture2notes.end_to_end.slide_classifier
 
 Spell Check
 -----------
 
-    .. automodule:: spell_check
+    .. automodule:: lecture2notes.end_to_end.spell_check
 
 Summarization Approaches
 ------------------------
 
-    .. automodule:: summarization_approaches
+    .. automodule:: lecture2notes.end_to_end.summarization_approaches
 
 Transcript Downloader
 ---------------------
 
-    .. automodule:: transcript_downloader
+    .. automodule:: lecture2notes.end_to_end.transcript_downloader
 
 YouTube API
 -----------
 
-    .. automodule:: youtube_api
+    .. automodule:: lecture2notes.end_to_end.youtube_api

@@ -1,48 +1,46 @@
-import os
-import json
 import glob
+import json
 import logging
+import os
 from argparse import Namespace
-from shutil import rmtree
 from functools import wraps
 from pathlib import Path
-from .helpers import *
+from shutil import rmtree
 from timeit import default_timer as timer
-from .spell_check import SpellChecker
-from .summarization_approaches import (
-    full_sents,
-    keyword_based_ext,
-    get_complete_sentences,
-    generic_abstractive,
-    cluster,
-    generic_extractive_sumy,
-    structured_joined_sum,
-)
 
-# Step extract frames imports
-from .frames_extractor import extract_frames
-
-# Step classify slides imports
-from .slide_classifier import classify_frames
-
-# Step black border removal imports
-from . import imghash
-from . import border_removal
-from .helpers import frame_number_from_filename
-
+# Step extract figures imports
+# Step slide structure analysis imports
 # Step perspective crop imports
-from . import sift_matcher
-from . import corner_crop_transform
+# Step black border removal imports
+from . import (
+    border_removal,
+    corner_crop_transform,
+    figure_detection,
+    imghash,
+    sift_matcher,
+    slide_structure_analysis,
+)
 
 # Step cluster slides imports
 from .cluster import ClusterFilesystem
+
+# Step extract frames imports
+from .frames_extractor import extract_frames
+from .helpers import copy_all, frame_number_from_filename, gen_unique_id
 from .segment_cluster import SegmentCluster
 
-# Step slide structure analysis imports
-from . import slide_structure_analysis
-
-# Step extract figures imports
-from . import figure_detection
+# Step classify slides imports
+from .slide_classifier import classify_frames
+from .spell_check import SpellChecker
+from .summarization_approaches import (
+    cluster,
+    full_sents,
+    generic_abstractive,
+    generic_extractive_sumy,
+    get_complete_sentences,
+    keyword_based_ext,
+    structured_joined_sum,
+)
 
 # Step transcribe audio imports
 from .transcribe import transcribe_main as transcribe
@@ -443,24 +441,33 @@ class LectureSummarizer:
         custom_transcription_failed = False
 
         if self.params.custom_transcript_check:
-            identified_files = glob.glob(str(self.root_process_folder / self.params.custom_transcript_check) + ".*")
+            identified_files = glob.glob(
+                str(self.root_process_folder / self.params.custom_transcript_check)
+                + ".*"
+            )
             if identified_files:
                 transcript_path = identified_files[0]
-                transcript, transcript_json = transcribe.caption_file_to_string(transcript_path)
+                transcript, transcript_json = transcribe.caption_file_to_string(
+                    transcript_path
+                )
                 if transcript is None:
                     custom_transcription_failed = True
             else:
                 custom_transcription_failed = True
-        
-        if (not self.params.custom_transcript_check) or (self.params.custom_transcript_check and custom_transcription_failed):
+
+        if (not self.params.custom_transcript_check) or (
+            self.params.custom_transcript_check and custom_transcription_failed
+        ):
             if self.params.transcription_method == "youtube":
                 yt_output_file = self.root_process_folder / "audio.vtt"
                 try:
                     transcript_path = transcribe.get_youtube_transcript(
                         self.params.video_id, yt_output_file
                     )
-                    transcript, transcript_json = transcribe.caption_file_to_string(transcript_path)
-                except:
+                    transcript, transcript_json = transcribe.caption_file_to_string(
+                        transcript_path
+                    )
+                except Exception:
                     yt_transcription_failed = True
                     self.params.transcription_method = self.transcription_method_default
                     logger.error(
@@ -523,7 +530,7 @@ class LectureSummarizer:
                                 transcript, transcript_json
                             )
 
-                except Exception as e:
+                except Exception:
                     logger.error(
                         "Audio transcription failed. Retry by running this script with the skip_to parameter set to 6."
                     )

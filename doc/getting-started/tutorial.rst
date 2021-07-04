@@ -29,7 +29,7 @@ Summarizing a lecture video on YouTube
         cd End-To-End
         python main.py --auto_id --remove_duplicates --deepspeech_model_dir ../deepspeech-models/ --transcription_method youtube --video_id <video id from youtube> <path to video>
 
-The only differences from :ref:`tutorial_general_summarize` are the addition of ``--transcription_method youtube`` and ``--video_id <video id from youtube>``. 
+The only differences from :ref:`tutorial_general_summarize` are the addition of ``--transcription_method youtube`` and ``--video_id <video id from youtube>``.
 
 * ``--transcription_method youtube`` makes the script attempt to download the transcript of the video directly from YouTube. This only works when the video has manually attached captions on YouTube. Videos with automatically generated captions from YouTube will still be processed locally using DeepSpeech by default. This is why the ``--deepspeech_model_dir`` argument is still specified.
 * ``--video_id <video id from youtube>`` tells the script which video from youtube to download the captions from. ``<video id from youtube>`` should be set to the id of the video. The id is the part after the ``?v=`` in the url up to (and not including) the ``&`` or if no ``&`` then until the end of the url (if the video link is ``https://www.youtube.com/watch?v=dQw4w9WgXcQ`` then the id is ``dQw4w9WgXcQ``).

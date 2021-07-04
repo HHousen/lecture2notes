@@ -2,10 +2,11 @@
 # that has been converted to functions and has some additions.
 
 import logging
-from imutils.object_detection import non_max_suppression
-import numpy as np
 import time
+
 import cv2
+import numpy as np
+from imutils.object_detection import non_max_suppression
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def load_east(east_path="frozen_east_text_detection.pb"):
     """Load the pre-trained EAST model.
 
     Args:
-        east_path (str, optional): Path to the EAST model file. Defaults to 
+        east_path (str, optional): Path to the EAST model file. Defaults to
             "frozen_east_text_detection.pb".
     """
     if type(east_path) is cv2.dnn_Net:
@@ -44,7 +45,6 @@ def get_text_bounding_boxes(
         net = load_east(net)
 
     # load the input image and grab the image dimensions
-    orig = image.copy()
     (H, W) = image.shape[:2]
 
     # set the new width and height and then determine the ratio in change

@@ -1,10 +1,13 @@
-import os
 import logging
-import numpy as np
-from sklearn.cluster import KMeans, AffinityPropagation
-from sklearn.metrics import pairwise_distances_argmin_min
+import os
+from collections import OrderedDict
+
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
 from PIL import Image
+from sklearn.cluster import AffinityPropagation, KMeans
+from sklearn.metrics import pairwise_distances_argmin_min
 
 from . import inference
 
@@ -13,8 +16,6 @@ logger = logging.getLogger(__name__)
 if os.environ.get("DISPLAY", "") == "":
     logger.debug("No display found. Using non-interactive Agg backend")
     mpl.use("Agg")
-import matplotlib.pyplot as plt
-from collections import OrderedDict
 
 
 class Cluster:
@@ -138,8 +139,8 @@ class Cluster:
 
     def get_closest_sample_filenames_to_centroids(self):
         """
-        Return the sample indexes that are closest to each centroid. 
-        Ex: If [0,8] is returned then X[0] (X is training data/vectors) is the closest 
+        Return the sample indexes that are closest to each centroid.
+        Ex: If [0,8] is returned then X[0] (X is training data/vectors) is the closest
         point in X to centroid 0 and X[8] is the closest to centroid 1
         """
         if self.closest_filenames is not None:

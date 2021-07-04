@@ -1,11 +1,12 @@
 import os
-import googleapiclient.discovery
+
 import google_auth_oauthlib.flow
+import googleapiclient.discovery
 import googleapiclient.errors
 
 
 def init_youtube(oauth=False):
-    """Initialize the YouTube API. 
+    """Initialize the YouTube API.
     If ``oauth`` then use the oauth ``client_secret.json`` located in the current directory, otherwise use the ``YT_API_KEY`` environment variable.
     """
     # Disable OAuthlib's HTTPS verification when running locally.

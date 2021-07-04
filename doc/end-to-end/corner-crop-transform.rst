@@ -21,19 +21,19 @@ The file can be run as a script in order to try the image processing pipeline on
 Recommended Command:
 
 .. code-block:: bash
-    
+
     python corner_crop_transform.py folder ../presenter_slide/ --debug_mode --debug_gif --debug_path ../debug_imgs
 
 The above command processes all files in the ``../presenter_slide/`` folder. The ``--debug_mode`` argument allows the usage of ``--debug_gif`` and ``--debug_path``. ``--debug_gif`` will save a gif of each step of the pipeline with a 1.4s delay to ``--debug_path``. ``--debug_imgs`` can also be enabled to save each step of the pipeline as its own image (in higher quality than the GIF, the GIF only has 256 colors).
 
-Using ``--debug_mode`` will output a file in the present working directory named ``debug_crop_error_log.txt`` with the paths to all of the images that the pipeline thinks it failed with. 
+Using ``--debug_mode`` will output a file in the present working directory named ``debug_crop_error_log.txt`` with the paths to all of the images that the pipeline thinks it failed with.
 
 .. warning:: There may be other images that the script failed to process correctly. The ``debug_crop_error_log.txt`` file only contains the paths to images that did not meet the criteria to be perspective cropped. The reasoning behind why they didn't will likely lead to parameter tuning.
 
 You can also process a single file using the file as a script with the ``file`` mode:
 
 .. code-block:: bash
-    
+
     python corner_crop_transform.py file /path/to/image/file/0Q5IimX-AAc-img_067.jpg -d -di -dg
 
 Example Images
@@ -44,7 +44,7 @@ Example of ``contours`` mode failing and falling back to ``hough_lines``
 
 .. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_130_debug.gif
 
-Command used to create above image: 
+Command used to create above image:
 
 .. code-block:: bash
 
@@ -60,7 +60,7 @@ Example of ``contours`` mode succeeding
 
 .. image:: ../_static/corner_crop_transform/IJquEYhiq_U-img_068_debug.gif
 
-Command used to create above image: 
+Command used to create above image:
 
 .. code-block:: bash
 
@@ -106,4 +106,3 @@ Output of ``python corner_crop_transform.py --help``:
                             './debug_imgs')
     -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Set the logging level (default: 'Info').
-
