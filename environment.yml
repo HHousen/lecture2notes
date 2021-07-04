@@ -38,6 +38,7 @@ dependencies:
   - imageio
   - sphinx
   # - fairseq # for Semsim model import in DocSum BartSumSummarizer
+  - pre-commit
   - pip
   - pip: 
     - deepspeech-gpu
