@@ -1,7 +1,9 @@
 .. _corner_crop_transform:
 
-Corner Detection & Perspective Cropping
+Perspective Cropping & Corner Detection
 =======================================
+
+The corner crop transform algorithm has two steps. First, it will apply Ostu's threshold and extract contours from an edge map of the image. In the edge map, the algorithm attempts to find a large rectangle, which is the slide. This method is ineffective if there are any gaps or obstructions in the outline around the slide. So, if it fails to find the slide, the program will use the Hough Lines algorithm to find horizontal and vertical lines, then find the intersection points, and finally cluster those points using KMeans.
 
 The process this file executes is based on `this jupyter notebook <https://github.com/Breta01/handwriting-ocr/blob/master/notebooks/page_detection.ipynb>`_ and `this StackOverflow answer <https://stackoverflow.com/a/44454619>`_. The `opencv package <https://docs.opencv.org/4.3.0/index.html>`_ provides most of the low-level functions. See the :ref:`Corner Crop Transform API Documentation <e2e_api_corner_crop_transform>` for details regarding the functions.
 

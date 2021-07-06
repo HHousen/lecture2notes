@@ -398,7 +398,7 @@ def cluster(
     for more information since several sections of this function were borrowed from that example.
 
     Notes:
-        * ``**kwargs`` is passed to the feature extraction function, which is either :meth:`~summarization_approaches.extract_features_bow` or :meth:`summarization_approaches.extract_features_neural` depending on the ``feature_extraction`` argument.
+        * ``**kwargs`` is passed to the feature extraction function, which is either :meth:`~lecture2notes.end_to_end.summarization_approaches.extract_features_bow` or :meth:`~lecture2notes.end_to_end.summarization_approaches.extract_features_neural` depending on the ``feature_extraction`` argument.
 
     Arguments:
         text (str): a string of text to summarize
@@ -407,7 +407,7 @@ def cluster(
             this argument is available. If specified, it will sort the final cluster
             summaries by the specified string. Options are ``["order", "rating"]``. Defaults to None.
         cluster_summarizer (str, optional): Which summarization method to use to summarize each individual cluster.
-            "Extractive" uses the same approach as :meth:`~summarization_approaches.keyword_based_ext`
+            "Extractive" uses the same approach as :meth:`~lecture2notes.end_to_end.summarization_approaches.keyword_based_ext`
             but instead of using keywords from another document, the keywords are
             calculated in the ``TfidfVectorizer`` or ``HashingVectorizer``. Each keyword
             is a feature in the document-term matrix, thus the number of words to use
@@ -441,7 +441,7 @@ def cluster(
                     with larger models. However, if spacy is specified for `feature_selection`
                     than the `en_core_web_lg` model will be used to extract high-quality embeddings
             * ``bow``: bow = "bag of words". this method is extremely fast since it is based on
-                    word frequencies throughout the input text. The :meth:`~summarization_approaches.extract_features_bow`
+                    word frequencies throughout the input text. The :meth:`~lecture2notes.end_to_end.summarization_approaches.extract_features_bow`
                     function contains more details on recommended parameters that you can
                     pass to this function because of ``**kwargs``.
 
@@ -848,7 +848,7 @@ def structured_joined_sum(
             transcript content will continue to be added to the previous slide until the
             ``ending_char`` is reached. It is recommended to use  periods or a special end of
             sentence token if present. These can be generated with
-            :meth:`transcribe.transcribe_main.segment_sentences` Defaults to ``" "`` (nearest
+            :meth:`lecture2notes.end_to_end.transcribe.transcribe_main.segment_sentences` Defaults to ``" "`` (nearest
             complete word).
         first_slide_frame_num (int, optional): The frame number of the first slide. Used to create a
             'preface' (aka an introduction) if the first slide is not immediately shown. Defaults to 0.
@@ -865,8 +865,8 @@ def structured_joined_sum(
         hf_inference_api (bool, optional): Use the huggingface inference API for abstractive
             summarization. Defaults to False.
         ``*args`` and ``**kwargs`` are passed to the summarization function, which is either
-            :meth:`~summarization_approaches.generic_abstractive` or
-            :meth:`~summarization_approaches.generic_extractive_sumy` depending on
+            :meth:`~lecture2notes.end_to_end.summarization_approaches.generic_abstractive` or
+            :meth:`~lecture2notes.end_to_end.summarization_approaches.generic_extractive_sumy` depending on
             ``summarization_method``.
 
     Returns:

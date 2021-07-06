@@ -3,6 +3,11 @@
 E2E API
 =======
 
+Main Summarizer Class
+---------------------
+
+    .. automodule:: lecture2notes.end_to_end.summarizer_class
+
 .. _e2e_api_transcribe:
 
 Transcribe
@@ -72,10 +77,20 @@ Segment Cluster
 
     .. automodule:: lecture2notes.end_to_end.segment_cluster
 
+SIFT Matcher
+------------
+
+    .. automodule:: lecture2notes.end_to_end.sift_matcher
+
 Slide Classifier
 ----------------
 
     .. automodule:: lecture2notes.end_to_end.slide_classifier
+
+Slide Structure Analysis
+------------------------
+
+    .. automodule:: lecture2notes.end_to_end.slide_structure_analysis
 
 Spell Check
 -----------

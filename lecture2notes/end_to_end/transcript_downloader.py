@@ -101,7 +101,7 @@ class TranscriptDownloader:
 
         Args:
             caption_id (str): the id of the caption track to download
-            output_path (str): path to save the captions. file extensions are parsed by :meth:`~transcript_downloader.check_suffix`
+            output_path (str): path to save the captions. file extensions are parsed by :meth:`~lecture2notes.end_to_end.transcript_downloader.check_suffix`
 
         Returns:
             [str]: the path where the transcript was saved (may not be the same as the ``output_path`` parameter)
@@ -135,8 +135,8 @@ class TranscriptDownloader:
     def download(self, video_id, output_path):
         """
         Convenience function to download transcript with one call.
-        If ``self.ytdl`` is False, calls :meth:`~transcript_downloader.TranscriptDownloader.get_caption_id` and passes result to :meth:`~transcribe.transcript_downloader.TranscriptDownloader.get_transcript`.
-        If ``self.ytdl`` is True, calls :meth:`~transcript_downloader.TranscriptDownloader.get_transcript_ytdl`.
+        If ``self.ytdl`` is False, calls :meth:`~lecture2notes.end_to_end.transcript_downloader.TranscriptDownloader.get_caption_id` and passes result to :meth:`~lecture2notes.end_to_end.transcript_downloader.TranscriptDownloader.get_transcript`.
+        If ``self.ytdl`` is True, calls :meth:`~lecture2notes.end_to_end.transcript_downloader.TranscriptDownloader.get_transcript_ytdl`.
         """
         if self.ytdl:
             output_path = self.get_transcript_ytdl(video_id, output_path)

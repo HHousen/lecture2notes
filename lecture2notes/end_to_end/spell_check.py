@@ -62,7 +62,7 @@ class SpellChecker:
         return output_term_list[0]
 
     def check_all(self, input_terms):
-        """Spell check multiple sequences by calling :meth:`~spell_check.check` for each item in ``input_terms``.
+        """Spell check multiple sequences by calling :meth:`~lecture2notes.end_to_end.spell_check.check` for each item in ``input_terms``.
 
         Args:
             input_terms (list): a list of strings to be corrected with spell checking

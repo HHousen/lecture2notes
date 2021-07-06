@@ -259,25 +259,6 @@ if __name__ == "__main__":
         help="Path to tensorboard logdir. Tensorboard not used if not set. Tensorboard only used to visualize cluster primarily for debugging.",
     )
     PARSER.add_argument(
-        "--bart_checkpoint",
-        default=None,
-        type=str,
-        metavar="PATH",
-        help="[BART Abstractive Summarizer Only] Path to optional checkpoint. Semsim is better model but will use more memory and is an additional 5GB download. (default: none, recommended: semsim)",
-    )
-    PARSER.add_argument(
-        "--bart_state_dict_key",
-        default="model",
-        type=str,
-        metavar="PATH",
-        help='[BART Abstractive Summarizer Only] model state_dict key to load from pickle file specified with --bart_checkpoint (default: "model")',
-    )
-    PARSER.add_argument(
-        "--bart_fairseq",
-        action="store_true",
-        help="[BART Abstractive Summarizer Only] Use fairseq model from torch hub instead of huggingface transformers library models. Can not use --bart_checkpoint if this option is supplied.",
-    )
-    PARSER.add_argument(
         "-l",
         "--log",
         dest="logLevel",

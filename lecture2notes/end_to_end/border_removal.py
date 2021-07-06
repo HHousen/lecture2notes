@@ -154,7 +154,7 @@ def remove_border(image_path, output_path=None):
 def all_in_folder(path, remove_original=False, **kwargs):
     """
     Perform border removal on every file in folder and return new paths.
-    ``**kwargs`` is passed to :meth:`~border_removal.remove_border`.
+    ``**kwargs`` is passed to :meth:`~lecture2notes.end_to_end.border_removal.remove_border`.
     """
     removed_border_paths = []
     images = os.listdir(path)

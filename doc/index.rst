@@ -29,8 +29,12 @@ Lecture2Notes: End-To-End Lecture Summarization
    :caption: End-To-End:
 
    end-to-end/general
-   end-to-end/summarization-approaches
+   end-to-end/combination-summarization
+   end-to-end/perspective-cropping
+   end-to-end/duplicate-image-removal
    end-to-end/figure-detection
+   end-to-end/slide-structure-analysis
+   end-to-end/slide-clustering
    end-to-end/transcribe
    end-to-end/corner-crop-transform
    end-to-end/api

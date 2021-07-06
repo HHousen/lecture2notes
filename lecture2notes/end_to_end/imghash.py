@@ -39,7 +39,7 @@ def sort_by_duplicates(img_dir, hash_func="phash"):
     Args:
         img_dir (str): path to folder containing images to scan for duplicates
         hash_func (str, optional): the hash function to use as given by
-            :meth:`~imghash.get_hash_func`. Defaults to "phash".
+            :meth:`~lecture2notes.end_to_end.imghash.get_hash_func`. Defaults to "phash".
 
     Returns:
         [dict]: dictionary in format {image hash: image filenames}
@@ -73,7 +73,7 @@ def remove_duplicates(img_dir, images):
     Args:
         img_dir (str): path to directory containing image files
         images (dict): dictionary in format {image hash: image filenames}
-            provided by :meth:`~imghash.sort_by_duplicates`.
+            provided by :meth:`~lecture2notes.end_to_end.imghash.sort_by_duplicates`.
     """
     logger.info("Removing duplicate frames/slides from disk")
     for img_hash, img_paths in images.items():

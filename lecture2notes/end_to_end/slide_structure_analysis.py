@@ -138,7 +138,7 @@ def analyze_structure(
     orient="index",
     extra_json=None,
 ):
-    """[summary]
+    """Perform slide structure analysis.
 
     Args:
         image (np.array): Image to be processed as loaded with ``cv2.imread()``.
@@ -311,13 +311,14 @@ def analyze_structure(
 
 def all_in_folder(path, do_rename=True, **kwargs):
     """Perform structure analysis and OCR on every file in folder using
-    :meth:`slide_structure_analysis.analyze_structure`.
+    :meth:`~lecture2notes.end_to_end.slide_structure_analysis.analyze_structure`.
 
     Args:
         path (str): Directory containing images to process.
         do_rename (str, optional): Rename files to just their frame number. Defaults
             to True.
-        ``**kwargs`` is passed to :meth:`slide_structure_analysis.analyze_structure`.
+        ``**kwargs`` (dict, optional) is passed to
+            :meth:`lecture2notes.end_to_end.slide_structure_analysis.analyze_structure`.
 
     Returns:
         tuple: (raw_texts, json_texts) A list of the raw text for each slide and a
@@ -358,12 +359,12 @@ def all_in_folder(path, do_rename=True, **kwargs):
 
 def write_to_file(raw_texts, json_texts, raw_save_file, json_save_file):
     """Write the raw text in ``raw_texts`` to ``raw_save_file`` and the json data
-    in ``json_texts`` to ``json_save_file``. Used to  write results from
-    :meth:`slide_structure_analysis.all_in_folder` to disk.
+    in ``json_texts`` to ``json_save_file``. Used to write results from
+    :meth:`~lecture2notes.end_to_end.slide_structure_analysis.all_in_folder` to disk.
 
     Args:
-        raw_texts (list): List of raw text outputs from :meth:`~slide_structure_analysis.analyze_structure`.
-        json_texts (list): List of json ssa outputs from :meth:`~slide_structure_analysis.analyze_structure`.
+        raw_texts (list): List of raw text outputs from :meth:`~lecture2notes.end_to_end.slide_structure_analysis.analyze_structure`.
+        json_texts (list): List of json ssa outputs from :meth:`~lecture2notes.end_to_end.slide_structure_analysis.analyze_structure`.
         raw_save_file (str): The path to save the raw text. A ".txt" file.
         json_save_file (str): The path to save the json output. A ".json" file.
     """

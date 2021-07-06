@@ -100,7 +100,7 @@ def sift_flann_match(query_image, train_image, algorithm="orb", num_features=100
 
 
 def ransac_transform(sift_matches, kp1, kp2, img1, img2, draw_matches=False):
-    """Use data from :meth:`~sift_matcher.sift_flann_match` to find the coordinates
+    """Use data from :meth:`~lecture2notes.end_to_end.sift_matcher.sift_flann_match` to find the coordinates
     of ``img1`` in ``img2``. ``sift_matches``, ``kp1``, ``kp2``, ``img1``, and ``img2``
     are all the outputs of meth:`~sift_matcher.sift_flann_match`. If ``draw_matches``
     is enabled then the features matches will be drawn and shown on the screen.
@@ -223,7 +223,7 @@ def does_camera_move(old_frame, frame, gamma=10, border_ratios=(10, 19), bottom=
 
 
 def does_camera_move_all_in_folder(folder_path):
-    """Runs :meth:`~sift_matcher.does_camera_move` on all the files in a folder and
+    """Runs :meth:`~lecture2notes.end_to_end.sift_matcher.does_camera_move` on all the files in a folder and
     calculates statistics about camera movement within those files.
 
     Args:
@@ -233,8 +233,8 @@ def does_camera_move_all_in_folder(folder_path):
         tuple: (movement_detection_percentage, average_move_value, max_move_value)
         A float representing the precentage of frames where movement was detected from
         the previous frame. The average of the ``total_movement`` values returned from
-        :meth:`~sift_matcher.does_camera_move`. The maximum of the the ``total_movement``
-        values returned from :meth:`~sift_matcher.does_camera_move`.
+        :meth:`~lecture2notes.end_to_end.sift_matcher.does_camera_move`. The maximum of the the ``total_movement``
+        values returned from :meth:`~lecture2notes.end_to_end.sift_matcher.does_camera_move`.
     """
     images = [
         os.path.join(folder_path, image_path) for image_path in os.listdir(folder_path)
@@ -268,9 +268,9 @@ def is_content_added(
     gamma=0.09,
     dilation_amount=22,
 ):
-    """Detect if ``second`` contains more content than ``first`` and how much more content
+    r"""Detect if ``second`` contains more content than ``first`` and how much more content
     it adds. This algorithm dilates both images and finds contours. It then computes the total
-    area of those contours. If ``gamma``% more than the area of the first image's contours is
+    area of those contours. If ``gamma``\% more than the area of the first image's contours is
     greater than the area of the second image's contours then it is assumed more content is
     added.
 
@@ -381,21 +381,21 @@ def match_features(
         presenter_slide_path (str): Path to the images classified as "presenter_slide"
             or any directory containing train images.
         min_match_count (int, optional): The minimum number of matches returned by
-            :meth:`~sift_matcher.sift_flann_match` required for the image pair to
+            :meth:`~lecture2notes.end_to_end.sift_matcher.sift_flann_match` required for the image pair to
             be considered as containing the same slide. Defaults to 33.
         min_area_percent (float, optional): Percentage of the area of the train image (images
             belonging to the 'presenter_slide' category) that a matched slide must take up to
             be counted as a legitimate duplicate slide. This removes incorrect matches that
             can result in crops to small portions of the train image. Defaults to 0.37.
         do_motion_detection (bool, optional): Whether motion detection using
-            :meth:`~sift_matcher.does_camera_move_all_in_folder` should be performed.
+            :meth:`~lecture2notes.end_to_end.sift_matcher.does_camera_move_all_in_folder` should be performed.
             If set to False then it is assumed that there is movement since assuming no
             movement leaves room for a lot of false positives. If no camera motion is detected
             and this option is enabled then all slides that are unique to the "presenter_slide"
             category (they have no matches in the "slide" category) will automatically be
             cropped to contain just the slide. They will be saved to the originating folder but
             with the string defined by the variable ``OUTPUT_PATH_MODIFIER`` in their filename.
-            Even if :meth:`~sift_matcher.does_camera_move_all_in_folder` detects no movement it is
+            Even if :meth:`~lecture2notes.end_to_end.sift_matcher.does_camera_move_all_in_folder` detects no movement it is
             still possible that movement is detected while running this function since a check is
             performed to make sure all slide bounding boxes found contain 80% overlapping area with
             all previously found bounding boxes. Defaults to True.

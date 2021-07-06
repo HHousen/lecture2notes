@@ -102,13 +102,13 @@ def hough_lines_corners(
 
     Args:
         img (image): the image as loaded by ``cv2.imread``.
-        edges_img (image): edges extracted from ``img`` by :meth:`~corner_crop_transform.edges_det`.
+        edges_img (image): edges extracted from ``img`` by :meth:`~lecture2notes.end_to_end.corner_crop_transform.edges_det`.
         min_line_length (int): the shortest line length to consider as a valid line
-        border_size (int, optional): the size of the borders added by :meth:`~corner_crop_transform.edges_det`. Defaults to 11.
+        border_size (int, optional): the size of the borders added by :meth:`~lecture2notes.end_to_end.corner_crop_transform.edges_det`. Defaults to 11.
         debug_output_imgs (dict, optional): modifies this dictionary by adding ``(image file name, image data)`` pairs. Defaults to None.
 
     Returns:
-        [list]: The corner coordinates as sorted by :meth:`~corner_crop_transform.four_corners_sort`.
+        [list]: The corner coordinates as sorted by :meth:`~lecture2notes.end_to_end.corner_crop_transform.four_corners_sort`.
     """
     # Remove `border_size` border from edges_det
     edges_img = edges_img[border_size:-border_size, border_size:-border_size]
@@ -199,7 +199,7 @@ def horizontal_vertical_edges_det(img, thresh_blurred, debug_output_imgs=None):
 
     Args:
         img (image): the image as provided by ``cv2.imread``
-        thresh_blurred (image): the image processed by thresholding. see :meth:`~corner_crop_transform.edges_det`.
+        thresh_blurred (image): the image processed by thresholding. see :meth:`~lecture2notes.end_to_end.corner_crop_transform.edges_det`.
         debug_output_imgs (dict, optional): modifies this dictionary by adding ``(image file name, image data)`` pairs. Defaults to None.
 
     Returns:
@@ -363,15 +363,15 @@ def find_page_contours(
     """Find corner points of page contour
 
     Args:
-        edges (image): edges extracted from ``img`` by :meth:`~corner_crop_transform.edges_det`.
+        edges (image): edges extracted from ``img`` by :meth:`~lecture2notes.end_to_end.corner_crop_transform.edges_det`.
         img (image): the image loaded by ``cv2.imread``.
-        border_size (int, optional): the size of the borders added by :meth:`~corner_crop_transform.edges_det`. Defaults to 11.
+        border_size (int, optional): the size of the borders added by :meth:`~lecture2notes.end_to_end.corner_crop_transform.edges_det`. Defaults to 11.
         min_area_mult (float, optional): the minimum percentage of the image area that a contour's
             area must be greater than to be considered as the slide. Defaults to 0.5.
 
     Returns:
         [contour or NoneType]: ``contour`` is the set of coordinates of the corners sorted
-            by :meth:`~corner_crop_transform.four_corners_sort` or returns None when no contour
+            by :meth:`~lecture2notes.end_to_end.corner_crop_transform.four_corners_sort` or returns None when no contour
             meets the criteria.
     """
     # Getting contours
@@ -481,12 +481,12 @@ def crop(
         output_path (str, optional): path to save the image. Defaults to ``[filename]_cropped.[ext]``.
         mode (str, optional): There are three modes available. Defaults to "automatic".
 
-            * ``contours``: uses :meth:`~corner_crop_transform.find_page_contours` to extract contours from an edge map of the image. is ineffective if there are any gaps or obstructions in the outline around the slide.
-            * ``hough_lines``: uses :meth:`~corner_crop_transform.hough_lines_corners` to get corners by looking for horizontal and vertical lines, finding the intersection points, and clustering the intersection points.
+            * ``contours``: uses :meth:`~lecture2notes.end_to_end.corner_crop_transform.find_page_contours` to extract contours from an edge map of the image. is ineffective if there are any gaps or obstructions in the outline around the slide.
+            * ``hough_lines``: uses :meth:`~lecture2notes.end_to_end.corner_crop_transform.hough_lines_corners` to get corners by looking for horizontal and vertical lines, finding the intersection points, and clustering the intersection points.
             * ``automatic``: tries to use ``contours`` and falls back to ``hough_lines`` if ``contours`` reports a failure.
 
         debug_output_imgs (bool or dict, optional): if dictionary, modifies the dictionary by adding ``(image file name, image data)`` pairs. if boolean and True, creates a dictionary in the same way as if a dictionary was passed. Defaults to False.
-        save_debug_imgs (bool, optional): uses :meth:`~corner_crop_transform.write_debug_imgs` to save the debug_output_imgs to disk. Requires ``debug_output_imgs`` to not be False. Defaults to False.
+        save_debug_imgs (bool, optional): uses :meth:`~lecture2notes.end_to_end.corner_crop_transform.write_debug_imgs` to save the debug_output_imgs to disk. Requires ``debug_output_imgs`` to not be False. Defaults to False.
         create_debug_gif (bool, optional): create a gif of the debug images. Requires ``debug_output_imgs`` to not be False. Defaults to False.
         debug_gif_optimize (bool, optional): optimize the gif produced by enabling the ``create_debug_gif`` option using ``pygifsicle``. Defaults to True.
         debug_path (str, optional): location to save the debug images and debug gif. Defaults to "debug_imgs".
@@ -605,7 +605,7 @@ def crop(
 def all_in_folder(path, remove_original=False, **kwargs):
     """
     Perform perspective cropping on every file in folder and return new paths.
-    ``**kwargs`` is passed to :meth:`~corner_crop_transform.crop`.
+    ``**kwargs`` is passed to :meth:`~lecture2notes.end_to_end.corner_crop_transform.crop`.
     """
     cropped_imgs_paths = []
     images = os.listdir(path)

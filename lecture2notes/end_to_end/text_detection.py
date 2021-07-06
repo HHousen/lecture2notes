@@ -32,7 +32,7 @@ def get_text_bounding_boxes(
 
     Args:
         image (np.array): The image to be processed.
-        net (cv2.dnn_Net): The EAST model loaded with :meth:`~text_detection.load_east`.
+        net (cv2.dnn_Net): The EAST model loaded with :meth:`~lecture2notes.end_to_end.text_detection.load_east`.
         min_confidence (float, optional): Minimum probability required to inspect a region. Defaults to 0.5.
         resized_width (int, optional): Resized image width (should be multiple of 32). Defaults to 320.
         resized_height (int, optional): Resized image height (should be multiple of 32). Defaults to 320.

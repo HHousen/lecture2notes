@@ -27,6 +27,7 @@ Quick-Install (Copy & Paste)
     conda env create
     conda activate lecture2notes
     python -m spacy download en_core_web_sm
+    gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt
 
 Extras (Linux Only):
 
@@ -47,17 +48,18 @@ Step-by-Step Instructions
 1. Clone this repository: ``git clone https://github.com/HHousen/lecture2notes.git``.
 2. Change to project directory: ``cd lecture2notes``.
 3. Run installation command: ``conda env create``.
-4. Activate newly created conda envrionment: ``conda activate lecture2notes``.
-5. **Other Binary Packages:** Install ``ffmpeg``, ``sox``, ``wget``, and ``poppler-utils`` with ``sudo apt install ffmpeg sox wget poppler-utils`` if on linux. Otherwise, navigate to the `sox homepage <http://sox.sourceforge.net/>`_ to download ``sox``, the `youtube-dl homepage <https://ytdl-org.github.io/youtube-dl/index.html>`_ (`GitHub <https://github.com/ytdl-org/youtube-dl>`_) to download ``youtube-dl``, and follow the directions in this `StackOverflow answer <https://stackoverflow.com/a/53960829>`_ (Windows) to install ``poppler-utils`` for your platform. ``ffmpeg`` is needed for frame extraction in ``Dataset`` and ``End-To-End``. ``sox`` is needed for automatic audio conversion during the transcription phase of ``End-To-End``. [#f1]_ ``wget`` is used to download videos that are not on youtube as part of the ``video_downloader`` scraper script in ``Dataset``.
-6. **End-To-End Process Requirements (Optional)**
+4. Activate newly created conda environment: ``conda activate lecture2notes``.
+5. Run `gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt` from the project root to download the :ref:`slide classification model <sc_overview>` and put it in the default expected location.
+6. **Other Binary Packages:** Install ``ffmpeg``, ``sox``, ``wget``, and ``poppler-utils`` with ``sudo apt install ffmpeg sox wget poppler-utils`` if on linux. Otherwise, navigate to the `sox homepage <http://sox.sourceforge.net/>`_ to download ``sox``, the `youtube-dl homepage <https://ytdl-org.github.io/youtube-dl/index.html>`_ (`GitHub <https://github.com/ytdl-org/youtube-dl>`_) to download ``youtube-dl``, and follow the directions in this `StackOverflow answer <https://stackoverflow.com/a/53960829>`_ (Windows) to install ``poppler-utils`` for your platform. ``ffmpeg`` is needed for frame extraction in ``Dataset`` and ``End-To-End``. ``sox`` is needed for automatic audio conversion during the transcription phase of ``End-To-End``. [#f1]_ ``wget`` is used to download videos that are not on youtube as part of the ``video_downloader`` scraper script in ``Dataset``.
+7. **End-To-End Process Requirements (Optional)**
     1. **Spacy:** Download the small spacy model by running ``python -m spacy download en_core_web_sm`` in the project root. This is required to use certain summarization and similarity features (as discussed above). A spacy model is also required when using spacy as a feature extractor in ``end_to_end/summarization_approaches.py``. [#f2]_
     2. **DeepSpeech/Vosk**: Download the ``DeepSpeech`` model (the ``.pbmm`` acoustic model and the scorer) from the `releases page <https://github.com/mozilla/DeepSpeech/releases>`_. To reduce complexity save them to ``deepspeech-models`` in the project root. [#f3]_ **Alternatively, it is recommended** to download the small vosk model using the commands on the :ref:`transcribe_method_vosk` transcription method page.
     3. **EAST**: Download the ``EAST`` model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ or by running ``gdown https://drive.google.com/uc?id=1ZVn7_g58g4B0QNYNFE6MzRzpirsNTjwe``. Extract it to the ``End-To-End`` directory by running ``tar -xzvf frozen_east_text_detection.tar.gz -C end_to_end/``
-7. **Dataset Collection Requirements (Optional)** YouTube API
+8. **Dataset Collection Requirements (Optional)** YouTube API
     1. Run ``cp .env.example .env`` to create a copy of the example ``.env`` file.
     2. Add your YouTube API key to your ``.env`` file.
     3. You can now use the scraper scripts to scrape YouTube and create the dataset needed to train the slide classifier.
-8. **Transcript Download w/YouTube API (Not Recommended)** If you want to download video transcripts with the YouTube API [#f4]_, place your ``client_secret.json`` in the ``dataset/scraper-scripts`` folder (if you want to download transcripts with the ``scraper-scripts``) or in ``End-To-End`` (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes).
+9. **Transcript Download w/YouTube API (Not Recommended)** If you want to download video transcripts with the YouTube API [#f4]_, place your ``client_secret.json`` in the ``dataset/scraper-scripts`` folder (if you want to download transcripts with the ``scraper-scripts``) or in ``End-To-End`` (if you want to download transcripts in the entire end-to-end process that converts a lecture video to notes).
 
 .. rubric:: Footnotes
 

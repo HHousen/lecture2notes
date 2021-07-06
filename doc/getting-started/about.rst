@@ -4,9 +4,11 @@ About
 Overview
 --------
 
-Lecture2Notes is a project that summarizes lectures videos. At a high level, it parses both the visual and auditory components of the video, extracts text from each, combines them, and then summarizes the combined text using automatic summarization algorithms. These pages document the code for the entirety of "Lecture2Notes: Summarizing Lecture Videos by Classifying Slides and Analyzing Text using Machine Learning."
+**Lecture2Notes** is a project that **summarizes lectures videos**. At a high level, it parses both the **visual** and **auditory** components of the video, **extracts text** from each, **combines** them, and then **summarizes** the combined text using **automatic** summarization algorithms. These pages document the code for the entirety of "Lecture2Notes: Summarizing Lecture Videos by Classifying Slides and Analyzing Text using Machine Learning."
 
-The project is broken into four main components: the slide classifier (including the dataset), the summarization models (neural, non-neural, extractive, and abstractive), the end-to-end-process (one command to convert to notes), and finally the website that enables users to process their own videos.
+**To get started**, visit :ref:`the tutorial <tutorial_general_summarize>`.
+
+The project is broken into four main components: the :ref:`slide classifier <sc_overview>` (including the :ref:`dataset <dataset_general_information>`), the :ref:`summarization models <summarizers>` (neural, non-neural, extractive, and abstractive), the :ref:`end-to-end-process <e2e_general_info>` (one command to convert to notes), and finally the `website <https://lecture2notes.com>`_ that enables users to process their own videos.
 
 Process:
     1. Extract frames from video file
@@ -17,11 +19,13 @@ Process:
     6. Detect and extract figures from the set of unique slide frames
     7. Transcribe the lecture using a speech-to-text algorithm
     8. Summarize the visual and auditory transcripts
+
        1. Combine
        2. Run some modifications (such as only using complete sentences)
        3. Extractive summarization
        4. Abstractive summarization
-    9. Convert intermediate outputs to a final notes file (HTML, TXT, markdown, etc.)
+
+    9.  Convert intermediate outputs to a final notes file (HTML, TXT, markdown, etc.)
 
 The summarization steps can be toggled off and on (see :ref:`e2e_summarization_approaches`).
 
@@ -45,19 +49,19 @@ Components
     * **More Info:** See :ref:`summarizers`.
 3. End-To-End Process
     * **Overview:** Brings everything together to summarize lecture videos. It requires only one command to summarize a lecture video. That command can contain 20 arguments or only 1: the path to the file. See :ref:`the tutorial <tutorial_general_summarize>`.
-    * **API Documentation:** :ref:`e2e_api`, use if you want to modify the scripts or if you want to write new components (`pull requests welcome <https://github.com/HHousen/lecture2notes/compare>`_)
+    * **API Documentation:** :ref:`e2e_api`, use if you want to modify the scripts, if you want to write new components (`pull requests welcome <https://github.com/HHousen/lecture2notes/compare>`_), or if you want to use certain components programmatically (:ref:`guide to programmatically summarize a lecture <tutorial_programmatically>`).
     * **General Info:** :ref:`e2e_general_info`, use if you want to fine-tune the parameters used for conversion.
     * **Summarization Approaches:** :ref:`e2e_summarization_approaches`, specific information about how the lecture is summarized
 4. Website
-    * Coming soon...
+    * https://lecture2notes.com
 
-The directory structure of the project should be relatively easy to follow. There is essentially a subfolder in the project root for each major component discussed above (and the documentation).
+The directory structure of the project should be relatively easy to follow. There is essentially a subfolder in the ``lecture2notes`` folder for each major component discussed above (documentation is in ``docs/`` at the root level of the repository).
 
 .. note::
     The slide classifier dataset is located in ``dataset`` and the model is located in ``models/slide_classifier``. This separation was made to disconnect the data collection code from the model training code, since they are two distinct stages of the process that require little interaction (the only interaction is the copying of the final dataset).
 
 * ``dataset``: Data collection code for the slide classifier.
-* ``end_to_end``: Contains all the code (except ``models/slide_classifier/inference.py`` and some summarization models) required to summarize a lecture video. This includes frame extraction, OCR, clustering, perspective cropping, spell checking, speech to text, and more.
+* ``end_to_end``: Contains all the code (except :py:mod:`lecture2notes.models.slide_classifier.inference` and some summarization models) required to summarize a lecture video. This includes frame extraction, OCR, clustering, perspective cropping, spell checking, speech to text, and more.
 * ``models``: Contains the slide classifier model training code and the legacy neural summarization model repository (https://github.com/HHousen/DocSum/) as a git module.
 
 FRQ

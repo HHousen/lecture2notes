@@ -14,6 +14,21 @@ Custom nn.Modules
 
     .. automodule:: lecture2notes.models.slide_classifier.custom_nnmodules
 
+GradCAM
+-------
+
+    .. automodule:: lecture2notes.models.slide_classifier.grad_cam
+
+Learning Rate Finder
+--------------------
+
+    .. automodule:: lecture2notes.models.slide_classifier.lr_finder
+
+Mish
+----
+
+    .. automodule:: lecture2notes.models.slide_classifier.mish
+
 Inference
 ---------
 

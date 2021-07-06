@@ -102,7 +102,7 @@ def detect_figures(
         output_path (str, optional): Path to save the figures. Defaults to
             ``[filename]_figure_[index].[ext]``.
         east (str or cv2.dnn_Net, optional): Path to the EAST model file or the pre-trained
-            EAST model loaded with :meth:`~text_detection.load_east`. ``do_text_check`` must
+            EAST model loaded with :meth:`~lecture2notes.end_to_end.text_detection.load_east`. ``do_text_check`` must
             be true for this option to take effect. Defaults to "frozen_east_text_detection.pb".
         text_area_overlap_threshold (float, optional): The percentage of the figure that
             can contain text. If the area of the text in the figure is greater than this
@@ -364,7 +364,7 @@ def all_in_folder(
 ):
     """
     Perform figure detection on every file in folder and return new paths.
-    ``**kwargs`` is passed to :meth:`~figure_detection.detect_figures`.
+    ``**kwargs`` is passed to :meth:`~lecture2notes.end_to_end.figure_detection.detect_figures`.
     """
     figure_paths = []
     images = os.listdir(path)
