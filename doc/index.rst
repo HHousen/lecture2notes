@@ -15,6 +15,7 @@ Lecture2Notes: End-To-End Lecture Summarization
 
    dataset/general
    dataset/scraper-scripts
+   dataset/dataset-download
 
 .. toctree::
    :maxdepth: 2

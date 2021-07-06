@@ -22,11 +22,12 @@ This allows the system to identify images containing slides for additional proce
 
 .. important:: Interactive charts, graphs, raw data, run commands, hyperparameter choices, and more for all experiments are publicly available on the `Lecture2Notes-Slide_Classifier Weights & Biases page <https://app.wandb.ai/hhousen/lecture2notes-slide_classifier>`_.
 
+.. _sc_pretrained_models:
 
 Pre-trained Models
 ------------------
 
-**Quick Start:** Use the ``three-category`` model trained on the ``train-test-three`` dataset. It achieves the highest accuracy (about 90%). Run `gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt` from the project root to download the model and put it in the default expected location.
+**Quick Start:** Use the ``three-category`` model trained on the ``train-test-three`` dataset. It achieves the highest accuracy (about 90%). Run ``gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt`` from the project root to download the model and put it in the default expected location.
 
 +----------------+----------------------+-----------+------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------+
 | Model          | Dataset              | Accuracy  | Model Download                                                                           | Other Checkpoints                                                                                  |
