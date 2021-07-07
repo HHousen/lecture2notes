@@ -880,8 +880,6 @@ def plot_confusion_matrix(
     Normalization can be applied by setting `normalize=True`
     https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-selection-plot-confusion-matrix-py.
     """
-
-    # Compute confusion matrix
     cm = confusion_matrix(y_true, y_pred)
     # Only use the labels that appear in the data
     # classes = classes[unique_labels(y_true, y_pred)]

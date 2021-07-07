@@ -219,7 +219,6 @@ class LRFinder:
                 scale; otherwise, plotted in a linear scale. Default: True.
 
         """
-
         if skip_start < 0:
             raise ValueError("skip_start cannot be negative")
         if skip_end < 0:

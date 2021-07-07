@@ -40,7 +40,6 @@ def get_text_bounding_boxes(
     Returns:
         list: The coordinates of bounding boxes containing text.
     """
-
     if type(net) is str:
         net = load_east(net)
 

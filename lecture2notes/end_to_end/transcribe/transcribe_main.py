@@ -410,7 +410,6 @@ def resolve_deepspeech_models(dir_name):
     Returns:
         tuple: a tuple containing each of the model files (pb, scorer)
     """
-
     pb = glob.glob(dir_name + "/*.pbmm")[0]
     logging.debug("Found model: %s", pb)
 
