@@ -25,14 +25,15 @@ Directory Structure
 Walkthrough (Step-by-Step Instructions to Create Dataset)
 ---------------------------------------------------------
 
-1. Download Content:
+1. Install Prerequisite Software: ``youtube-dl``, ``wget``, ``ffmpeg``, ``poppler-utils`` (see :ref:`quick_install`)
+2. Download Content:
     1. Download all videos: ``python 2-video_downloader.py csv``
     2. Download all slides: ``python 2-slides_downloader.py csv``
-2. Data Pre-processing:
+3. Data Pre-processing:
     1. Convert slide PDFs to PNGs: ``python 3-pdf2image.py``
     2. Extract frames from all videos: ``python 3-frame_extractor.py auto``
     3. Sort the frames: ``python 4-sort_from_file.py sort``
-3. Compile and merge the data: ``python 5-compile_data.py``
+4. Compile and merge the data: ``python 5-compile_data.py``
 
 Transcripts WER
 ---------------

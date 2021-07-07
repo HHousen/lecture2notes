@@ -17,6 +17,8 @@ The default transcription method in the End-To-End process is to use ``vosk``. Y
 
 The End-To-End ``figure_detection.py`` contains a function called :meth:`~figure_detection.detect_figures`. This function requires the `EAST (Efficient and Accurate Scene Text Detector) <https://arxiv.org/abs/1704.03155>`_ model by default due to the ``do_text_check`` argument defaulting to ``True``. See the docstring for more information. You can download the model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ (this link was extracted from the `official code <https://github.com/opencv/opencv_extra/blob/65796edadce27ed013e3deeedb3c081ff527e4ec/testdata/dnn/download_models.py#L349>`__) or `Google Drive <https://drive.google.com/uc?id=1ZVn7_g58g4B0QNYNFE6MzRzpirsNTjwe>`__ (my mirror). Then just extract the file by running ``tar -xzvf frozen_east_text_detection.tar.gz``.
 
+.. _quick_install:
+
 Quick-Install (Copy & Paste)
 ----------------------------
 
