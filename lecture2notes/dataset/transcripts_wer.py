@@ -136,7 +136,7 @@ if ARGS.mode == "transcribe":
             audio_path = process_folder / (video_id + "." + ARGS.audio_format)
 
             end_time = timer() - start_time
-            logger.info("Stage 1 (Download and Convert Audio) took %s" % end_time)
+            logger.info("Stage 1 (Download and Convert Audio) took %s", end_time)
 
             # Transcribe
             start_time = timer()
@@ -157,7 +157,7 @@ if ARGS.mode == "transcribe":
                 )
 
             end_time = timer() - start_time
-            logger.info("Stage 2 (Transcribe) took %s" % end_time)
+            logger.info("Stage 2 (Transcribe) took %s", end_time)
 
             transcribe.write_to_file(transcript, transcript_ml_path)
             logger.info(

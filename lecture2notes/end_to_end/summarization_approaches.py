@@ -293,8 +293,8 @@ def extract_features_bow(
         )
     features = vectorizer.fit_transform(data)
 
-    logger.debug("done in %fs" % (time() - t0))
-    logger.debug("n_samples: %d, n_features: %d" % features.shape)
+    logger.debug("done in %fs", (time() - t0))
+    logger.debug("n_samples: %d, n_features: %d", features.shape)
 
     if return_lsa_svd:
         doc_term_matrix = features.toarray()
@@ -314,7 +314,7 @@ def extract_features_bow(
 
         features = lsa.fit_transform(features)
 
-        logger.debug("done in %fs" % (time() - t0))
+        logger.debug("done in %fs", (time() - t0))
 
         explained_variance = svd.explained_variance_ratio_.sum()
         logger.debug(
@@ -555,10 +555,10 @@ def cluster(
     else:
         km = KMeans(n_clusters=num_topics, max_iter=100)
 
-    logger.debug("Clustering data with %s" % km)
+    logger.debug("Clustering data with %s", km)
     t0 = time()
     km.fit(X)
-    logger.debug("done in %0.3fs" % (time() - t0))
+    logger.debug("done in %0.3fs", (time() - t0))
 
     sentence_clusters = [
         [] for _ in range(num_topics)
