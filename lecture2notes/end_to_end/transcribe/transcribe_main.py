@@ -72,7 +72,8 @@ def transcribe_audio_generic(audio_path, method="sphinx", **kwargs):
     Returns:
         str: the transcript of the audio file
     """
-    assert method in ["sphinx", "google"]
+    if method not in ["sphinx", "google"]:
+        raise AssertionError
     transcript = None
     logger.debug("Initializing speech_recognition library")
     r = sr.Recognizer()
@@ -245,7 +246,8 @@ def read_wave(path, desired_sample_rate=None, force=False):
     """
     with contextlib.closing(wave.open(str(path), "rb")) as wf:
         sample_width = wf.getsampwidth()
-        assert sample_width == 2
+        if sample_width != 2:
+            raise AssertionError
         sample_rate = wf.getframerate()
         frames = wf.getnframes()
         duration = frames / sample_rate
@@ -608,12 +610,13 @@ def chunk_by_speech(
         tuple: (segments, sample_rate, audio_length). See :meth:`~lecture2notes.end_to_end.transcribe.webrtcvad_utils.vad_segment_generator`.
     """
     if desired_sample_rate:
-        assert desired_sample_rate in (
+        if desired_sample_rate not in (
             8000,
             16000,
             32000,
             48000,
-        ), "The WebRTC VAD only accepts 16-bit mono PCM audio, sampled at 8000, 16000, 32000 or 48000 Hz."
+        ):
+            raise AssertionError("The WebRTC VAD only accepts 16-bit mono PCM audio, sampled at 8000, 16000, 32000 or 48000 Hz.")
 
     segments, sample_rate, audio_length = webrtcvad_utils.vad_segment_generator(
         audio_path,
@@ -781,7 +784,8 @@ def process_chunks(chunk_dir, method="sphinx", model_dir=None):
         if chunk.endswith(".wav"):
             chunk_path = Path(chunk_dir) / chunk
             if method == "deepspeech" or method == "vosk":
-                assert model_dir is not None
+                if model_dir is None:
+                    raise AssertionError
                 model = load_model(method, model_dir)
                 transcript, transcript_json = transcribe_audio(
                     chunk_path, method, model=model
@@ -805,7 +809,8 @@ def caption_file_to_string(transcript_path, remove_speakers=False):
     Optionally removes speaker entries by removing everything before ": " in each subtitle cell.
     """
     transcript_path = Path(transcript_path)
-    assert transcript_path.is_file()
+    if not transcript_path.is_file():
+        raise AssertionError
     if transcript_path.suffix == ".srt":
         subtitles = webvtt.from_srt(transcript_path)
     elif transcript_path.suffix == ".sbv":

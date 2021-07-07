@@ -494,7 +494,8 @@ def crop(
     Returns:
         [tuple]: path to cropped image and failed (True if no slide bounding box found, false otherwise)
     """
-    assert mode in ["automatic", "contours", "hough_lines"]
+    if mode not in ["automatic", "contours", "hough_lines"]:
+        raise AssertionError
 
     if not debug_output_imgs:
         debug_output_imgs = None

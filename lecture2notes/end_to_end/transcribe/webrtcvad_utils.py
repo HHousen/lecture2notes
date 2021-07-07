@@ -131,12 +131,13 @@ def vad_segment_generator(wavFile, aggressiveness, desired_sample_rate=None):
 
     logging.debug("Caught the wav file @: %s" % (wavFile))
     audio, sample_rate, audio_length = read_wave(wavFile, desired_sample_rate)
-    assert sample_rate in (
+    if sample_rate not in (
         8000,
         16000,
         32000,
         48000,
-    ), "The WebRTC VAD only accepts 16-bit mono PCM audio, sampled at 8000, 16000, 32000 or 48000 Hz."
+    ):
+        raise AssertionError("The WebRTC VAD only accepts 16-bit mono PCM audio, sampled at 8000, 16000, 32000 or 48000 Hz.")
     vad = webrtcvad.Vad(int(aggressiveness))
     frames = frame_generator(30, audio, sample_rate)
     frames = list(frames)

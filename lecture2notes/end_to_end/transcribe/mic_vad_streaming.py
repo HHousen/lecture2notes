@@ -103,7 +103,8 @@ class Audio:
         wf = wave.open(filename, "wb")
         wf.setnchannels(self.CHANNELS)
         # wf.setsampwidth(self.pa.get_sample_size(FORMAT))
-        assert self.FORMAT == pyaudio.paInt16
+        if self.FORMAT != pyaudio.paInt16:
+            raise AssertionError
         wf.setsampwidth(2)
         wf.setframerate(self.sample_rate)
         wf.writeframes(data)
