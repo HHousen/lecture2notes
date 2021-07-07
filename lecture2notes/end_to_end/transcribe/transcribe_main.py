@@ -412,10 +412,10 @@ def resolve_deepspeech_models(dir_name):
     """
 
     pb = glob.glob(dir_name + "/*.pbmm")[0]
-    logging.debug("Found model: %s" % pb)
+    logging.debug("Found model: %s", pb)
 
     scorer = glob.glob(dir_name + "/*.scorer")[0]
-    logging.debug("Found scorer: %s" % scorer)
+    logging.debug("Found scorer: %s", scorer)
 
     return pb, scorer
 
@@ -515,7 +515,7 @@ def transcribe_audio_deepspeech(
     transcript_json_converted = convert_deepspeech_json(transcript_json)
 
     inference_end = timer() - inference_start
-    logger.debug("Inference (transcription) took %0.3fs." % inference_end)
+    logger.debug("Inference (transcription) took %0.3fs.", inference_end)
 
     return transcript_text, transcript_json_converted
 
@@ -682,7 +682,7 @@ def process_segments(
                 segment, model, raw_audio_data=True
             )
 
-            logging.debug("Chunk Transcript: %s" % transcript)
+            logging.debug("Chunk Transcript: %s", transcript)
 
             full_transcript_json.extend(transcript_json)
 
