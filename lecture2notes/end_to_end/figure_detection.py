@@ -63,10 +63,9 @@ def detect_color_image(image, thumb_size=40, MSE_cutoff=22, adjust_color_bias=Tr
         if MSE <= MSE_cutoff:
             return "grayscale"
         return "color"
-    elif len(bands) == 1:
+    if len(bands) == 1:
         return "b&w"
-    else:
-        return "unknown"
+    return "unknown"
 
 
 def convert_coords_to_corners(box):
