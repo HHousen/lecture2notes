@@ -105,7 +105,8 @@ def compute_ranks(sigma, v_matrix):
     MIN_DIMENSIONS = 3
     REDUCTION_RATIO = 1 / 1
 
-    assert len(sigma) == v_matrix.shape[0], "Matrices should be multiplicable"
+    if len(sigma) != v_matrix.shape[0]:
+        raise AssertionError("Matrices should be multiplicable")
 
     dimensions = max(MIN_DIMENSIONS, int(len(sigma) * REDUCTION_RATIO))
     powered_sigma = tuple(
@@ -133,7 +134,8 @@ def get_best_sentences(sentences, count, rating, *args, **kwargs):
     )
     rate = rating
     if isinstance(rating, list):
-        assert not args and not kwargs
+        if not (not args and not kwargs):
+            raise AssertionError
         rate = lambda o: rating[o]  # noqa: E731
 
     infos = (
@@ -453,14 +455,17 @@ def cluster(
     Returns:
         [str]: The summarized text as a normal string. Line breaks will be included if ``title_generation`` is true.
     """
-    assert cluster_summarizer in ["extractive", "abstractive"]
-    assert feature_extraction in ["neural_hf", "neural_sbert", "spacy", "bow"]
+    if cluster_summarizer not in ["extractive", "abstractive"]:
+        raise AssertionError
+    if feature_extraction not in ["neural_hf", "neural_sbert", "spacy", "bow"]:
+        raise AssertionError
     if (cluster_summarizer == "extractive") and (feature_extraction != "bow"):
         raise Exception(
             "If cluster_summarizer is set to 'extractive', feature_extraction cannot be set to 'bow' because extractive summarization is based off the ranks calculated from the document-term matrix used for 'bow' feature extraction."
         )
     if final_sort_by:
-        assert final_sort_by in ["order", "rating"]
+        if final_sort_by not in ["order", "rating"]:
+            raise AssertionError
 
         if title_generation:  # if final_sort_by and title_generation
             raise Exception(
@@ -876,11 +881,12 @@ def structured_joined_sum(
         If ``to_json`` is a path (string), then the JSON data will be dumped to the file specified
         and the path to the file will be returned.
     """
-    assert summarization_method in [
+    if summarization_method not in [
         "abstractive",
         "extractive",
         "none",
-    ], "Invalid summarization method"
+    ]:
+        raise AssertionError("Invalid summarization method")
 
     first_slide_frame_num = int(first_slide_frame_num)
 

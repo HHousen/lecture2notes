@@ -31,7 +31,8 @@ class Cluster:
         self.vectors = OrderedDict()
 
         algorithms = ["kmeans", "affinity_propagation"]
-        assert algorithm_name in algorithms
+        if algorithm_name not in algorithms:
+            raise AssertionError
 
         self.algorithm_name = algorithm_name
         self.centroids = None
@@ -186,7 +187,8 @@ class Cluster:
         """
         # Elbow method: https://www.geeksforgeeks.org/elbow-method-for-optimal-value-of-k-in-kmeans/
         # Other methods: https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set
-        assert self.algorithm_name == "kmeans"
+        if self.algorithm_name != "kmeans":
+            raise AssertionError
         costs = []
         for i in range(1, max_k):
             kmeans, _, cost, _ = self.create_kmeans(num_centroids=i, store=False)
