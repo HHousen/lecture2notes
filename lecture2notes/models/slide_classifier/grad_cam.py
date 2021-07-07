@@ -171,7 +171,6 @@ def occlusion_sensitivity(
     "Visualizing and Understanding Convolutional Networks"
     https://arxiv.org/abs/1311.2901
     """
-
     torch.set_grad_enabled(False)
     model.eval()
     mean = mean if mean else 0
@@ -293,7 +292,6 @@ def main(args):
     """
     Visualize model responses given multiple images
     """
-
     device = get_device(not args.cpu)
 
     from slide_classifier_pytorch import SlideClassifier
