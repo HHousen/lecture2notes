@@ -21,21 +21,22 @@ Note-taking is a universal activity among students because of its benefits to th
 The project is broken into four main components: the [slide classifier](https://lecture2notes.readthedocs.io/en/latest/models/slide-classifier.html#sc-overview) (including the [dataset](https://lecture2notes.readthedocs.io/en/latest/dataset/general.html#dataset-general-information)), the [summarization models](https://lecture2notes.readthedocs.io/en/latest/models/summarizers.html#summarizers) (neural, non-neural, extractive, and abstractive), the [end-to-end-process](https://lecture2notes.readthedocs.io/en/latest/end-to-end/general.html#e2e-general-info) (one command to convert to notes), and finally the [website](https://lecture2notes.com>) that enables users to process their own videos.
 
 Process:
-    1. Extract frames from video file
-    2. Classify extracted frames to find frames containing slides
-    3. Perspective crop images containing the presenter and slide to contain only the slide by matching temporal features
-    4. Cluster slides to group transitions and remove duplicates
-    5. Run a Slide Structure Analysis (SSA) using OCR on the slide frames to obtain a formatted transcript of the text on the slides
-    6. Detect and extract figures from the set of unique slide frames
-    7. Transcribe the lecture using a speech-to-text algorithm
-    8. Summarize the visual and auditory transcripts
 
-       1. Combine
-       2. Run some modifications (such as only using complete sentences)
-       3. Extractive summarization
-       4. Abstractive summarization
+1. Extract frames from video file
+2. Classify extracted frames to find frames containing slides
+3. Perspective crop images containing the presenter and slide to contain only the slide by matching temporal features
+4. Cluster slides to group transitions and remove duplicates
+5. Run a Slide Structure Analysis (SSA) using OCR on the slide frames to obtain a formatted transcript of the text on the slides
+6. Detect and extract figures from the set of unique slide frames
+7. Transcribe the lecture using a speech-to-text algorithm
+8. Summarize the visual and auditory transcripts
 
-    9.  Convert intermediate outputs to a final notes file (HTML, TXT, markdown, etc.)
+    1. Combine
+    2. Run some modifications (such as only using complete sentences)
+    3. Extractive summarization
+    4. Abstractive summarization
+
+9. Convert intermediate outputs to a final notes file (HTML, TXT, markdown, etc.)
 
 The summarization steps can be toggled off and on (see [Combination and Summarization](https://lecture2notes.readthedocs.io/en/latest/end-to-end/combination-summarization.html#e2e-summarization-approaches)).
 
