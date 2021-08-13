@@ -8,6 +8,8 @@ Overview
 
 Installation is made easy due to conda environments. Simply run ``conda env create -f environment.yml`` from the root project directory and conda will create an environment called ``lecture2notes`` with all the required packages from ``environment.yml``.
 
+..note:: Read `the paper <https://haydenhousen.com/media/lecture2notes-paper-v1.pdf>`__ for more in-depth explanations regarding the background, methodology, and results of this project.
+
 Info About Optional Components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

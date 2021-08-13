@@ -3,6 +3,8 @@ Tutorial
 
 After you've installed lecture2notes using the instructions in :ref:`install`, you can follow this guide to perform some common actions.
 
+..note:: Read `the paper <https://haydenhousen.com/media/lecture2notes-paper-v1.pdf>`__ for more in-depth explanations regarding the background, methodology, and results of this project.
+
 .. _tutorial_general_summarize:
 
 Summarizing a lecture video

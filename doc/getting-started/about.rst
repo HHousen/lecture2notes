@@ -4,7 +4,7 @@ About
 Overview
 --------
 
-**Lecture2Notes** is a project that **summarizes lectures videos**. At a high level, it parses both the **visual** and **auditory** components of the video, **extracts text** from each, **combines** them, and then **summarizes** the combined text using **automatic** summarization algorithms. These pages document the code for the entirety of "Lecture2Notes: Summarizing Lecture Videos by Classifying Slides and Analyzing Text using Machine Learning."
+**Lecture2Notes** is a project that **summarizes lectures videos**. At a high level, it parses both the **visual** and **auditory** components of the video, **extracts text** from each, **combines** them, and then **summarizes** the combined text using **automatic** summarization algorithms. These pages document the code for the entirety of "`Lecture2Notes: Summarizing Lecture Videos by Classifying Slides and Analyzing Text using Machine Learning <https://haydenhousen.com/media/lecture2notes-paper-v1.pdf>`__."
 
 **To get started**, visit :ref:`the tutorial <tutorial_general_summarize>`.
 
