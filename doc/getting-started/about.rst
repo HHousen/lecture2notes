@@ -64,10 +64,10 @@ The directory structure of the project should be relatively easy to follow. Ther
 * ``end_to_end``: Contains all the code (except :py:mod:`lecture2notes.models.slide_classifier.inference` and some summarization models) required to summarize a lecture video. This includes frame extraction, OCR, clustering, perspective cropping, spell checking, speech to text, and more.
 * ``models``: Contains the slide classifier model training code and the legacy neural summarization model repository (https://github.com/HHousen/DocSum/) as a git module.
 
-FRQ
+FAQ
 ---
 
-Want to add to the FRQ? Open an issue on GitHub or click "Edit on GitHub" above. All contributions are greatly appreciated. If you're asking it, someone else probably is too.
+Want to add to the FAQ? Open an issue on GitHub or click "Edit on GitHub" above. All contributions are greatly appreciated. If you're asking it, someone else probably is too.
 
 Where are the summarization models?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
