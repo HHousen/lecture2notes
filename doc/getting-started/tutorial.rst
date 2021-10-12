@@ -13,11 +13,11 @@ Summarizing a lecture video
 .. code-block:: bash
 
     cd End-To-End
-    python main.py --auto_id --remove_duplicates --deepspeech_model_dir ../deepspeech-models/ <path to video>
+    python main.py --auto_id --remove_duplicates --transcribe_model_dir ../asr-models/ <path to video>
 
 * ``--auto_id`` changes the location where files will be saved during processing to a folder in the present working directory named the first 12 characters of the input video's SHA1 hash.
 * ``--remove_duplicates`` will remove duplicate slides before clustering. Once frames have been classified and the slides have been identified, there are likely to be duplicates. Setting this option removes very closely matching slides. Similar slides are detected using perceptual hashing by default (other hashing methods are available).
-* ``--deepspeech_model_dir`` is the path to the folder containing the DeepSpeech model files (the ``.pbmm`` acoustic model and the scorer).
+* ``--transcribe_model_dir`` is the path to the folder containing the DeepSpeech/Vosk model files (the ``.pbmm`` acoustic model and the scorer).
 * ``<path to video>`` is the path to your video file that you want to process.
 
 Summarizing a lecture video on YouTube
