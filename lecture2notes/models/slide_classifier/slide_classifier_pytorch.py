@@ -50,7 +50,7 @@ class SlideClassifier(pl.LightningModule):
         if type(hparams) is not Namespace:
             hparams = Namespace(**hparams)
 
-        self.hparams = hparams
+        self.hparams.update(vars(hparams))
 
         self.classification_model = None
         # If `hparams` has `num_classes` then create the classification model right away.
