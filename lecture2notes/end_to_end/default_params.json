@@ -14,7 +14,7 @@
   "remove": false,
   "remove_duplicates": true,
   "skip_to": 0,
-  "slide_classifier_model_path": "./lecture2notes/end_to_end/model_best.ckpt",
+  "slide_classifier_model_path": "model_best.ckpt",
   "spell_check": [
     "ocr"
   ],
