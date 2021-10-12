@@ -114,7 +114,7 @@ def remove_border(image_path, output_path=None):
     # cv2.imwrite("thresh.png", thresh)
 
     # Now find contours in it. There will be only one object, so find bounding rectangle for it.
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # large_contour_img = cv2.drawContours(image.copy(), contours, -1, (0, 255, 0), 3)
     # cv2.imwrite("large_contour_img.png", large_contour_img)
 
