@@ -33,6 +33,13 @@ Quick-Install (Copy & Paste)
     python -m spacy download en_core_web_sm
     gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt
 
+If conda is asking to initiate your shell on running ``conda activate lecture2notes``, then before activate run
+.. code-block:: bash
+        source ~/etc/profile.d/conda.sh
+If you are running on Google Colab, then run
+.. code-block:: bash
+        source /usr/local/etc/profile/conda.sh
+
 Extras (Linux Only):
 
 Install extras only after the above commands have been run.
