@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from imutils import auto_canny
 from PIL import Image, ImageStat
-from rlsa import rlsa
+from .rlsa import rlsa
 from skimage.measure.entropy import shannon_entropy
 from tqdm import tqdm
 

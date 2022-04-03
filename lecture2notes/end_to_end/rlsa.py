@@ -35,10 +35,10 @@ def valueChecker(value) -> Tuple[int, int]:
     Parameters
     value int/tuplePair/listPair
     """
-    if type(value) in [tuple, list] and len(value) is 2:
+    if type(value) in [tuple, list] and len(value) == 2:
         valueh = value[0]
         valuev = value[1]
-    elif type(value) in [tuple, list] and len(value) is 1:
+    elif type(value) in [tuple, list] and len(value) == 1:
         valueh = value[0]
         valuev = value[0]
     elif type(value) is int:
