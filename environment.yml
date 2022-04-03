@@ -64,4 +64,3 @@ dependencies:
     - opencv-contrib-python
     - pytorch-ranger
     - vosk
-    - pythonRLSA
