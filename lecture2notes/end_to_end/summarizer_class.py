@@ -317,6 +317,7 @@ class LectureSummarizer:
             self, "slides_noborder_dir", self.frames_sorted_dir / "slides_noborder"
         )
 
+        os.makedirs(self.imgs_to_cluster_dir, exist_ok=True)
         copy_all(self.slides_noborder_dir, self.imgs_to_cluster_dir)
 
         if self.params.remove_duplicates:
