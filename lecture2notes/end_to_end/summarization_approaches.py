@@ -687,7 +687,7 @@ def initialize_abstractive_model(sum_model, use_hf_pipeline=True, *args, **kwarg
     if use_hf_pipeline:
         if sum_model == "bart":
             sum_model = "sshleifer/distilbart-cnn-12-6"
-        SUMMARIZER = pipeline("summarization", model=sum_model)
+        SUMMARIZER = pipeline("summarization", model=sum_model, framework="pt")
     else:
         if sum_model == "bart":
             import bart_sum
