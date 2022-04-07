@@ -8,6 +8,8 @@ Overview
 
 **To get started**, visit :ref:`the tutorial <tutorial_general_summarize>`.
 
+**Visit `lecture2notes.com <https://lecture2notes.com/>`__ to convert your own lectures to notes!**
+
 The project is broken into four main components: the :ref:`slide classifier <sc_overview>` (including the :ref:`dataset <dataset_general_information>`), the :ref:`summarization models <summarizers>` (neural, non-neural, extractive, and abstractive), the :ref:`end-to-end-process <e2e_general_info>` (one command to convert to notes), and finally the `website <https://lecture2notes.com>`_ that enables users to process their own videos.
 
 Process:
