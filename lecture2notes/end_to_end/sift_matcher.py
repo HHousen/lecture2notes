@@ -241,6 +241,9 @@ def does_camera_move_all_in_folder(folder_path):
     ]
     images.sort()
 
+    if len(images) < 2:
+        return 0, 0, 0
+
     move_values = []
     movement_detection_values = []
     previous_image = cv2.imread(images[0])
@@ -408,7 +411,7 @@ def match_features(
         was enabled and no motion was detected.
     """
     if do_motion_detection:
-        movement_detected = does_camera_move_all_in_folder(presenter_slide_path)
+        movement_detected = does_camera_move_all_in_folder(presenter_slide_path)[0] > 0.05
     else:
         movement_detected = True
 
@@ -438,6 +441,7 @@ def match_features(
     all_dst_corners = []
     match_successful = False
     frame_with_most_content = None
+    dst_coords = None
     previous_category = images[0][1]
 
     for idx, (filename, category) in tqdm(

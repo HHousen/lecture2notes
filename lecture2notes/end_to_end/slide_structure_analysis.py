@@ -336,6 +336,8 @@ def all_in_folder(path, do_rename=True, **kwargs):
         if os.path.isfile(current_path):
             image = cv2.imread(current_path)
             frame_number = frame_number_from_filename(current_path)
+            if not frame_number:
+                continue
 
             if do_rename:
                 item_directory = os.path.dirname(item)
