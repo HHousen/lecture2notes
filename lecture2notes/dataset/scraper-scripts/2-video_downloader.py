@@ -8,7 +8,7 @@ import pandas as pd
 from shared_functions import download_video, download_video_yt
 from tqdm import tqdm
 
-sys.path.insert(1, os.path.join(sys.path[0], "../../End-To-End"))
+sys.path.insert(1, os.path.join(sys.path[0], "../../end_to_end"))
 from transcript_downloader import TranscriptDownloader  # noqa: E402
 
 PARSER = argparse.ArgumentParser(description="Video Downloader")

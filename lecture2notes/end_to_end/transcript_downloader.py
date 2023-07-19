@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import glob
 import subprocess
 
 from googleapiclient.http import MediaIoBaseDownload
@@ -56,9 +57,9 @@ class TranscriptDownloader:
         output_path_no_extension = os.path.splitext(output_path)[0]
 
         command_array = [
-            "youtube-dl",
-            "--sub-lang",
-            "en",
+            "yt-dlp",
+            "--sub-langs",
+            "en.*",
             "--sub-format",
             sub_format,
             "--write-sub",
@@ -81,7 +82,7 @@ class TranscriptDownloader:
             logger.warn("YouTube timed out while getting " + video_id)
             return None
 
-        if "WARNING: video doesn't have subtitles" in errors:
+        if "WARNING: video doesn't have subtitles" in errors or "There are no subtitles for the requested languages" in output:
             logger.warn(
                 video_id
                 + " does not contain a subtitle file for the specified language and format."
@@ -93,7 +94,7 @@ class TranscriptDownloader:
             return None
 
         # remove the ".en" that youtube-dl adds
-        os.rename((output_path_no_extension + ".en." + sub_format), output_path)
+        os.rename(glob.glob(output_path_no_extension + ".en*." + sub_format)[0], output_path)
         return output_path
 
     def get_transcript_api(self, caption_id, output_path):
