@@ -9,7 +9,7 @@ from pathlib import Path
 from timeit import default_timer as timer
 
 import jiwer
-import youtube_dl
+import yt_dlp as youtube_dl
 from tqdm import tqdm
 
 from ..end_to_end.transcribe import transcribe_main as transcribe
@@ -108,6 +108,9 @@ if ARGS.mode == "transcribe":
     elif ARGS.method == "vosk":
         model = transcribe.load_vosk_model(ARGS.model_dir)
         desired_sample_rate = 16000
+    elif ARGS.method == "whispercpp":
+        model = transcribe.load_whispercpp_model(ARGS.model_dir)
+        desired_sample_rate = 16000
 
     for transcript in tqdm(transcripts, desc="Transcribing"):
         video_id = transcript.split(".")[0]
@@ -192,7 +195,7 @@ elif ARGS.mode == "calc":
         transcript_path = str(transcript_ml_path)[: -(4 + len(ARGS.suffix))] + ".vtt"
         transcript_ground_truth = transcribe.caption_file_to_string(
             transcript_path, remove_speakers=True
-        )
+        )[0]
 
         with open(transcript_ml_path, "r") as file:
             transcript_prediction = file.read()

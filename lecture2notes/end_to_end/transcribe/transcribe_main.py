@@ -2,6 +2,7 @@ import contextlib
 import glob
 import json
 import logging
+import ffmpeg
 import os
 import wave
 from pathlib import Path
@@ -34,7 +35,7 @@ def extract_audio(video_path, output_path):
         + str(output_path)
     )
     command = (
-        "ffmpeg -i " + str(video_path) + " -f wav -ab 192000 -vn " + str(output_path)
+        "ffmpeg -y -i " + str(video_path) + " -f wav -ab 192000 -vn " + str(output_path)
     )
     os.system(command)
     return output_path
@@ -58,6 +59,8 @@ def transcribe_audio(audio_path, method="sphinx", **kwargs):
         return transcribe_audio_deepspeech(audio_path, **kwargs)
     if method == "wav2vec":
         return transcribe_audio_wav2vec(audio_path, **kwargs)
+    if method == "whispercpp":
+        return transcribe_audio_whispercpp(audio_path, **kwargs)
     return transcribe_audio_generic(audio_path, method, **kwargs), None
 
 
@@ -229,6 +232,59 @@ def transcribe_audio_wav2vec(
         combined_transcript = " ".join(transcription).strip()
         final_transcript.append(combined_transcript.lower())
     return " ".join(final_transcript).strip(), None
+
+
+def transcribe_with_time(
+    self, data, num_proc: int = 1, strict: bool = False
+):
+    if strict:
+        assert (
+            self.context.is_initialized
+        ), "strict=True and context is not initialized. Make sure to call 'context.init_state()' before."
+    else:
+        if not self.context.is_initialized and not self._context_initialized:
+            self.context.init_state()            
+            self._context_initialized = True
+
+    self.context.full_parallel(self.params, data, num_proc)
+    return [
+        {
+            "start": self.context.full_get_segment_start(i)/100,
+            "end": self.context.full_get_segment_end(i)/100,
+            "word": self.context.full_get_segment_text(i),
+        }
+        for i in range(self.context.full_n_segments())
+    ]
+
+def load_whispercpp_model(model_name_or_path="small.en"):
+    from whispercpp import Whisper
+    Whisper.transcribe_with_time = transcribe_with_time
+    model = Whisper.from_pretrained(model_name_or_path)
+    model.params.with_token_timestamps(True)
+    model.params.with_print_progress(True)
+    return model
+
+def transcribe_audio_whispercpp(audio_path, model=None):
+    if model is None:
+        model = load_whispercpp_model("small.en")
+    elif isinstance(model, str):
+        model = load_whispercpp_model(model)
+    
+    try:
+        y, _ = (
+            ffmpeg.input(str(audio_path), threads=0)
+            .output("-", format="s16le", acodec="pcm_s16le", ac=1, ar=16000)
+            .run(
+                cmd=["ffmpeg", "-nostdin"], capture_stdout=True, capture_stderr=True
+            )
+        )
+    except ffmpeg.Error as e:
+        raise RuntimeError(f"Failed to load audio: {e.stderr.decode()}") from e
+
+    arr = np.frombuffer(y, np.int16).flatten().astype(np.float32) / 32768.0
+    results = model.transcribe_with_time(arr)
+    return "".join([x["word"] for x in results]), json.dumps(results)
+    
 
 
 def read_wave(path, desired_sample_rate=None, force=False):
@@ -664,6 +720,8 @@ def process_segments(
         model = load_vosk_model(model)
     elif model == "wav2vec":
         model = load_wav2vec_model()
+    elif model == "whispercpp":
+        model = load_whispercpp_model()
 
     create_json = True
     full_transcript = ""
