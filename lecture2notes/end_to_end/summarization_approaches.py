@@ -825,7 +825,7 @@ def structured_joined_sum(
     ssa_path,
     transcript_json_path,
     frame_every_x=1,
-    ending_char=".",
+    ending_chars=[".", "!", "?"],
     first_slide_frame_num=0,
     to_json=False,
     summarization_method="abstractive",
@@ -925,9 +925,9 @@ def structured_joined_sum(
             transcript_before_slides += to_add
             transcript_json_idx += 1
 
-            if current_time >= first_slide_timestamp_seconds and current_letter_obj[
-                "word"
-            ].strip().endswith(ending_char):
+            current_word = current_letter_obj["word"].strip()
+
+            if current_time >= first_slide_timestamp_seconds and any(current_word.endswith(x) for x in ending_chars):
                 break
 
         transcript_before_slides = transcript_before_slides.strip()
@@ -1015,12 +1015,12 @@ def structured_joined_sum(
             coresponding_transcript_text += to_add
             transcript_json_idx += 1
 
+            current_word = current_letter_obj["word"].strip()
+
             # If the current time is past the next slide time advance to the next slide.
             # However, jump forward a few letter if necessary in order to end the current
             # transcript-slide segment with `endding_char`.
-            if current_time >= current_slide_timestamp_seconds and current_letter_obj[
-                "word"
-            ].strip().endswith(ending_char):
+            if current_time >= current_slide_timestamp_seconds and any(current_word.endswith(x) for x in ending_chars):
                 break
 
         final_dict[title] = {"transcript": coresponding_transcript_text.strip()}

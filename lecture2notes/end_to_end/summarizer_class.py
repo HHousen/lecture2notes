@@ -607,7 +607,6 @@ class LectureSummarizer:
                     self.ocr_json_output_file,
                     self.transcript_json_output_file,
                     frame_every_x=self.extract_every_x_seconds,
-                    ending_char=".",
                     first_slide_frame_num=int(first_slide_frame_num),
                     to_json=lecture_summarized_structured_output_file,
                     summarization_method=self.params.structured_joined_summarization_method,
