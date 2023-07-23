@@ -820,6 +820,17 @@ def generic_extractive_sumy(
 
     return " ".join(sentence_list)
 
+def summarize_chatgpt(text, model="gpt-3.5-turbo"):
+    import openai
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=[
+            {"role": "user", "content": f"Can you provide a comprehensive summary of the given transcript? The summary should cover all the key points presented in the original transcript, while also condensing the information into a concise and easy-to-understand format. Please ensure that the summary includes relevant details and examples that support the main ideas, while avoiding any unnecessary information or repetition. The length of the summary should be appropriate for the length and complexity of the original transcript, providing a clear and accurate overview without omitting any important information. Write just the summary and nothing else. Do not reference the original transcript.\n\n{text}"},
+        ]
+    )
+    summary = response["choices"][0]["message"]["content"]
+    return summary
+
 
 def structured_joined_sum(
     ssa_path,
@@ -884,9 +895,10 @@ def structured_joined_sum(
     if summarization_method not in [
         "abstractive",
         "extractive",
+        "chatgpt",
         "none",
     ]:
-        raise AssertionError("Invalid summarization method")
+        raise AssertionError(f"Invalid summarization method: {summarization_method}")
 
     first_slide_frame_num = int(first_slide_frame_num)
 
@@ -1075,6 +1087,8 @@ def structured_joined_sum(
                         *args,
                         **kwargs
                     )
+                elif summarization_method == "chatgpt":
+                    final_dict[title]["transcript"] = summarize_chatgpt(content)
                 else:
                     final_dict[title]["transcript"] = generic_extractive_sumy(
                         content, algorithm=ext_summarizer, *args, **kwargs

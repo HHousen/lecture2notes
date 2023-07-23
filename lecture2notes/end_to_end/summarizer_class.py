@@ -36,6 +36,7 @@ from .summarization_approaches import (
     cluster,
     full_sents,
     generic_abstractive,
+    summarize_chatgpt,
     generic_extractive_sumy,
     get_complete_sentences,
     keyword_based_ext,
@@ -681,11 +682,14 @@ class LectureSummarizer:
             self.params.summarization_abs != "none"
             and self.params.summarization_abs is not None
         ):  # if abstractive method was specified
-            lecture_summarized = generic_abstractive(
-                summarized_ext,
-                self.params.summarization_abs,
-                hf_inference_api=self.params.abs_hf_api_overall,
-            )
+            if self.params.summarization_abs == "chatgpt":
+                lecture_summarized = summarize_chatgpt(summarized_ext, model="gpt-3.5-turbo-16k")
+            else:
+                lecture_summarized = generic_abstractive(
+                    summarized_ext,
+                    self.params.summarization_abs,
+                    hf_inference_api=self.params.abs_hf_api_overall,
+                )
         else:  # if no abstractive summarization method was specified
             lecture_summarized = summarized_ext
             logger.debug("Skipping summarization_abs")
