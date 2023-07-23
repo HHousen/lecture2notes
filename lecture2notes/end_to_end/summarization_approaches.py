@@ -822,13 +822,20 @@ def generic_extractive_sumy(
 
 def summarize_chatgpt(text, model="gpt-3.5-turbo"):
     import openai
-    response = openai.ChatCompletion.create(
-        model=model,
-        messages=[
-            {"role": "user", "content": f"Can you provide a comprehensive summary of the given transcript? The summary should cover all the key points presented in the original transcript, while also condensing the information into a concise and easy-to-understand format. Please ensure that the summary includes relevant details and examples that support the main ideas, while avoiding any unnecessary information or repetition. The length of the summary should be appropriate for the length and complexity of the original transcript, providing a clear and accurate overview without omitting any important information. Write just the summary and nothing else. Do not reference the original transcript.\n\n{text}"},
-        ]
-    )
-    summary = response["choices"][0]["message"]["content"]
+    try:
+        response = openai.ChatCompletion.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": f"{text}\n\nCan you provide a comprehensive summary of the given transcript? The summary should cover all the key points presented in the original transcript, while also condensing the information into a concise and easy-to-understand format. Please ensure that the summary includes relevant details and examples that support the main ideas, while avoiding any unnecessary information or repetition. The length of the summary should be significantly shorter than the original transcript while still providing a clear and accurate overview without omitting any important information. Write just the summary and do not reference the original transcript. Write just the main points and do not say introductory phrases. Write in the 1st person."},
+            ]
+        )
+        summary = response["choices"][0]["message"]["content"]
+    except openai.error.InvalidRequestError as e:
+        if "maximum context length" in str(e):
+            summary = "This content is too long to be summarized. Please contact support for assistance."
+        else:
+            raise e
+
     return summary
 
 
