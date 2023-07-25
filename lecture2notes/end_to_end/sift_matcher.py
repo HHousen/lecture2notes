@@ -616,7 +616,7 @@ def match_features(
             output_path = filename + OUTPUT_PATH_MODIFIER + ext
             transformed_image_paths.append(output_path)
 
-            transformed_image = persp_transform(cv2.readim(image), dst_coords)
+            transformed_image = persp_transform(cv2.imread(image), dst_coords)
             cv2.imwrite(output_path, transformed_image)
 
     return non_unique_presenter_slides, transformed_image_paths
