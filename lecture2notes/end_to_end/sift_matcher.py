@@ -605,7 +605,7 @@ def match_features(
                 match_successful = False
 
     transformed_image_paths = []
-    if not movement_detected and dst_coords:
+    if not movement_detected and dst_coords is not None:
         presenter_slide_images = [
             x for x in presenter_slide_images if x not in non_unique_presenter_slides
         ]
