@@ -1044,7 +1044,7 @@ def structured_joined_sum(
 
         final_dict[title] = {"transcript": coresponding_transcript_text.strip()}
         final_dict[title]["slide_content"] = all_slide_content
-        final_dict[title]["frame_number"] = slide["frame_number"]
+        final_dict[title]["frame_number"] = slide["frame_number"] * frame_every_x
         if "figure_paths" in slide.keys():
             final_dict[title]["figure_paths"] = slide["figure_paths"]
 

@@ -34,6 +34,18 @@ def extract_frames(input_video_path, quality, output_path, extract_every_x_secon
 
     logger.debug("Running command: " + command)
     os.system(command)
+
+    for filename in os.listdir(output_path):
+        if filename.endswith(".jpg"):
+            new_number = int(filename.split("_")[1].split(".")[0]) * int(
+                extract_every_x_seconds
+            )
+            new_filename = "img_" + str(new_number).zfill(5) + ".jpg"
+            os.rename(
+                os.path.join(output_path, filename),
+                os.path.join(output_path, new_filename),
+            )
+
     logger.info(
         "Frame extraction successful. Returning output_path=" + str(output_path)
     )
