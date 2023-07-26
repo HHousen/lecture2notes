@@ -61,6 +61,8 @@ def transcribe_audio(audio_path, method="sphinx", **kwargs):
         return transcribe_audio_wav2vec(audio_path, **kwargs)
     if method == "whispercpp":
         return transcribe_audio_whispercpp(audio_path, **kwargs)
+    if method == "fasterwhisper":
+        return transcribe_audio_fasterwhisper(audio_path, **kwargs)
     return transcribe_audio_generic(audio_path, method, **kwargs), None
 
 
@@ -255,6 +257,28 @@ def transcribe_with_time(
         }
         for i in range(self.context.full_n_segments())
     ]
+
+def load_fasterwhisper_model(model_name_or_path="small.en"):
+    from faster_whisper import WhisperModel
+    model = WhisperModel(model_name_or_path, device="cpu", compute_type="int8")
+    return model
+
+def transcribe_audio_fasterwhisper(audio_path, model=None):
+    if model is None:
+        model = load_fasterwhisper_model("small.en")
+    elif isinstance(model, str):
+        model = load_fasterwhisper_model(model)
+    
+    with open(audio_path, "rb") as f:
+        segments, transcription_info = model.transcribe(f, beam_size=5)
+
+    results = []
+    for idx, segment in enumerate(segments):
+        if idx % 10 == 0:
+            print(f"Transcription Progress: {segment.seek/transcription_info.duration:.2f}")
+        results.append({"start": segment.start, "end": segment.end, "word": segment.text})
+
+    return "".join([x["word"] for x in results]), json.dumps(results)
 
 def load_whispercpp_model(model_name_or_path="small.en"):
     from whispercpp import Whisper
