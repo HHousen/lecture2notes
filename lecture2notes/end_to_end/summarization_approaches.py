@@ -924,6 +924,8 @@ def structured_joined_sum(
         ssa = json.load(ssa_file)
         transcript_json = json.load(transcript_json_file)
 
+    ssa = sorted(ssa, key=lambda x: x["frame_number"])
+
     transcript_json_idx = 0
     current_time = 0
 
