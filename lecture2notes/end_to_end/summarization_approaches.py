@@ -4,7 +4,7 @@ import math
 from collections import OrderedDict, namedtuple
 from functools import partial
 from operator import attrgetter
-from time import time
+from time import time, sleep
 
 import numpy as np
 import requests
@@ -822,21 +822,30 @@ def generic_extractive_sumy(
 
 def summarize_chatgpt(text, model="gpt-3.5-turbo"):
     import openai
-    try:
-        response = openai.ChatCompletion.create(
-            model=model,
-            messages=[
-                {"role": "user", "content": f"{text}\n\nCan you provide a comprehensive summary of the given transcript? The summary should cover all the key points presented in the original transcript, while also condensing the information into a concise and easy-to-understand format. Please ensure that the summary includes relevant details and examples that support the main ideas, while avoiding any unnecessary information or repetition. The length of the summary should be significantly shorter than the original transcript while still providing a clear and accurate overview without omitting any important information. Write just the summary and do not reference the original transcript. Write just the main points and do not say introductory phrases. Write in the 1st person."},
-            ]
-        )
-        summary = response["choices"][0]["message"]["content"]
-    except openai.error.InvalidRequestError as e:
-        if "maximum context length" in str(e):
-            summary = "This content is too long to be summarized. Please contact support for assistance."
-        else:
-            raise e
+    tries = 0
+    while tries < 5:
+        try:
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=[
+                    {"role": "user", "content": f"{text}\n\nCan you provide a comprehensive summary of the given transcript? The summary should cover all the key points presented in the original transcript, while also condensing the information into a concise and easy-to-understand format. Please ensure that the summary includes relevant details and examples that support the main ideas, while avoiding any unnecessary information or repetition. The length of the summary should be significantly shorter than the original transcript while still providing a clear and accurate overview without omitting any important information. Write just the summary and do not reference the original transcript. Write just the main points and do not say introductory phrases. Write in the 1st person."},
+                ]
+            )
+            summary = response["choices"][0]["message"]["content"]
+            return summary
+        except openai.error.InvalidRequestError as e:
+            if "maximum context length" in str(e):
+                if model == "gpt-3.5-turbo":
+                    return summarize_chatgpt(text, model="gpt-3.5-turbo-16k")
+                return "This content is too long to be summarized. Please contact support for assistance."
+            else:
+                raise e
+        except (openai.error.ServiceUnavailableError, openai.error.APIError) as e:
+            tries += 1
+            print("OpenAI API error. Trying again in 10 seconds...")
+            sleep(10)
 
-    return summary
+    raise Exception("OpenAI API failed to summarize. Please try again later.")
 
 
 def structured_joined_sum(
