@@ -1,7 +1,7 @@
 import json
 import logging
 import math
-from collections import OrderedDict, defaultdict, namedtuple
+from collections import OrderedDict, namedtuple
 from functools import partial
 from operator import attrgetter
 from time import time, sleep
@@ -963,7 +963,7 @@ def structured_joined_sum(
         transcript_before_slides = transcript_before_slides.strip()
         final_dict = OrderedDict({"Preface": {"transcript": transcript_before_slides}})
 
-    all_titles = defaultdict(int)
+    all_titles = {}
     no_conclusion = False
     for idx, slide in tqdm(
         enumerate(ssa), total=len(ssa), desc="Grouping Slides and Transcript"
@@ -1018,7 +1018,7 @@ def structured_joined_sum(
                 all_titles[title] += 1
                 title = f"{title} ({all_titles[title]})"
             else:
-                all_titles.add(title)
+                all_titles[title] = 0
 
         current_slide_timestamp_seconds = ssa[idx]["frame_number"] * frame_every_x
 
