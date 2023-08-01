@@ -25,7 +25,7 @@ class SegmentCluster:
         self.model = inference.load_model(model_path)
         self.change_indexes = None
 
-    def extract_and_add_features(self, gamma=1.3):
+    def extract_and_add_features(self, gamma=1.08):
         """Extracts features from the images in ``slides_dir`` and saves feature vectors"""
         num_slides = len(self.slides_list)
 
