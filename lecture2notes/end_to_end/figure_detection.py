@@ -395,7 +395,7 @@ def all_in_folder(
 
 def add_figures_to_ssa(ssa, figures_path):
     # If the SSA contains frame numbers
-    if "frame_number" in ssa[0].keys():
+    if ssa and "frame_number" in ssa[0].keys():
         mapping = frame_number_filename_mapping(figures_path)
 
         for idx, slide in enumerate(ssa):
