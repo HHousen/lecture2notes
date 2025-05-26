@@ -42,7 +42,7 @@ pytorch-ranger==0.1.1
 
 # Computer vision
 opencv-python==4.5.3.56
-opencv-contrib-python==4.5.3.56
+opencv-contrib-python==4.8.1.78
 imutils==0.5.4
 
 # Text processing
