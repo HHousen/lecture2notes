@@ -51,7 +51,7 @@ summa==1.2.0
 sumy==0.8.1
 symspellpy==6.7.0
 sentence-transformers==2.0.0
-transformers==4.9.2
+transformers==4.50.0
 
 # Additional dependencies
 tensorflow==2.5.0
