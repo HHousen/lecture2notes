@@ -79,14 +79,14 @@ Example Folder Structure:
 
 The ``vosk`` method is implemented in the :meth:`~lecture2notes.transcribe.transcribe_main.transcribe_audio_vosk` function. It uses the `vosk library <https://pypi.org/project/vosk/>`_.
 
-In order to use this method in the ``end_to_end/main.py`` script, you need to download one of the models from alphacephei's website at https://alphacephei.com/vosk/models (`Google Drive Mirror <https://drive.google.com/drive/folders/10OY4DeD3Lm-hdTFLFDvaDYaL2m-8h-Cr>`__).
+In order to use this method in the ``end_to_end/main.py`` script, you need to download one of the models from alphacephei's website at https://alphacephei.com/vosk/models (`Hugging Face Mirror <https://huggingface.co/HHousen/lecture2notes/tree/main/Vosk%20Models>`__).
 
 These commands will download the recommended model and put it in the expected location:
 
 .. code-block:: bash
 
     conda activate lecture2notes
-    gdown https://drive.google.com/uc?id=1cjgVxc_NJUYapxEJ2xv-t61nKhJhKs-M
+    wget https://huggingface.co/HHousen/lecture2notes/resolve/main/Vosk%20Models/vosk-model-en-us-small-0.3.zip
     unzip vosk-model-en-us-small-0.3.zip
     mkdir vosk-models/
     mv vosk-model-en-us-small-0.3 ./vosk-models/vosk-model-en-us-small-0.3/
@@ -101,7 +101,7 @@ The abstract from the paper is the following:
 
 "We show for the first time that learning powerful representations from speech audio alone followed by fine-tuning on transcribed speech can outperform the best semi-supervised methods while being conceptually simpler. wav2vec 2.0 masks the speech input in the latent space and solves a contrastive task defined over a quantization of the latent representations which are jointly learned. Experiments using all labeled data of Librispeech achieve 1.8/3.3 WER on the clean/other test sets. When lowering the amount of labeled data to one hour, wav2vec 2.0 outperforms the previous state of the art on the 100 hour subset while using 100 times less labeled data. Using just ten minutes of labeled data and pre-training on 53k hours of unlabeled data still achieves 4.8/8.2 WER. This demonstrates the feasibility of speech recognition with limited amounts of labeled data."
 
-The implementation in lecture2notes uses the `huggingface/transformers package <https://huggingface.co/transformers/model_doc/wav2vec2.html>`__. You can learn more by reading the code for the :meth:`~lecture2notes.transcribe.transcribe_main.transcribe_audio_wav2vec` function. The wav2vec2 model will automatically be downloading upon usage thanks to huggingface/transformers. The default model key to be downloaded from the `model hub <https://huggingface.co/facebook/wav2vec2-base-960h>`__ is ``facebook/wav2vec2-base-960h``. You can also download the model manually from `this Google Drive mirror <https://drive.google.com/uc?id=1FAkQ8GgmXY3dfyXTeUmi98K6Cb6f40wQ>`__
+The implementation in lecture2notes uses the `huggingface/transformers package <https://huggingface.co/transformers/model_doc/wav2vec2.html>`__. You can learn more by reading the code for the :meth:`~lecture2notes.transcribe.transcribe_main.transcribe_audio_wav2vec` function. The wav2vec2 model will automatically be downloading upon usage thanks to huggingface/transformers. The default model key to be downloaded from the `model hub <https://huggingface.co/facebook/wav2vec2-base-960h>`__ is ``facebook/wav2vec2-base-960h``.
 
 
 Experiment Results

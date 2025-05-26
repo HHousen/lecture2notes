@@ -15,9 +15,9 @@ Info About Optional Components
 
 Certain functions in the End-To-End ``transcribe.py`` file require additional downloads. If you are not using the transcribe feature of the End-To-End approach then this notice can safely be ignored. These extra files may not be necessary depending on your configuration. To use the similarity function to compare two transcripts a spacy model is needed, which you can learn more about on the spacy `starter models <https://spacy.io/models/en-starters>`_ and `core models <https://spacy.io/models/en>`_ documentation.
 
-The default transcription method in the End-To-End process is to use ``vosk``. You need to download a ``vosk`` model from the `models page <https://alphacephei.com/vosk/models>`_ (`Google Drive Mirror <https://drive.google.com/drive/folders/10OY4DeD3Lm-hdTFLFDvaDYaL2m-8h-Cr>`__) to use this method or you can specify a different method with the ``--transcription_method`` flag such as ``--transcription_method wav2vec``.
+The default transcription method in the End-To-End process is to use ``vosk``. You need to download a ``vosk`` model from the `models page <https://alphacephei.com/vosk/models>`_ (`Hugging Face Mirror <https://huggingface.co/HHousen/lecture2notes/tree/main/Vosk%20Models>`__) to use this method or you can specify a different method with the ``--transcription_method`` flag such as ``--transcription_method wav2vec``.
 
-The End-To-End ``figure_detection.py`` contains a function called :meth:`~figure_detection.detect_figures`. This function requires the `EAST (Efficient and Accurate Scene Text Detector) <https://arxiv.org/abs/1704.03155>`_ model by default due to the ``do_text_check`` argument defaulting to ``True``. See the docstring for more information. You can download the model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ (this link was extracted from the `official code <https://github.com/opencv/opencv_extra/blob/65796edadce27ed013e3deeedb3c081ff527e4ec/testdata/dnn/download_models.py#L349>`__) or `Google Drive <https://drive.google.com/uc?id=1ZVn7_g58g4B0QNYNFE6MzRzpirsNTjwe>`__ (my mirror). Then just extract the file by running ``tar -xzvf frozen_east_text_detection.tar.gz``.
+The End-To-End ``figure_detection.py`` contains a function called :meth:`~figure_detection.detect_figures`. This function requires the `EAST (Efficient and Accurate Scene Text Detector) <https://arxiv.org/abs/1704.03155>`_ model by default due to the ``do_text_check`` argument defaulting to ``True``. See the docstring for more information. You can download the model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ (this link was extracted from the `official code <https://github.com/opencv/opencv_extra/blob/65796edadce27ed013e3deeedb3c081ff527e4ec/testdata/dnn/download_models.py#L349>`__) or `Hugging Face <https://huggingface.co/HHousen/lecture2notes/resolve/main/frozen_east_text_detection.pb>`__. Then just extract the file by running ``tar -xzvf frozen_east_text_detection.tar.gz``.
 
 .. _quick_install:
 
@@ -31,7 +31,7 @@ Quick-Install (Copy & Paste)
     conda env create
     conda activate lecture2notes
     python -m spacy download en_core_web_sm
-    gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt
+    wget "https://huggingface.co/HHousen/lecture2notes/resolve/main/Slide%20Classifier%20Median%20Weights/three-category/epoch%3D8.ckpt" -O lecture2notes/end_to_end/model_best.ckpt
 
 Extras (Linux Only):
 
@@ -53,12 +53,12 @@ Step-by-Step Instructions
 2. Change to project directory: ``cd lecture2notes``.
 3. Run installation command: ``conda env create``.
 4. Activate newly created conda environment: ``conda activate lecture2notes``.
-5. Run `gdown "https://drive.google.com/uc?id=1eXwWQujo_0HVffuUx0Fa6KydjW8h4gUb" -O lecture2notes/end_to_end/model_best.ckpt` from the project root to download the :ref:`slide classification model <sc_overview>` and put it in the default expected location.
+5. Run `wget "https://huggingface.co/HHousen/lecture2notes/resolve/main/Slide%20Classifier%20Median%20Weights/three-category/epoch%3D8.ckpt" -O lecture2notes/end_to_end/model_best.ckpt` from the project root to download the :ref:`slide classification model <sc_overview>` and put it in the default expected location.
 6. **Other Binary Packages:** Install ``ffmpeg``, ``sox``, ``wget``, and ``poppler-utils`` with ``sudo apt install ffmpeg sox wget poppler-utils`` if on linux. Otherwise, navigate to the `sox homepage <http://sox.sourceforge.net/>`_ to download ``sox``, the `youtube-dl homepage <https://ytdl-org.github.io/youtube-dl/index.html>`_ (`GitHub <https://github.com/ytdl-org/youtube-dl>`_) to download ``youtube-dl``, and follow the directions in this `StackOverflow answer <https://stackoverflow.com/a/53960829>`_ (Windows) to install ``poppler-utils`` for your platform. ``ffmpeg`` is needed for frame extraction in ``Dataset`` and ``End-To-End``. ``sox`` is needed for automatic audio conversion during the transcription phase of ``End-To-End``. [#f1]_ ``wget`` is used to download videos that are not on youtube as part of the ``video_downloader`` scraper script in ``Dataset``.
 7. **End-To-End Process Requirements (Optional)**
     1. **Spacy:** Download the small spacy model by running ``python -m spacy download en_core_web_sm`` in the project root. This is required to use certain summarization and similarity features (as discussed above). A spacy model is also required when using spacy as a feature extractor in ``end_to_end/summarization_approaches.py``. [#f2]_
     2. **DeepSpeech/Vosk**: Download the ``DeepSpeech`` model (the ``.pbmm`` acoustic model and the scorer) from the `releases page <https://github.com/mozilla/DeepSpeech/releases>`_. To reduce complexity save them to ``deepspeech-models`` in the project root. [#f3]_ **Alternatively, it is recommended** to download the small vosk model using the commands on the :ref:`transcribe_method_vosk` transcription method page.
-    3. **EAST**: Download the ``EAST`` model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ or by running ``gdown https://drive.google.com/uc?id=1ZVn7_g58g4B0QNYNFE6MzRzpirsNTjwe``. Extract it to the ``End-To-End`` directory by running ``tar -xzvf frozen_east_text_detection.tar.gz -C end_to_end/``
+    3. **EAST**: Download the ``EAST`` model from `Dropbox <https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1>`__ or by running ``wget https://huggingface.co/HHousen/lecture2notes/resolve/main/frozen_east_text_detection.pb -O end_to_end/frozen_east_text_detection.pb``. If downloading from Dropbox, extract it to the ``End-To-End`` directory by running ``tar -xzvf frozen_east_text_detection.tar.gz -C end_to_end/``
 8. **Dataset Collection Requirements (Optional)** YouTube API
     1. Run ``cp .env.example .env`` to create a copy of the example ``.env`` file.
     2. Add your YouTube API key to your ``.env`` file.
