@@ -53,7 +53,7 @@ sentence-transformers==2.0.0
 transformers==4.9.2
 
 # Additional dependencies
-tensorflow==2.5.0
+tensorflow==2.12.1
 deepsegment==2.3.1
 pygifsicle==1.0.4
 jiwer==2.2.0
