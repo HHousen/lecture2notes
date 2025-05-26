@@ -42,7 +42,7 @@ pytorch_lightning==1.4.2
 pytorch-ranger==0.1.1
 
 # Computer vision
-opencv-python==4.5.3.56
+opencv-python==4.8.1.78
 opencv-contrib-python==4.5.3.56
 imutils==0.5.4
 
