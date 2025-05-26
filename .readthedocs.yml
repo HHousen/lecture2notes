@@ -20,4 +20,4 @@ formats:
 
 # Install packages using conda from environment.yml
 conda:
-  environment: environment.yml
+  environment: environment_pinned.yml
