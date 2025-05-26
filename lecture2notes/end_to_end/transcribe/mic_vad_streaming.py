@@ -10,7 +10,6 @@ from datetime import datetime
 
 import deepspeech
 import numpy as np
-import pyaudio
 import webrtcvad
 from halo import Halo
 from scipy import signal
@@ -21,13 +20,14 @@ logging.basicConfig(level=20)
 class Audio:
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
 
-    FORMAT = pyaudio.paInt16
     # Network/VAD rate-space
     RATE_PROCESS = 16000
     CHANNELS = 1
     BLOCKS_PER_SECOND = 50
 
     def __init__(self, callback=None, device=None, input_rate=RATE_PROCESS, file=None):
+        import pyaudio
+        self.FORMAT = pyaudio.paInt16
         def proxy_callback(in_data, frame_count, time_info, status):
             # pylint: disable=unused-argument
             if self.chunk is not None:
@@ -99,6 +99,7 @@ class Audio:
     )
 
     def write_wav(self, filename, data):
+        import pyaudio
         logging.info("write wav %s", filename)
         wf = wave.open(filename, "wb")
         wf.setnchannels(self.CHANNELS)
